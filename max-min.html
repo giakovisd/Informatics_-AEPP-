@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Εύρεση Μέγιστου/Ελαχίστου</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            
+            --col-on: #3b82f6; /* Μπλε για Ονόματα */
+            --col-grade: #10b981; /* Πράσινο για Βαθμούς */
+            
+            --text-white: #ffffff;
+            --compare-color: #f59e0b;
+            
+            /* ΚΙΤΡΙΝΟ ΓΙΑ MAX/MIN */
+            --current-max-bg: #FFFF00; 
+            --current-max-text: #000000;
+
+            --border-color: #cbd5e1;
+            --disabled-btn: #94a3b8;
+            --ptr-i: #dc2626; 
+
+            --code-kw: #0000CD; 
+            --code-sym: #FF0000; 
+            --code-var: #000000; 
+            --code-num: #008000;
+            --code-str: #A020F0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        button {
+            padding: 8px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        button.primary { background-color: var(--col-on); color: white; border: none; }
+        button:hover:not(:disabled) { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { background-color: var(--disabled-btn); color: #ccc; cursor: not-allowed; }
+
+        .slider-container { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin-left: 10px; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 15px;
+            gap: 15px;
+            height: calc(100% - 70px);
+            box-sizing: border-box;
+            overflow: hidden; 
+        }
+
+        /* LEFT: Code Panel */
+        .col-code {
+            flex: 0 0 450px;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .col-code.hidden { display: none; }
+
+        .tabs { display: flex; background: #f1f5f9; border-bottom: 1px solid var(--border-color); }
+        .tab {
+            flex: 1; text-align: center; padding: 12px; font-size: 0.85rem; cursor: pointer;
+            border-bottom: 3px solid transparent; color: #64748b; font-weight: bold;
+        }
+        .tab:hover { background: #e2e8f0; }
+        .tab.active { background: var(--panel-bg); border-bottom-color: var(--col-on); color: var(--text-color); }
+
+        .code-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            white-space: pre; 
+        }
+        .code-line { padding: 1px 6px; border-radius: 3px; }
+        .code-line.active { background-color: var(--highlight-line); font-weight: bold; }
+
+        .kw { color: var(--code-kw); font-weight: bold; } 
+        .sym { color: var(--code-sym); font-weight: bold; }
+        .var { color: var(--code-var); }
+        .num { color: var(--code-num); font-weight: bold; }
+        .str { color: var(--code-str); }
+
+        /* CENTER: Visualization */
+        .col-viz {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            position: relative;
+            overflow: hidden; 
+        }
+
+        .narrative {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: rgba(59, 130, 246, 0.1); 
+            border-left: 4px solid var(--col-on);
+            font-size: 0.95rem;
+            font-style: italic;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        /* --- VISUALIZATION AREA --- */
+        .scene-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 20px;
+            padding-bottom: 20px;
+            position: relative;
+            overflow: auto;
+            scrollbar-width: none;
+        }
+        .scene-wrapper::-webkit-scrollbar { display: none; }
+
+        /* Array Container */
+        .array-container {
+            display: flex;
+            flex-direction: column; /* Default Vertical */
+            align-items: center;
+            gap: 2px;
+            position: relative;
+            margin: 0 auto;
+            transition: all 0.3s ease;
+        }
+
+        /* Row Wrapper */
+        .row-wrapper {
+            display: flex;
+            flex-direction: row; 
+            align-items: center;
+            gap: 5px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        /* Cells */
+        .cell {
+            height: 32px; 
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            box-sizing: border-box;
+            color: white;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+
+        .cell.ON { width: 130px; background-color: var(--col-on); justify-content: flex-start; }
+        .cell.B { width: 50px; background-color: var(--col-grade); justify-content: center; }
+
+        .cell-idx { 
+            width: 25px;
+            text-align: right;
+            font-size: 0.75rem; 
+            color: var(--text-color); 
+            opacity: 0.7; 
+            font-weight: bold; 
+            margin-right: 5px;
+        }
+
+        /* --- HORIZONTAL MODE --- */
+        .array-container.horizontal {
+            flex-direction: row; 
+            align-items: flex-start;
+            padding-top: 80px; /* Space for pointer */
+            gap: 4px;
+        }
+
+        .row-wrapper.horizontal {
+            flex-direction: column; 
+            gap: 2px;
+        }
+
+        .row-wrapper.horizontal .cell-idx {
+            width: auto;
+            margin-right: 0;
+            margin-bottom: 2px;
+            text-align: center;
+        }
+
+        .row-wrapper.horizontal .cell.ON {
+            width: 60px; 
+            font-size: 0.7rem; 
+            justify-content: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .row-wrapper.horizontal .cell.B {
+            width: 60px;
+        }
+
+        /* Variables Box */
+        .vars-box {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #fff;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            width: 110px;
+            z-index: 50;
+        }
+        .var-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: monospace;
+            font-size: 1rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 2px;
+        }
+        .var-label { font-weight: bold; color: var(--text-color); }
+        .var-val { color: var(--col-on); font-weight: bold; }
+        .var-val.changed { animation: pop 0.3s ease; color: red; }
+
+        @keyframes pop { 50% { transform: scale(1.3); } }
+
+        /* --- 2. ΔΕΙΚΤΗΣ (POINTER) --- */
+        .ptr-container {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end; 
+            transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            opacity: 0;
+            z-index: 9999; 
+            pointer-events: none;
+        }
+        
+        /* Pointer - Vertical Style */
+        .ptr-container.vertical {
+            flex-direction: row;
+            width: 40px;
+            height: 32px; 
+        }
+        .ptr-container.vertical .ptr-arrow { margin-left: 5px; transform: rotate(0deg); }
+
+        /* Pointer - Horizontal Style */
+        .ptr-container.horizontal {
+            flex-direction: column; 
+            justify-content: flex-end;
+            width: 60px; 
+            height: 50px;
+        }
+        .ptr-container.horizontal .ptr-arrow { margin-top: 0px; transform: rotate(90deg); margin-bottom: -5px; }
+        .ptr-container.horizontal .ptr-label { margin-bottom: 5px; }
+
+        .ptr-i { color: var(--ptr-i); }
+        .ptr-arrow { font-size: 1.5rem; line-height: 1; font-weight: bold; }
+        .ptr-label { font-size: 1rem; font-weight: bold; font-family: monospace; }
+
+        /* Highlights */
+        .comparing { 
+            transform: scale(1.1); 
+            box-shadow: 0 0 8px var(--compare-color); 
+            border: 2px solid var(--compare-color) !important;
+            z-index: 20;
+        }
+        
+        /* Highlight για Max/Min */
+        .current-max-highlight {
+            background-color: var(--current-max-bg) !important;
+            color: var(--current-max-text) !important;
+            border: 3px solid #000000 !important;
+            box-shadow: 0 0 10px #FFFF00;
+            transform: scale(1.1);
+            z-index: 50;
+            font-weight: 900;
+        }
+
+        /* RIGHT: Output */
+        .col-output {
+            flex: 0 0 180px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .output-header { padding: 10px; background: #f1f5f9; font-weight: bold; border-bottom: 1px solid var(--border-color); }
+        .output-log { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 0.9rem; }
+        .log-item { border-bottom: 1px solid #eee; padding: 3px 0; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1 id="appTitle">Εύρεση Μέγιστου Βαθμού</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button onclick="resetSim()">🔄 Αρχή</button>
+        <button onclick="toggleLayout()">🔄 Κάθετα/Οριζόντια</button>
+        <button onclick="play()" id="btnPlay" class="primary">▶️ Εκτέλεση</button>
+        <button onclick="step()" id="btnStep">Βήμα ⏩</button>
+        <button onclick="toggleCode()" id="btnCode">👁️ Κώδικας</button>
+        <button onclick="toggleMinMax()" id="btnMinMax">📉 Εύρεση Ελαχίστου</button>
+        
+        <div class="slider-container">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="50" max="1500" value="800" id="speedSlider" oninput="updateSpeed()">
+        </div>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-code hidden">
+        <div class="tabs">
+            <div class="tab active" onclick="setSolution(1)">1. Μοναδικό</div>
+            <div class="tab" onclick="setSolution(2)">2. Πολλαπλό</div>
+            <div class="tab" onclick="setSolution(3)">3. Ασκηση με ετικέτα</div>
+        </div>
+        <div class="code-content" id="codeContainer"></div>
+    </div>
+
+    <div class="col-viz">
+        <div class="narrative" id="narrativeBox">Πατήστε εκτέλεση...</div>
+        
+        <div class="vars-box">
+            <div class="var-item"><span class="var-label" id="lbl-max">max:</span> <span id="val-max" class="var-val">-</span></div>
+            <div class="var-item" id="row-theta"><span class="var-label">θ:</span> <span id="val-theta" class="var-val">-</span></div>
+            <div class="var-item" id="row-pl" style="display:none;"><span class="var-label">πλ:</span> <span id="val-pl" class="var-val">-</span></div>
+        </div>
+
+        <div class="scene-wrapper">
+            <div id="arraysContainer" class="array-container">
+                <div id="ptr-i" class="ptr-container ptr-i vertical" style="display:none;">
+                    <div class="ptr-label">i</div><div class="ptr-arrow">➡</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">📺 Οθόνη Εξόδου</div>
+        <div class="output-log" id="outputLog"></div>
+    </div>
+
+</div>
+
+<script>
+    // --- Data & State ---
+    const SIZE = 12;
+    const NAMES_POOL = [
+        "Ρώτας", "Μάνος", "Ζώης", "Λέκκας", 
+        "Σίμος", "Νώτας", "Βένος", "Δήμου", 
+        "Ρίζος", "Γάκης", "Λώλος", "Πάνας"
+    ];
+    let dataON = [];
+    let dataB = [];
+    
+    let isMax = true; 
+    let currentSol = 1;
+    let steps = [];
+    let stepIdx = -1;
+    let timer = null;
+    let isPlaying = false;
+    let speed = 800;
+    
+    // Layout State
+    let isHorizontal = false;
+
+    // --- Helpers ---
+    function kw(t) { return `<span class="kw">${t}</span>`; }
+    function sym(t) { return `<span class="sym">${t}</span>`; }
+    function v(t) { return `<span class="var">${t}</span>`; }
+    function n(t) { return `<span class="num">${t}</span>`; }
+    function str(t) { return `<span class="str">${t}</span>`; }
+
+    // Dynamic Code Generation
+    function getCodes() {
+        const varName = isMax ? "max" : "min";
+        const op = isMax ? ">" : "<";
+        
+        return {
+            1: [
+                `${v(varName)} ${sym("←")} ${v("B")}${sym("[")}${n("1")}${sym("]")}`,
+                `${v("θ")} ${sym("←")} ${n("1")}`,
+                `${kw("Για")} ${v("i")} ${kw("από")} ${n("2")} ${kw("μέχρι")} ${n("12")}`,
+                `  ${kw("Αν")} ${v("B")}${sym("[")}${v("i")}${sym("]")} ${sym(op)} ${v(varName)} ${kw("τότε")}`,
+                `    ${v(varName)} ${sym("←")} ${v("B")}${sym("[")}${v("i")}${sym("]")}`,
+                `    ${v("θ")} ${sym("←")} ${v("i")}`,
+                `  ${kw("Τέλος_αν")}`,
+                `${kw("Τέλος_επανάληψης")}`,
+                `${kw("Γράψε")} ${v(varName)}${sym(",")} ${v("ΟΝ")}${sym("[")}${v("θ")}${sym("]")}`,
+                `${kw("Τέλος")} ${v(isMax?"εύρεση_max":"εύρεση_min")}`
+            ],
+            2: [
+                `${v(varName)} ${sym("←")} ${v("B")}${sym("[")}${n("1")}${sym("]")}`,
+                `${kw("Για")} ${v("i")} ${kw("από")} ${n("2")} ${kw("μέχρι")} ${n("12")}`,
+                `  ${kw("Αν")} ${v("B")}${sym("[")}${v("i")}${sym("]")} ${sym(op)} ${v(varName)} ${kw("τότε")}`,
+                `    ${v(varName)} ${sym("←")} ${v("B")}${sym("[")}${v("i")}${sym("]")}`,
+                `  ${kw("Τέλος_αν")}`,
+                `${kw("Τέλος_επανάληψης")}`,
+                `${kw("Γράψε")} ${v(varName)}`,
+                `${kw("Για")} ${v("i")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("12")}`,
+                `  ${kw("Αν")} ${v("B")}${sym("[")}${v("i")}${sym("]")} ${sym("=")} ${v(varName)} ${kw("τότε")}`,
+                `    ${kw("Γράψε")} ${v("ΟΝ")}${sym("[")}${v("i")}${sym("]")}`,
+                `  ${kw("Τέλος_αν")}`,
+                `${kw("Τέλος_επανάληψης")}`
+            ],
+            3: [
+                `${v(varName)} ${sym("←")} ${v("B")}${sym("[")}${n("1")}${sym("]")}`,
+                `${kw("Για")} ${v("i")} ${kw("από")} ${n("2")} ${kw("μέχρι")} ${n("12")}`,
+                `  ${kw("Αν")} ${v("B")}${sym("[")}${v("i")}${sym("]")} ${sym(op)} ${v(varName)} ${kw("τότε")}`,
+                `    ${v(varName)} ${sym("←")} ${v("B")}${sym("[")}${v("i")}${sym("]")}`,
+                `  ${kw("Τέλος_αν")}`,
+                `${kw("Τέλος_επανάληψης")}`,
+                `${v("πλ")} ${sym("←")} ${n("0")}`,
+                `${kw("Για")} ${v("i")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("12")}`,
+                `  ${kw("Αν")} ${v("B")}${sym("[")}${v("i")}${sym("]")} ${sym("=")} ${v(varName)} ${kw("τότε")}`,
+                `    ${v("πλ")} ${sym("←")} ${v("πλ")} ${sym("+")} ${n("1")}`,
+                `  ${kw("Τέλος_αν")}`,
+                `${kw("Τέλος_επανάληψης")}`,
+                `${kw("Γράψε")} ${v(varName)}`, 
+                `${kw("Αν")} ${v("πλ")} ${sym("=")} ${n("1")} ${kw("τότε")}`,
+                `  ${kw("Γράψε")} ${str("'ΜΑΘΗΤΗΣ'")}`,
+                `${kw("αλλιώς")}`,
+                `  ${kw("Γράψε")} ${str("'ΜΑΘΗΤΕΣ'")}`,
+                `${kw("Τέλος_αν")}`,
+                `${kw("Για")} ${v("i")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("12")}`,
+                `  ${kw("Αν")} ${v("B")}${sym("[")}${v("i")}${sym("]")} ${sym("=")} ${v(varName)} ${kw("τότε")}`,
+                `    ${kw("Γράψε")} ${v("ΟΝ")}${sym("[")}${v("i")}${sym("]")}`,
+                `  ${kw("Τέλος_αν")}`,
+                `${kw("Τέλος_επανάληψης")}`
+            ]
+        };
+    }
+
+    // --- Init ---
+    function init() {
+        dataON = [...NAMES_POOL].sort(() => 0.5 - Math.random()).slice(0, SIZE);
+        
+        if (currentSol === 1) {
+            let range = [];
+            for(let k=8; k<=20; k++) range.push(k);
+            range.sort(() => 0.5 - Math.random());
+            dataB = range.slice(0, SIZE);
+        } else {
+            // Random with duplicates but variable max
+            let limit;
+            if (isMax) {
+                // Random MAX limit between 17 and 20
+                limit = Math.floor(Math.random() * 4) + 17; 
+                // Fill array up to that limit
+                dataB = Array.from({length: SIZE}, () => Math.floor(Math.random() * (limit - 9)) + 10);
+            } else {
+                // Random MIN floor between 10 and 13
+                limit = Math.floor(Math.random() * 4) + 10; 
+                dataB = Array.from({length: SIZE}, () => Math.floor(Math.random() * (21 - limit)) + limit);
+            }
+            
+            // Inject duplicates of the limit
+            let count = Math.floor(Math.random() * 3) + 2; // 2 to 4 duplicates
+            let indices = Array.from({length: SIZE}, (_, i) => i).sort(() => 0.5 - Math.random());
+            for(let i=0; i<count; i++) dataB[indices[i]] = limit;
+        }
+
+        updateUIConfig();
+        renderCode();
+        renderArrays();
+        updateUIState();
+        
+        isPlaying = false;
+        clearTimeout(timer);
+        stepIdx = -1;
+        document.getElementById('outputLog').innerHTML = '';
+        document.getElementById('narrativeBox').innerText = "Πατήστε εκτέλεση...";
+        document.getElementById('btnPlay').innerText = "▶️ Εκτέλεση";
+        
+        updatePointer(-1);
+        
+        document.querySelectorAll('.current-max-highlight').forEach(e => e.classList.remove('current-max-highlight'));
+    }
+
+    function toggleMinMax() {
+        isMax = !isMax;
+        const btn = document.getElementById('btnMinMax');
+        const title = document.getElementById('appTitle');
+        if (isMax) {
+            btn.innerText = "📉 Εύρεση Ελαχίστου";
+            title.innerText = "Εύρεση Μέγιστου Βαθμού";
+        } else {
+            btn.innerText = "📈 Εύρεση Μεγίστου";
+            title.innerText = "Εύρεση Ελάχιστου Βαθμού";
+        }
+        init();
+    }
+
+    function toggleLayout() {
+        isHorizontal = !isHorizontal;
+        renderArrays(); 
+        if (stepIdx !== -1 && steps[stepIdx] && steps[stepIdx].i !== undefined) {
+            updatePointer(steps[stepIdx].i);
+        }
+    }
+
+    function updateUIConfig() {
+        document.getElementById('lbl-max').innerText = isMax ? "max:" : "min:";
+    }
+
+    function setSolution(n) {
+        currentSol = n;
+        document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i+1 === n));
+        document.getElementById('row-theta').style.display = (n === 1) ? 'flex' : 'none';
+        document.getElementById('row-pl').style.display = (n === 3) ? 'flex' : 'none';
+        init(); 
+    }
+
+    function resetSim() { init(); }
+
+    function toggleCode() {
+        const p = document.querySelector('.col-code');
+        p.classList.toggle('hidden');
+        document.getElementById('btnCode').innerText = p.classList.contains('hidden') ? "👁️ Εμφάνιση Κώδικα" : "👁️ Απόκρυψη Κώδικα";
+    }
+
+    function renderCode() {
+        const codes = getCodes();
+        const html = codes[currentSol].map((l, i) => `<div class="code-line" id="line-${i}">${l}</div>`).join('');
+        document.getElementById('codeContainer').innerHTML = html;
+    }
+
+    function renderArrays() {
+        const container = document.getElementById('arraysContainer');
+        const ptr = document.getElementById('ptr-i');
+        
+        if (isHorizontal) {
+            container.classList.add('horizontal');
+            ptr.classList.add('horizontal');
+            ptr.classList.remove('vertical');
+        } else {
+            container.classList.remove('horizontal');
+            ptr.classList.remove('horizontal');
+            ptr.classList.add('vertical');
+        }
+
+        let html = '';
+        
+        for (let i = 0; i < SIZE; i++) {
+            const rowClass = isHorizontal ? "row-wrapper horizontal" : "row-wrapper";
+            html += `
+            <div class="${rowClass}" id="row-${i}">
+                <div class="cell-idx">${i+1}</div>
+                <div class="cell ON">${dataON[i]}</div>
+                <div class="cell B" id="cell-b-${i}">${dataB[i]}</div>
+            </div>`;
+        }
+        
+        // Re-inject pointer inside container
+        const ptrClass = isHorizontal ? "ptr-container ptr-i horizontal" : "ptr-container ptr-i vertical";
+        html += `<div id="ptr-i" class="${ptrClass}" style="display:none;">
+                    <div class="ptr-label">i</div><div class="ptr-arrow">➡</div>
+                 </div>`;
+
+        container.innerHTML = html;
+        
+        if (stepIdx !== -1 && steps[stepIdx] && steps[stepIdx].currMaxIdx !== undefined) {
+             const c = document.getElementById(`cell-b-${steps[stepIdx].currMaxIdx}`);
+             if(c) c.classList.add('current-max-highlight');
+        }
+    }
+
+    function updateUIState() {
+        document.getElementById('val-max').innerText = '-';
+        document.getElementById('val-theta').innerText = '-';
+        document.getElementById('val-pl').innerText = '-';
+    }
+
+    // --- Logic ---
+    function calcSteps() {
+        steps = [];
+        let val = dataB[0]; 
+        let currMaxIdx = 0; 
+        const label = isMax ? "max" : "min";
+        
+        if (currentSol === 1) { 
+            let theta = 0; 
+            steps.push({ line: 0, type: 'init', val: val, theta: 1, currMaxIdx: 0, msg: `${label} <- ${val}, θ <- 1` });
+            for (let i = 1; i < SIZE; i++) {
+                steps.push({ line: 2, type: 'loop', i: i, currMaxIdx: currMaxIdx, msg: `Έλεγχος i=${i+1}` });
+                let condition = isMax ? (dataB[i] > val) : (dataB[i] < val);
+                let op = isMax ? ">" : "<";
+                steps.push({ line: 3, type: 'cmp', i: i, currMaxIdx: currMaxIdx, msg: `Β[${i+1}](${dataB[i]}) ${op} ${label}(${val})?` });
+                
+                if (condition) {
+                    val = dataB[i];
+                    theta = i;
+                    currMaxIdx = i; 
+                    steps.push({ line: 4, type: 'new_max', i: i, val: val, theta: i+1, currMaxIdx: currMaxIdx, msg: `Νέο ${label}=${val}, θ=${i+1}` });
+                }
+            }
+            steps.push({ line: 8, type: 'print', val: `${val}, ${dataON[theta]}`, currMaxIdx: currMaxIdx, msg: `Τέλος.` });
+
+        } else if (currentSol === 2) { 
+            steps.push({ line: 0, type: 'init', val: val, currMaxIdx: 0, msg: `${label} <- ${val}` });
+            for (let i = 1; i < SIZE; i++) {
+                steps.push({ line: 1, type: 'loop', i: i, currMaxIdx: currMaxIdx, msg: `Έλεγχος i=${i+1}` });
+                let condition = isMax ? (dataB[i] > val) : (dataB[i] < val);
+                let op = isMax ? ">" : "<";
+                steps.push({ line: 2, type: 'cmp', i: i, currMaxIdx: currMaxIdx, msg: `Β[${i+1}](${dataB[i]}) ${op} ${label}(${val})?` });
+                if (condition) {
+                    val = dataB[i];
+                    currMaxIdx = i;
+                    steps.push({ line: 3, type: 'new_max', i: i, val: val, currMaxIdx: currMaxIdx, msg: `Νέο ${label}=${val}` });
+                }
+            }
+            steps.push({ line: 6, type: 'print_val', val: `${isMax?"Max":"Min"}: ${val}`, currMaxIdx: currMaxIdx, msg: `Εύρεση ολοκληρώθηκε.` });
+
+            for (let i = 0; i < SIZE; i++) {
+                steps.push({ line: 7, type: 'loop', i: i, currMaxIdx: currMaxIdx, msg: `Σάρωση i=${i+1}` });
+                steps.push({ line: 8, type: 'cmp_eq', i: i, currMaxIdx: currMaxIdx, msg: `Β[${i+1}] = ${label}?` });
+                if (dataB[i] === val) {
+                    steps.push({ line: 9, type: 'print', val: `${dataON[i]}`, currMaxIdx: currMaxIdx, msg: `Βρέθηκε!` });
+                }
+            }
+
+        } else if (currentSol === 3) { 
+            steps.push({ line: 0, type: 'init', val: val, currMaxIdx: 0, msg: `${label} <- ${val}` });
+            for (let i = 1; i < SIZE; i++) {
+                steps.push({ line: 1, type: 'loop', i: i, currMaxIdx: currMaxIdx, msg: `Check i=${i+1}` });
+                let condition = isMax ? (dataB[i] > val) : (dataB[i] < val);
+                let op = isMax ? ">" : "<";
+                steps.push({ line: 2, type: 'cmp', i: i, currMaxIdx: currMaxIdx, msg: `Β[${i+1}] ${op} ${label}?` });
+                if (condition) {
+                    val = dataB[i];
+                    currMaxIdx = i;
+                    steps.push({ line: 3, type: 'new_max', i: i, val: val, currMaxIdx: currMaxIdx, msg: `Νέο ${label}=${val}` });
+                }
+            }
+            
+            let pl = 0;
+            steps.push({ line: 6, type: 'init_pl', pl: 0, currMaxIdx: currMaxIdx, msg: `πλ <- 0` });
+            for (let i = 0; i < SIZE; i++) {
+                steps.push({ line: 7, type: 'loop', i: i, currMaxIdx: currMaxIdx, msg: `Check i=${i+1}` });
+                steps.push({ line: 8, type: 'cmp_eq', i: i, currMaxIdx: currMaxIdx, msg: `Β[${i+1}] = ${label}?` });
+                if (dataB[i] === val) {
+                    pl++;
+                    steps.push({ line: 9, type: 'inc_pl', i: i, pl: pl, currMaxIdx: currMaxIdx, msg: `πλ <- ${pl}` });
+                }
+            }
+
+            steps.push({ line: 12, type: 'print_val', val: `${isMax?"Max":"Min"} βαθμός: ${val}`, currMaxIdx: currMaxIdx, msg: 'Εμφάνιση τιμής' });
+
+            steps.push({ line: 13, type: 'check_pl', currMaxIdx: currMaxIdx, msg: `Αν πλ=1` });
+            if (pl === 1) {
+                steps.push({ line: 14, type: 'print_val', val: 'ΜΑΘΗΤΗΣ', currMaxIdx: currMaxIdx, msg: `Μοναδικός` });
+            } else {
+                steps.push({ line: 16, type: 'print_val', val: 'ΜΑΘΗΤΕΣ', currMaxIdx: currMaxIdx, msg: `Πλήθος` });
+            }
+
+            for (let i = 0; i < SIZE; i++) {
+                steps.push({ line: 18, type: 'loop', i: i, currMaxIdx: currMaxIdx, msg: `Check i=${i+1}` });
+                steps.push({ line: 19, type: 'cmp_eq', i: i, currMaxIdx: currMaxIdx, msg: `Β[${i+1}] = ${label}?` });
+                if (dataB[i] === val) {
+                    steps.push({ line: 20, type: 'print', val: dataON[i], currMaxIdx: currMaxIdx, msg: `Εμφάνιση Ονόματος` });
+                }
+            }
+        }
+    }
+
+    function updatePointer(i) {
+        const ptr = document.getElementById('ptr-i');
+        const row = document.getElementById(`row-${i}`);
+        
+        if (i < 0 || !row) {
+            ptr.style.display = 'none';
+            return;
+        }
+        
+        ptr.style.display = 'flex';
+        ptr.style.opacity = '1';
+
+        if (isHorizontal) {
+            // Horizontal Mode - Offset from Left
+            const offsetLeft = row.offsetLeft;
+            const width = row.offsetWidth;
+            ptr.style.left = (offsetLeft + (width/2) - 30) + 'px'; 
+            
+            // IMPORTANT: Adjust this value to bring arrow closer/further
+            ptr.style.top = '30px'; // Βελάκι πιο κοντά
+        } else {
+            // Vertical Mode - Offset from Top
+            const offsetTop = row.offsetTop;
+            ptr.style.top = (offsetTop) + 'px'; 
+            ptr.style.left = '-50px'; 
+        }
+    }
+
+    function updateVar(id, val, changed = false) {
+        const el = document.getElementById(id);
+        el.innerText = val;
+        if (changed) {
+            el.classList.remove('changed');
+            void el.offsetWidth; 
+            el.classList.add('changed');
+        }
+    }
+
+    function highlightCell(idx, className) {
+        const c = document.getElementById(`cell-b-${idx}`);
+        c.classList.add(className);
+        setTimeout(() => c.classList.remove(className), speed * 0.8);
+    }
+
+    function updateCurrentMaxHighlight(idx) {
+        document.querySelectorAll('.current-max-highlight').forEach(e => e.classList.remove('current-max-highlight'));
+        
+        if (idx !== undefined && idx >= 0) {
+            const c = document.getElementById(`cell-b-${idx}`);
+            if (c) c.classList.add('current-max-highlight');
+        }
+    }
+
+    function step() {
+        if (stepIdx === -1 && steps.length === 0) calcSteps();
+        if (stepIdx >= steps.length - 1) {
+            isPlaying = false;
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+            return;
+        }
+        stepIdx++;
+        runStep(steps[stepIdx]);
+    }
+
+    function runStep(s) {
+        document.querySelectorAll('.code-line').forEach(e => e.classList.remove('active'));
+        if (s.line !== undefined) {
+             const el = document.getElementById(`line-${s.line}`);
+             if(el) {
+                 el.classList.add('active');
+                 el.scrollIntoView({behavior: "smooth", block: "nearest"});
+             }
+        }
+
+        if(s.msg) document.getElementById('narrativeBox').innerText = s.msg;
+
+        if (s.currMaxIdx !== undefined) {
+            updateCurrentMaxHighlight(s.currMaxIdx);
+        }
+
+        if (s.i !== undefined) updatePointer(s.i);
+
+        if (s.type === 'init' || s.type === 'new_max') {
+            updateVar('val-max', s.val, true);
+            if (s.theta !== undefined) updateVar('val-theta', s.theta, true);
+            highlightCell(s.i !== undefined ? s.i : 0, 'comparing');
+        } else if (s.type === 'cmp' || s.type === 'cmp_eq') {
+            highlightCell(s.i, 'comparing');
+        } else if (s.type === 'init_pl') {
+            updateVar('val-pl', s.pl);
+        } else if (s.type === 'inc_pl') {
+            updateVar('val-pl', s.pl, true);
+            highlightCell(s.i, 'comparing');
+        } else if (s.type === 'print' || s.type === 'print_val') {
+            document.getElementById('outputLog').innerHTML += `<div class="log-item">${s.val}</div>`;
+            const log = document.getElementById('outputLog');
+            log.scrollTop = log.scrollHeight;
+        }
+
+        if (isPlaying) timer = setTimeout(step, speed);
+    }
+
+    function play() {
+        if (!isPlaying) {
+            isPlaying = true;
+            document.getElementById('btnPlay').innerText = "⏸ Παύση";
+            if(stepIdx === -1) calcSteps();
+            step();
+        } else {
+            isPlaying = false;
+            clearTimeout(timer);
+            document.getElementById('btnPlay').innerText = "▶️ Εκτέλεση";
+        }
+    }
+
+    function updateSpeed() {
+        speed = 1550 - document.getElementById('speedSlider').value;
+    }
+
+    init();
+
+</script>
+</body>
+</html>

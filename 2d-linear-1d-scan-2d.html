@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Αναζήτηση σε μονοδιάστατο και σάρωση σε δισδιάστατο</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            
+            --col-arr: #3b82f6; 
+            --col-on: #8b5cf6; 
+            --col-math: #f97316; 
+            --col-header: #64748b;
+            
+            /* Visual States */
+            --scan-bg: #d1fae5;       /* Soft Green scan */
+            --target-text: #059669;   /* Green text for 100 */
+            --found-bg: #10b981;      /* Found Target Background */
+            
+            --border-color: #cbd5e1;
+            --ptr-color: #dc2626; 
+
+            /* Code Syntax */
+            --code-kw: #0000CD; 
+            --code-sym: #FF0000; 
+            --code-var: #000000; 
+            --code-num: #008000;
+            --code-str: #A020F0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        button {
+            padding: 8px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            white-space: nowrap;
+        }
+        button.primary { background-color: var(--col-arr); color: white; border: none; }
+        button:hover { filter: brightness(0.95); transform: translateY(-1px); }
+
+        /* Input Field */
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: #eff6ff;
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: 1px solid #bfdbfe;
+        }
+        .input-group input { width: 100px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        .input-group span { font-weight: bold; font-size: 0.9rem; color: #1e3a8a; }
+
+        .slider-container { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin-left: 10px; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 15px;
+            gap: 15px;
+            height: calc(100% - 70px);
+            box-sizing: border-box;
+            overflow: hidden; 
+        }
+
+        /* LEFT: Code Panel */
+        .col-code {
+            flex: 0 0 500px;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .col-code.hidden { display: none; }
+
+        .tabs { display: flex; background: #f1f5f9; border-bottom: 1px solid var(--border-color); }
+        .tab {
+            flex: 1; text-align: center; padding: 12px; font-size: 0.9rem; cursor: pointer;
+            border-bottom: 3px solid transparent; color: #64748b; font-weight: bold;
+        }
+        .tab.active { background: var(--panel-bg); border-bottom-color: var(--col-arr); color: var(--text-color); }
+
+        .problem-info {
+            padding: 15px;
+            background-color: #fffbeb;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        .info-header { font-weight: bold; color: #b45309; margin-bottom: 5px; display: block; }
+
+        .code-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            white-space: pre; 
+        }
+        .code-line { padding: 2px 6px; border-radius: 3px; }
+        .code-line.active { background-color: var(--highlight-line); font-weight: bold; }
+
+        .kw { color: var(--code-kw); font-weight: bold; } 
+        .sym { color: var(--code-sym); font-weight: bold; }
+        .var { color: var(--code-var); }
+        .num { color: var(--code-num); font-weight: bold; }
+        .str { color: var(--code-str); }
+
+        /* CENTER: Visualization */
+        .col-viz {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            position: relative;
+            overflow: hidden; 
+        }
+
+        .narrative {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: rgba(59, 130, 246, 0.1); 
+            border-left: 4px solid var(--col-arr);
+            font-size: 0.95rem;
+            font-style: italic;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        /* Vars */
+        .vars-box {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #fff;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            width: 150px;
+            z-index: 50;
+        }
+        .var-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: monospace;
+            font-size: 1rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 3px;
+        }
+        .var-val.changed { animation: pop 0.3s ease; font-weight: bold; color: var(--col-arr); }
+        @keyframes pop { 50% { transform: scale(1.3); } }
+
+        .scene-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            position: relative;
+            overflow: auto;
+            padding-top: 30px;
+        }
+
+        /* --- TABLE STYLES (Robust Layout) --- */
+        table {
+            border-collapse: separate;
+            border-spacing: 4px;
+            margin-bottom: 20px;
+        }
+        
+        td, th {
+            width: 55px;
+            height: 35px;
+            text-align: center;
+            vertical-align: middle;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            position: relative;
+            transition: background-color 0.2s;
+        }
+
+        /* Specific Columns */
+        .col-name {
+            width: 110px; /* Name column wider */
+            background-color: var(--col-on);
+            color: white;
+            text-align: left;
+            padding-left: 10px;
+        }
+        
+        .col-header {
+            background-color: var(--col-math);
+            color: white;
+            height: 40px;
+        }
+        
+        .grade-cell {
+            background-color: white;
+            border: 1px solid #cbd5e1;
+            color: var(--text-color);
+        }
+        
+        .grade-cell.val-100 {
+            color: var(--target-text);
+            font-weight: 900;
+        }
+
+        .spacer-cell {
+            width: 20px;
+            border: none;
+            background: transparent;
+        }
+
+        /* STATES */
+        .scanning {
+            background-color: var(--scan-bg) !important;
+        }
+        /* Override specifically for Name/Header to ensure color change is visible */
+        .col-name.scanning { background-color: var(--scan-bg) !important; color: #064e3b; border: 2px solid var(--scan-border); }
+        .col-header.scanning { background-color: var(--scan-bg) !important; color: #064e3b; border: 2px solid var(--scan-border); }
+        .grade-cell.scanning { background-color: var(--scan-bg) !important; border-color: var(--scan-border); }
+
+        .found-target {
+            background-color: var(--found-bg) !important;
+            color: white !important;
+            transform: scale(1.1);
+            box-shadow: 0 0 8px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+
+        /* Pointer */
+        .pointer-arrow {
+            position: absolute;
+            font-size: 1.8rem; 
+            color: var(--ptr-color);
+            font-weight: bold;
+            z-index: 50;
+            transition: all 0.2s;
+            text-shadow: 1px 1px 0px white;
+            opacity: 0; /* Hidden initially */
+            line-height: 1;
+            pointer-events: none;
+        }
+
+        /* RIGHT: Output */
+        .col-output {
+            flex: 0 0 200px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .output-header { padding: 10px; background: #f1f5f9; font-weight: bold; border-bottom: 1px solid var(--border-color); }
+        .output-log { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 0.9rem; }
+        .log-item { border-bottom: 1px solid #eee; padding: 3px 0; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Αναζήτηση σε 1d και επεξεργασία σε γραμμή/στήλη 2d </h1>
+    </div>
+    
+    <div class="controls-area">
+        <button onclick="init()">🔄 Αρχή</button>
+        <button onclick="play()" id="btnPlay" class="primary">▶️ Εκτέλεση</button>
+        <button onclick="step()" id="btnStep">Βήμα ⏩</button>
+        <button onclick="toggleCode()" id="btnCode">👁️ Απόκρυψη Κώδικα</button>
+        
+        <div class="input-group">
+            <span id="searchLabel">Αναζήτηση:</span>
+            <input type="text" id="searchInput" placeholder="Όνομα...">
+        </div>
+
+        <div class="slider-container">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="50" max="1500" value="800" id="speedSlider" oninput="updateSpeed()">
+        </div>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-code">
+        <div class="tabs">
+            <div class="tab active" onclick="setMode(1)">1. Μέσος Όρος Μαθητή</div>
+            <div class="tab" onclick="setMode(2)">2. Μέσος Όρος Μαθήματος</div>
+        </div>
+        
+        <div class="problem-info" id="problemInfo">
+            <span class="info-header">Δεδομένα: ΟΝ[12], ΜΑΘ[5], Β[12,5]</span>
+            <span class="info-text" id="problemText">
+                Διάβασε ένα όνομα, βρες τον στον πίνακα ΟΝ και υπολόγισε τον Μ.Ο. των βαθμών του.
+            </span>
+        </div>
+
+        <div class="code-content" id="codeContainer"></div>
+    </div>
+
+    <div class="col-viz">
+        <div class="narrative" id="narrativeBox">Εισάγετε δεδομένο και πατήστε εκτέλεση...</div>
+        
+        <div class="vars-box">
+            <div class="var-item"><span class="var-label">found:</span> <span id="val-found" class="var-val">Ψευδής</span></div>
+            <div class="var-item"><span class="var-label">pos:</span> <span id="val-pos" class="var-val">0</span></div>
+            <div class="var-item"><span class="var-label">sum:</span> <span id="val-sum" class="var-val">0</span></div>
+            <div class="var-item"><span class="var-label">MO:</span> <span id="val-mo" class="var-val">-</span></div>
+        </div>
+
+        <div class="scene-wrapper">
+            <div id="gridPointer" class="pointer-arrow">➡</div>
+            <table id="mainTable">
+                </table>
+        </div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">📺 Οθόνη Εξόδου</div>
+        <div class="output-log" id="outputLog"></div>
+    </div>
+
+</div>
+
+<script>
+    // --- Configuration ---
+    const ROWS = 12;
+    const COLS = 5;
+    const NAMES = [
+        "Γιώργος", "Μαρία", "Νίκος", "Ελένη", "Κώστας", "Άννα",
+        "Πέτρος", "Σοφία", "Γιάννης", "Κατερίνα", "Δημήτρης", "Χαρά"
+    ];
+    const SUBJECTS = ["Μαθ", "Φυσ", "Χημ", "Ιστ", "Γλωσ"];
+    
+    // --- State ---
+    let currentMode = 1; 
+    let dataB = []; 
+    let steps = [];
+    let stepIdx = -1;
+    let timer = null;
+    let isPlaying = false;
+    let speed = 800;
+    let targetSearch = "";
+
+    // --- Helpers ---
+    function kw(t) { return `<span class="kw">${t}</span>`; }
+    function sym(t) { return `<span class="sym">${t}</span>`; }
+    function v(t) { return `<span class="var">${t}</span>`; }
+    function n(t) { return `<span class="num">${t}</span>`; }
+    function str(t) { return `<span class="str">${t}</span>`; }
+
+    // Codes with WHILE (ΟΣΟ)
+    function getCodes() {
+        return {
+            1: [ // Search Student
+                `${kw("Διάβασε")} ${v("όνομα")}`,
+                `${v("found")} ${sym("<-")} ${kw("Ψευδής")}`,
+                `${v("pos")} ${sym("<-")} ${n("0")}`,
+                `${v("i")} ${sym("<-")} ${n("1")}`,
+                `${kw("Όσο")} ${v("i")} ${sym("<=")} ${n("12")} ${kw("ΚΑΙ")} ${v("found")} ${sym("=")} ${kw("Ψευδής")} ${kw("επανάλαβε")}`,
+                `  ${kw("Αν")} ${v("ON")}${sym("[")}${v("i")}${sym("]")} ${sym("=")} ${v("όνομα")} ${kw("Τότε")}`,
+                `    ${v("found")} ${sym("<-")} ${kw("Αληθής")}`,
+                `    ${v("pos")} ${sym("<-")} ${v("i")}`,
+                `  ${kw("Αλλιώς")}`,
+                `    ${v("i")} ${sym("<-")} ${v("i")} ${sym("+")} ${n("1")}`,
+                `  ${kw("Τέλος_αν")}`,
+                `${kw("Τέλος_επανάληψης")}`,
+                `${kw("Αν")} ${v("found")} ${sym("=")} ${kw("Αληθής")} ${kw("Τότε")}`,
+                `  ${v("sum")} ${sym("<-")} ${n("0")}`,
+                `  ${kw("Για")} ${v("j")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("5")}`,
+                `    ${v("sum")} ${sym("<-")} ${v("sum")} ${sym("+")} ${v("Β")}${sym("[")}${v("pos")}${sym(",")}${v("j")}${sym("]")}`,
+                `  ${kw("Τέλος_επανάληψης")}`,
+                `  ${v("MO")} ${sym("<-")} ${v("sum")} ${sym("/")} ${n("5")}`,
+                `  ${kw("Γράψε")} ${v("MO")}`,
+                `${kw("Αλλιώς")}`,
+                `  ${kw("Γράψε")} ${str("'Δεν βρέθηκε'")}`,
+                `${kw("Τέλος_αν")}`
+            ],
+            2: [ // Search Subject
+                `${kw("Διάβασε")} ${v("μάθημα")}`,
+                `${v("found")} ${sym("<-")} ${kw("Ψευδής")}`,
+                `${v("pos")} ${sym("<-")} ${n("0")}`,
+                `${v("j")} ${sym("<-")} ${n("1")}`,
+                `${kw("Όσο")} ${v("j")} ${sym("<=")} ${n("5")} ${kw("ΚΑΙ")} ${v("found")} ${sym("=")} ${kw("Ψευδής")} ${kw("επανάλαβε")}`,
+                `  ${kw("Αν")} ${v("ΜΑΘ")}${sym("[")}${v("j")}${sym("]")} ${sym("=")} ${v("μάθημα")} ${kw("Τότε")}`,
+                `    ${v("found")} ${sym("<-")} ${kw("Αληθής")}`,
+                `    ${v("pos")} ${sym("<-")} ${v("j")}`,
+                `  ${kw("Αλλιώς")}`,
+                `    ${v("j")} ${sym("<-")} ${v("j")} ${sym("+")} ${n("1")}`,
+                `  ${kw("Τέλος_αν")}`,
+                `${kw("Τέλος_επανάληψης")}`,
+                `${kw("Αν")} ${v("found")} ${sym("=")} ${kw("Αληθής")} ${kw("Τότε")}`,
+                `  ${v("sum")} ${sym("<-")} ${n("0")}`,
+                `  ${kw("Για")} ${v("i")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("12")}`,
+                `    ${v("sum")} ${sym("<-")} ${v("sum")} ${sym("+")} ${v("Β")}${sym("[")}${v("i")}${sym(",")}${v("pos")}${sym("]")}`,
+                `  ${kw("Τέλος_επανάληψης")}`,
+                `  ${v("MO")} ${sym("<-")} ${v("sum")} ${sym("/")} ${n("12")}`,
+                `  ${kw("Γράψε")} ${v("MO")}`,
+                `${kw("Αλλιώς")}`,
+                `  ${kw("Γράψε")} ${str("'Δεν βρέθηκε'")}`,
+                `${kw("Τέλος_αν")}`
+            ]
+        };
+    }
+
+    // --- Init ---
+    function init() {
+        dataB = [];
+        for(let i=0; i<ROWS; i++) {
+            let row = [];
+            for(let j=0; j<COLS; j++) {
+                row.push(Math.floor(Math.random() * 20) + 80); 
+            }
+            dataB.push(row);
+        }
+
+        renderCode();
+        renderViz();
+        updateUI();
+        
+        isPlaying = false;
+        clearTimeout(timer);
+        stepIdx = -1;
+        document.getElementById('outputLog').innerHTML = '';
+        document.getElementById('narrativeBox').innerText = "Εισάγετε δεδομένο και πατήστε εκτέλεση...";
+        document.getElementById('btnPlay').innerText = "▶️ Εκτέλεση";
+        document.getElementById('gridPointer').style.opacity = '0';
+    }
+
+    function setMode(m) {
+        currentMode = m;
+        document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i+1 === m));
+        
+        const desc = document.getElementById('problemText');
+        const searchInput = document.getElementById('searchInput');
+        
+        if(m === 1) {
+            desc.innerText = "Διάβασε ένα όνομα, βρες τον στον πίνακα ΟΝ (σειριακή αναζήτηση) και υπολόγισε τον Μ.Ο. των βαθμών του.";
+            searchInput.placeholder = "Όνομα...";
+        } else {
+            desc.innerText = "Διάβασε ένα μάθημα, βρες το στον πίνακα ΜΑΘ (σειριακή αναζήτηση) και υπολόγισε τον Μ.Ο. της τάξης.";
+            searchInput.placeholder = "Μάθημα...";
+        }
+        searchInput.value = "";
+        init();
+    }
+
+    function updateUI() {
+        document.getElementById('val-found').innerText = 'Ψευδής';
+        document.getElementById('val-pos').innerText = '0';
+        document.getElementById('val-sum').innerText = '0';
+        document.getElementById('val-mo').innerText = '-';
+    }
+
+    function resetSim() { init(); }
+
+    function toggleCode() {
+        const p = document.querySelector('.col-code');
+        p.classList.toggle('hidden');
+        const btn = document.getElementById('btnCode');
+        btn.innerText = p.classList.contains('hidden') ? "👁️ Εμφάνιση Κώδικα" : "👁️ Απόκρυψη Κώδικα";
+    }
+
+    function renderCode() {
+        const codes = getCodes();
+        const html = codes[currentMode].map((l, i) => `<div class="code-line" id="line-${i}">${l}</div>`).join('');
+        document.getElementById('codeContainer').innerHTML = html;
+    }
+
+    function renderViz() {
+        const tbl = document.getElementById('mainTable');
+        tbl.innerHTML = '';
+
+        // HEADER ROW
+        const trH = document.createElement('tr');
+        // Empty Name Col
+        const thEmpty = document.createElement('th');
+        thEmpty.style.background = "transparent";
+        thEmpty.style.border = "none";
+        trH.appendChild(thEmpty);
+        
+        // Spacer
+        const thSpace = document.createElement('th');
+        thSpace.className = 'spacer-cell';
+        trH.appendChild(thSpace);
+
+        // Subjects
+        SUBJECTS.forEach((sub, j) => {
+            const th = document.createElement('th');
+            th.className = 'col-header';
+            th.id = `math-${j+1}`;
+            th.innerText = sub;
+            trH.appendChild(th);
+        });
+        tbl.appendChild(trH);
+
+        // DATA ROWS
+        for(let i=1; i<=ROWS; i++) {
+            const tr = document.createElement('tr');
+            
+            // Name
+            const tdName = document.createElement('td');
+            tdName.className = 'col-name';
+            tdName.id = `name-${i}`;
+            tdName.innerHTML = `<span style="opacity:0.6;font-size:0.8rem;margin-right:5px;">${i}</span>${NAMES[i-1]}`;
+            tr.appendChild(tdName);
+
+            // Spacer
+            const tdSpace = document.createElement('td');
+            tdSpace.className = 'spacer-cell';
+            tr.appendChild(tdSpace);
+
+            // Grades
+            for(let j=1; j<=COLS; j++) {
+                const td = document.createElement('td');
+                td.className = 'grade-cell';
+                if(dataB[i-1][j-1] === 100) td.classList.add('val-100');
+                td.id = `cell-${i}-${j}`;
+                td.innerText = dataB[i-1][j-1];
+                tr.appendChild(td);
+            }
+            tbl.appendChild(tr);
+        }
+    }
+
+    // --- Logic ---
+    function calcSteps() {
+        steps = [];
+        let found = false;
+        let pos = 0;
+        
+        let inputVal = document.getElementById('searchInput').value.trim();
+        
+        if(!inputVal) {
+            if(currentMode === 1) inputVal = NAMES[Math.floor(Math.random()*NAMES.length)];
+            else inputVal = SUBJECTS[Math.floor(Math.random()*SUBJECTS.length)];
+            
+            document.getElementById('searchInput').value = inputVal;
+            document.getElementById('outputLog').innerHTML += `<div class="log-item" style="color:#666"><i>(Αυτόματη επιλογή: ${inputVal})</i></div>`;
+        }
+        
+        targetSearch = inputVal;
+        steps.push({ line: 0, msg: `Διάβασμα: ${inputVal}` });
+        steps.push({ line: 1, type: 'var', id:'val-found', val:'Ψευδής', msg: `found <- Ψευδής` });
+        steps.push({ line: 2, type: 'var', id:'val-pos', val:'0', msg: `pos <- 0` });
+        steps.push({ line: 3, type: 'init_idx', msg: (currentMode===1)?`i <- 1`:`j <- 1` });
+
+        if (currentMode === 1) { // SEARCH STUDENT
+            let i = 1;
+            while(i <= ROWS && !found) {
+                steps.push({ line: 4, msg: `Έλεγχος: i(${i}) <= 12 KAI found=Ψευδής` });
+                steps.push({ line: 5, type: 'point_search', r: i, c: null, msg: `  Είναι ΟΝ[${i}] (${NAMES[i-1]}) = ${targetSearch};` });
+                
+                if(NAMES[i-1].toLowerCase() === targetSearch.toLowerCase()) {
+                    found = true;
+                    pos = i;
+                    steps.push({ line: 6, type: 'found_name', r: i, msg: `    ΝΑΙ! found <- Αληθής` });
+                    steps.push({ line: 7, type: 'var', id:'val-pos', val: i, msg: `    pos <- ${i}` });
+                } else {
+                    steps.push({ line: 9, msg: `    Αλλιώς` });
+                    i++;
+                    steps.push({ line: 10, type: 'update_idx', msg: `    i <- ${i}` });
+                }
+                steps.push({ line: 11, msg: `  Τέλος_αν` });
+            }
+            steps.push({ line: 12, msg: "Τέλος επανάληψης αναζήτησης" });
+
+            steps.push({ line: 13, msg: `Έλεγχος found` });
+            if(found) {
+                let sum = 0;
+                steps.push({ line: 14, type: 'var', id:'val-sum', val: 0, msg: `  sum <- 0` });
+                for(let j=1; j<=COLS; j++) {
+                    let val = dataB[pos-1][j-1];
+                    sum += val;
+                    steps.push({ line: 16, type: 'scan_row', r: pos, c: j, msg: `    Προσθήκη Β[${pos},${j}] = ${val}` });
+                    steps.push({ line: 16, type: 'var', id:'val-sum', val: sum, msg: `    sum <- ${sum}` });
+                }
+                let avg = (sum/5).toFixed(2);
+                steps.push({ line: 18, type: 'var', id:'val-mo', val: avg, msg: `  MO <- ${sum}/5 = ${avg}` });
+                steps.push({ line: 19, type: 'print', out: `Μ.Ο. ${targetSearch}: ${avg}`, msg: `  Εμφάνιση` });
+            } else {
+                steps.push({ line: 20, msg: `  Αλλιώς` });
+                steps.push({ line: 21, type: 'print', out: "Δεν βρέθηκε", msg: `  Εμφάνιση μηνύματος` });
+            }
+
+        } else { // SEARCH SUBJECT
+            let j = 1;
+            while(j <= COLS && !found) {
+                steps.push({ line: 4, msg: `Έλεγχος: j(${j}) <= 5 KAI found=Ψευδής` });
+                steps.push({ line: 5, type: 'point_search', r: null, c: j, msg: `  Είναι ΜΑΘ[${j}] (${SUBJECTS[j-1]}) = ${targetSearch};` });
+                
+                if(SUBJECTS[j-1].toLowerCase() === targetSearch.toLowerCase()) {
+                    found = true;
+                    pos = j;
+                    steps.push({ line: 6, type: 'found_subj', c: j, msg: `    ΝΑΙ! found <- Αληθής` });
+                    steps.push({ line: 7, type: 'var', id:'val-pos', val: j, msg: `    pos <- ${j}` });
+                } else {
+                    steps.push({ line: 9, msg: `    Αλλιώς` });
+                    j++;
+                    steps.push({ line: 10, type: 'update_idx', msg: `    j <- ${j}` });
+                }
+                steps.push({ line: 11, msg: `  Τέλος_αν` });
+            }
+            steps.push({ line: 12, msg: "Τέλος επανάληψης αναζήτησης" });
+
+            if(found) {
+                let sum = 0;
+                steps.push({ line: 14, type: 'var', id:'val-sum', val: 0, msg: `  sum <- 0` });
+                for(let i=1; i<=ROWS; i++) {
+                    let val = dataB[i-1][pos-1];
+                    sum += val;
+                    steps.push({ line: 16, type: 'scan_col', r: i, c: pos, msg: `    Προσθήκη Β[${i},${pos}] = ${val}` });
+                    steps.push({ line: 16, type: 'var', id:'val-sum', val: sum, msg: `    sum <- ${sum}` });
+                }
+                let avg = (sum/12).toFixed(2);
+                steps.push({ line: 18, type: 'var', id:'val-mo', val: avg, msg: `  MO <- ${sum}/12 = ${avg}` });
+                steps.push({ line: 19, type: 'print', out: `Μ.Ο. ${targetSearch}: ${avg}`, msg: `  Εμφάνιση` });
+            } else {
+                steps.push({ line: 21, type: 'print', out: "Δεν βρέθηκε", msg: `  Εμφάνιση μηνύματος` });
+            }
+        }
+    }
+
+    // --- Visuals ---
+    function updatePointer(r, c) {
+        const ptr = document.getElementById('gridPointer');
+        if (r === null && c === null) {
+            ptr.style.opacity = '0';
+            return;
+        }
+        
+        let target;
+        let offsetX = 0;
+        let offsetY = 0;
+        let arrow = '';
+
+        if (r !== null && c === null) { // Row Name
+            target = document.getElementById(`name-${r}`);
+            arrow = '➡';
+            offsetX = -30;
+            offsetY = 10;
+        } else if (r === null && c !== null) { // Col Header
+            target = document.getElementById(`math-${c}`);
+            arrow = '⬇';
+            offsetX = 20;
+            offsetY = -30;
+        } else { // Grid Cell
+            target = document.getElementById(`cell-${r}-${c}`);
+            if(currentMode === 1) { // Scan Row
+                arrow = '➡';
+                offsetX = -30;
+                offsetY = 10;
+            } else { // Scan Col
+                arrow = '⬇';
+                offsetX = 20;
+                offsetY = -30;
+            }
+        }
+
+        if(target) {
+            ptr.innerText = arrow;
+            ptr.style.left = (target.offsetLeft + offsetX) + 'px';
+            ptr.style.top = (target.offsetTop + offsetY) + 'px';
+            ptr.style.opacity = '1';
+        }
+    }
+
+    function clearHighlights() {
+        document.querySelectorAll('.scanning').forEach(e => e.classList.remove('scanning'));
+    }
+
+    function highlightFound(r, c) {
+        if(r) document.getElementById(`name-${r}`).classList.add('found-target');
+        if(c) document.getElementById(`math-${c}`).classList.add('found-target');
+    }
+
+    function highlightScan(r, c) {
+        clearHighlights();
+        
+        if(currentMode === 1) { // Row
+            // Highlight cells in row r up to col c
+            const cell = document.getElementById(`cell-${r}-${c}`);
+            if(cell) cell.classList.add('scanning');
+        } else { // Col
+            const cell = document.getElementById(`cell-${r}-${c}`);
+            if(cell) cell.classList.add('scanning');
+        }
+    }
+
+    function updateVar(id, val) {
+        const el = document.getElementById(id);
+        if(el) {
+            el.innerText = val;
+            el.classList.remove('changed');
+            void el.offsetWidth;
+            el.classList.add('changed');
+        }
+    }
+
+    // --- Execution ---
+    function step() {
+        if (stepIdx === -1 && steps.length === 0) calcSteps();
+        if (stepIdx >= steps.length - 1) {
+            isPlaying = false;
+            document.getElementById('btnPlay').innerText = "▶️ Εκτέλεση";
+            return;
+        }
+        stepIdx++;
+        runStep(steps[stepIdx]);
+    }
+
+    function runStep(s) {
+        document.querySelectorAll('.code-line').forEach(e => e.classList.remove('active'));
+        if (s.line !== undefined) {
+             const el = document.getElementById(`line-${s.line}`);
+             if(el) {
+                 el.classList.add('active');
+                 el.scrollIntoView({behavior: "smooth", block: "nearest"});
+             }
+        }
+
+        if(s.msg) document.getElementById('narrativeBox').innerText = s.msg;
+
+        if(s.type === 'point_search') {
+            updatePointer(s.r, s.c);
+        }
+        else if(s.type === 'found_name') {
+            highlightFound(s.r, null);
+            updateVar('val-found', 'Αληθής');
+        }
+        else if(s.type === 'found_subj') {
+            highlightFound(null, s.c);
+            updateVar('val-found', 'Αληθής');
+        }
+        else if(s.type === 'scan_row' || s.type === 'scan_col') {
+            highlightScan(s.r, s.c);
+            updatePointer(s.r, s.c);
+        }
+        else if(s.type === 'var') {
+            updateVar(s.id, s.val);
+        }
+        else if(s.type === 'print') {
+            document.getElementById('outputLog').innerHTML += `<div class="log-item">${s.out}</div>`;
+        }
+
+        if (isPlaying) timer = setTimeout(step, speed);
+    }
+
+    function play() {
+        if (!isPlaying) {
+            isPlaying = true;
+            document.getElementById('btnPlay').innerText = "⏸ Παύση";
+            if(stepIdx === -1) calcSteps();
+            step();
+        } else {
+            isPlaying = false;
+            clearTimeout(timer);
+            document.getElementById('btnPlay').innerText = "▶️ Εκτέλεση";
+        }
+    }
+
+    function updateSpeed() {
+        speed = 1550 - document.getElementById('speedSlider').value;
+    }
+
+    init();
+
+</script>
+</body>
+</html>

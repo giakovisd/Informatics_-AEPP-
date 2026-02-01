@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Συχνότητα Εμφάνισης</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            
+            --arr-b-bg: #3b82f6; 
+            --arr-pl-bg: #64748b; 
+            --inc-color: #10b981; 
+            
+            --text-white: #ffffff;
+            --compare-color: #f59e0b;
+            --border-color: #cbd5e1;
+            --disabled-btn: #94a3b8;
+            
+            --ptr-i: #dc2626; 
+            --ptr-j: #2563eb; 
+
+            --code-kw: #0000CD; 
+            --code-sym: #FF0000; 
+            --code-var: #000000; 
+            --code-num: #008000;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        button {
+            padding: 8px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        button.primary { background-color: var(--arr-b-bg); color: white; border: none; }
+        button:hover:not(:disabled) { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { background-color: var(--disabled-btn); color: #ccc; cursor: not-allowed; }
+
+        .slider-container { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin-left: 10px; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 15px;
+            gap: 15px;
+            height: calc(100% - 70px);
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .col-code {
+            flex: 0 0 450px;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .col-code.hidden { display: none; }
+
+        .tabs { display: flex; background: #f1f5f9; border-bottom: 1px solid var(--border-color); }
+        .tab {
+            flex: 1; text-align: center; padding: 12px; font-size: 0.9rem; cursor: pointer;
+            border-bottom: 3px solid transparent; color: #64748b; font-weight: bold;
+        }
+        .tab:hover { background: #e2e8f0; }
+        .tab.active { background: var(--panel-bg); border-bottom-color: var(--arr-b-bg); color: var(--text-color); }
+
+        .code-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            white-space: pre; 
+        }
+        .code-line { padding: 1px 6px; border-radius: 3px; }
+        .code-line.active { background-color: var(--highlight-line); font-weight: bold; }
+
+        .kw { color: var(--code-kw); font-weight: bold; } 
+        .sym { color: var(--code-sym); font-weight: bold; }
+        .var { color: var(--code-var); }
+        .num { color: var(--code-num); font-weight: bold; }
+
+        .col-viz {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .narrative {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: rgba(59, 130, 246, 0.1); 
+            border-left: 4px solid var(--arr-b-bg);
+            font-size: 0.95rem;
+            font-style: italic;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        /* --- SCENE WRAPPER --- */
+        .scene-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column; 
+            align-items: center;
+            padding-top: 50px; 
+            position: relative;
+            gap: 80px; 
+            overflow: auto;
+        }
+
+        .array-section { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            position: relative; 
+            transition: all 0.3s;
+        }
+        
+        /* Headers */
+        .array-header { 
+            font-weight: bold; 
+            font-size: 1.1rem; 
+            color: var(--text-color); 
+            transition: all 0.3s;
+            /* Χώρος για το βελάκι ανάμεσα σε ετικέτα και πίνακα */
+            margin-bottom: 60px; 
+        } 
+        
+        /* Η ετικέτα του ΠΛ πάει κάτω, άρα θέλουμε χώρο από πάνω της */
+        .pl-header {
+            margin-top: 60px !important; 
+            margin-bottom: 0 !important;
+            order: 2; /* Flex order to put it below in column mode */
+        }
+
+        .array-container {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+            transition: all 0.3s;
+            margin: 0;
+            order: 1; /* Array above header for PL */
+        }
+
+        /* Για τον πίνακα Β, το header είναι order 0 (default), array order 1. ΟΚ */
+
+        .cell-wrapper {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            transition: all 0.3s;
+        }
+
+        .cell {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            box-sizing: border-box;
+            color: white;
+            box-shadow: 0 2px 3px rgba(0,0,0,0.1);
+            transition: background-color 0.1s;
+            position: relative;
+            z-index: 5;
+        }
+
+        .cell.B { background-color: var(--arr-b-bg); }
+        .cell.PL { background-color: var(--arr-pl-bg); }
+
+        .cell-idx { 
+            position: absolute; 
+            width: 100%; 
+            text-align: center; 
+            font-size: 0.75rem; 
+            color: var(--text-color); 
+            opacity: 0.7; 
+            font-weight: bold; 
+            transition: all 0.3s;
+        }
+
+        /* Horizontal idx placement */
+        .horizontal-mode .cell-idx { bottom: -22px; left: 0; }
+        
+        /* VERTICAL MODE STYLES */
+        .scene-wrapper.vertical-mode {
+            flex-direction: row; 
+            justify-content: center;
+            align-items: flex-start;
+            gap: 150px; 
+            padding-top: 50px;
+        }
+
+        .vertical-mode .array-section {
+            /* Reset orders for vertical */
+        }
+
+        .vertical-mode .array-container { flex-direction: column; order: 2; }
+        .vertical-mode .array-header { margin-bottom: 20px; order: 1; }
+        
+        /* Στην κάθετη το header του ΠΛ πάει πάλι πάνω */
+        .vertical-mode .pl-header { 
+            margin-top: 0 !important; 
+            margin-bottom: 20px !important; 
+            order: 1; 
+        }
+
+        .vertical-mode .cell-idx {
+            bottom: auto;
+            top: 10px;
+            left: -30px; 
+            text-align: right;
+            width: 20px;
+        }
+
+        /* --- POINTERS --- */
+        .ptr-container {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center; 
+            transition: all 0.2s ease-out; 
+            opacity: 0;
+            z-index: 20;
+            pointer-events: none;
+        }
+        
+        .ptr-label { font-size: 1.1rem; font-weight: bold; font-family: monospace; }
+        .ptr-arrow { font-size: 1.8rem; line-height: 1; font-weight: bold; }
+
+        .ptr-i { color: var(--ptr-i); }
+        .ptr-j { color: var(--ptr-j); }
+
+        /* Styles for Horizontal Mode */
+        .ptr-horizontal {
+            flex-direction: column;
+            width: 40px; 
+            height: 50px; /* Ύψος βέλους + γράμματος */
+            gap: 4px;
+        }
+        .ptr-horizontal .ptr-arrow { 
+            margin-top: -8px; 
+            line-height: 1;
+        } 
+        
+        /* Styles for Vertical Mode */
+        .ptr-vertical {
+            flex-direction: row;
+            width: auto; 
+            height: 40px;
+            gap: 5px;
+        }
+        .ptr-vertical .ptr-arrow { margin-right: -8px; line-height: 1; } 
+        .ptr-vertical .ptr-label { margin-right: 0; }
+
+
+        /* --- ANIMATIONS --- */
+        .increment-bg {
+            background-color: var(--inc-color) !important;
+            animation: flash 0.5s ease-out;
+        }
+
+        @keyframes flash {
+            0% { background-color: var(--inc-color); transform: scale(1.1); }
+            100% { background-color: var(--arr-pl-bg); transform: scale(1); }
+        }
+
+        /* Index Grow Animation */
+        .pop-index {
+            display: inline-block;
+            animation: index-grow 2s ease-in-out forwards;
+            color: #dc2626 !important; 
+            z-index: 100;
+        }
+
+        @keyframes index-grow {
+            0% { transform: scale(1); }
+            10% { transform: scale(2.5); font-weight: 900; }
+            90% { transform: scale(2.5); font-weight: 900; }
+            100% { transform: scale(1); font-weight: bold; }
+        }
+
+        .comparing { 
+            transform: scale(1.15); 
+            box-shadow: 0 0 8px var(--compare-color); 
+            border: 2px solid var(--compare-color) !important;
+            z-index: 5;
+        }
+
+        .col-output {
+            flex: 0 0 200px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .output-header { padding: 10px; background: #f1f5f9; font-weight: bold; border-bottom: 1px solid var(--border-color); }
+        .output-log { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 0.85rem; }
+        .log-item { border-bottom: 1px solid #eee; padding: 3px 0; }
+        
+        .col-code.hidden { display: none; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Συχνότητα Εμφάνισης</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button onclick="resetSim()">🔄 Αρχή</button>
+        <button onclick="toggleLayout()">🔄 Κάθετα/Οριζόντια</button>
+        <button onclick="play()" id="btnPlay" class="primary">▶️ Εκτέλεση</button>
+        <button onclick="step()" id="btnStep">Βήμα ⏩</button>
+        <button onclick="toggleCode()" id="btnCode">👁️ Κώδικας</button>
+        
+        <div class="slider-container">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="50" max="2500" value="800" id="speedSlider" oninput="updateSpeed()">
+        </div>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-code">
+        <div class="tabs">
+            <div class="tab active" onclick="setSolution(1)" id="t1">1. Εμφωλευμένη (Για i, Για j)</div>
+            <div class="tab" onclick="setSolution(2)" id="t2">2. Βελτιστοποιημένη (j <- B[i])</div>
+            <div class="tab" onclick="setSolution(3)" id="t3">3. Λύση (Για j, Για i)</div>
+        </div>
+        <div class="code-content" id="codeContainer"></div>
+    </div>
+
+    <div class="col-viz">
+        <div class="narrative" id="narrativeBox">Πατήστε εκτέλεση...</div>
+        
+        <div class="scene-wrapper horizontal-mode" id="sceneWrapper">
+            
+            <div class="array-section">
+                <div class="array-header">Πίνακας Β</div>
+                <div class="array-container" id="containerB"></div>
+                <div id="ptr-i" class="ptr-container ptr-i ptr-horizontal">
+                    <div class="ptr-label">i</div>
+                    <div class="ptr-arrow">⬇</div>
+                </div>
+            </div>
+
+            <div class="array-section">
+                <div class="array-container" id="containerPL"></div>
+                <div class="array-header pl-header">Πίνακας ΠΛ</div> 
+                <div id="ptr-j" class="ptr-container ptr-j ptr-horizontal">
+                    <div class="ptr-label">j</div>
+                    <div class="ptr-arrow">⬇</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">📺 Οθόνη Εξόδου</div>
+        <div class="output-log" id="outputLog"></div>
+    </div>
+
+</div>
+
+<script>
+    // --- Configuration ---
+    const SIZE_B = 15; 
+    const SIZE_PL = 6; 
+    let dataB = [];
+    let dataPL = [];
+    
+    // --- Helpers ---
+    function kw(t) { return `<span class="kw">${t}</span>`; }
+    function sym(t) { return `<span class="sym">${t}</span>`; }
+    function v(t) { return `<span class="var">${t}</span>`; }
+    function n(t) { return `<span class="num">${t}</span>`; }
+
+    const SOL_CODES = {
+        1: [
+            `${kw("Για")} ${v("j")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("6")}`,
+            `  ${v("ΠΛ")}${sym("[")}${v("j")}${sym("]")} ${sym("<-")} ${n("0")}`,
+            `${kw("Τέλος_επανάληψης")}`,
+            `${kw("Για")} ${v("i")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("15")}`,
+            `  ${kw("Για")} ${v("j")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("6")}`,
+            `    ${kw("Αν")} ${v("B")}${sym("[")}${v("i")}${sym("]")} ${sym("=")} ${v("j")} ${kw("τότε")}`,
+            `      ${v("ΠΛ")}${sym("[")}${v("j")}${sym("]")} ${sym("<-")} ${v("ΠΛ")}${sym("[")}${v("j")}${sym("]")} ${sym("+")} ${n("1")}`,
+            `    ${kw("Τέλος_αν")}`,
+            `  ${kw("Τέλος_επανάληψης")}`,
+            `${kw("Τέλος_επανάληψης")}`
+        ],
+        2: [
+            `${kw("Για")} ${v("i")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("6")}`,
+            `  ${v("ΠΛ")}${sym("[")}${v("i")}${sym("]")} ${sym("<-")} ${n("0")}`,
+            `${kw("Τέλος_επανάληψης")}`,
+            `${kw("Για")} ${v("i")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("15")}`,
+            `  ${v("j")} ${sym("<-")} ${v("B")}${sym("[")}${v("i")}${sym("]")}`,
+            `  ${v("ΠΛ")}${sym("[")}${v("j")}${sym("]")} ${sym("<-")} ${v("ΠΛ")}${sym("[")}${v("j")}${sym("]")} ${sym("+")} ${n("1")}`,
+            `${kw("Τέλος_επανάληψης")}`
+        ],
+        3: [
+            `${kw("Για")} ${v("j")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("6")}`,
+            `  ${v("ΠΛ")}${sym("[")}${v("j")}${sym("]")} ${sym("<-")} ${n("0")}`,
+            `${kw("Τέλος_επανάληψης")}`,
+            `${kw("Για")} ${v("j")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("6")}`,
+            `  ${kw("Για")} ${v("i")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("15")}`,
+            `    ${kw("Αν")} ${v("B")}${sym("[")}${v("i")}${sym("]")} ${sym("=")} ${v("j")} ${kw("τότε")}`,
+            `      ${v("ΠΛ")}${sym("[")}${v("j")}${sym("]")} ${sym("<-")} ${v("ΠΛ")}${sym("[")}${v("j")}${sym("]")} ${sym("+")} ${n("1")}`,
+            `    ${kw("Τέλος_αν")}`,
+            `  ${kw("Τέλος_επανάληψης")}`,
+            `${kw("Τέλος_επανάληψης")}`
+        ]
+    };
+
+    // --- State ---
+    let currentSol = 1;
+    let steps = [];
+    let stepIdx = -1;
+    let timer = null;
+    let isPlaying = false;
+    let speed = 800;
+    let isHorizontal = true; 
+
+    // --- Init ---
+    function init() {
+        dataB = Array.from({length: SIZE_B}, () => Math.floor(Math.random() * 6) + 1); 
+        dataPL = new Array(SIZE_PL).fill(0);
+        
+        renderCode();
+        renderArrays();
+        updatePointers(-1, -1);
+    }
+
+    function setSolution(n) {
+        currentSol = n;
+        document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i+1 === n));
+        resetSim();
+    }
+
+    function resetSim() {
+        isPlaying = false;
+        clearTimeout(timer);
+        stepIdx = -1;
+        document.getElementById('outputLog').innerHTML = '';
+        document.getElementById('narrativeBox').innerText = "Πατήστε εκτέλεση...";
+        document.getElementById('btnPlay').innerText = "▶️ Εκτέλεση";
+        document.querySelectorAll('.active').forEach(e => e.classList.remove('active'));
+        
+        document.querySelectorAll('.increment-bg').forEach(e => e.classList.remove('increment-bg'));
+        document.querySelectorAll('.pop-index').forEach(e => e.classList.remove('pop-index'));
+        
+        init();
+    }
+
+    function toggleLayout() {
+        isHorizontal = !isHorizontal;
+        const wrapper = document.getElementById('sceneWrapper');
+        const ptrI = document.getElementById('ptr-i');
+        const ptrJ = document.getElementById('ptr-j');
+        const arrowI = ptrI.querySelector('.ptr-arrow');
+        const arrowJ = ptrJ.querySelector('.ptr-arrow');
+
+        if(isHorizontal) {
+            wrapper.classList.remove('vertical-mode');
+            wrapper.classList.add('horizontal-mode');
+            
+            [ptrI, ptrJ].forEach(p => {
+                p.classList.remove('ptr-vertical');
+                p.classList.add('ptr-horizontal');
+            });
+            arrowI.innerText = '⬇';
+            arrowJ.innerText = '⬇';
+        } else {
+            wrapper.classList.remove('horizontal-mode');
+            wrapper.classList.add('vertical-mode');
+            
+            [ptrI, ptrJ].forEach(p => {
+                p.classList.remove('ptr-horizontal');
+                p.classList.add('ptr-vertical');
+            });
+            arrowI.innerText = '➡'; 
+            arrowJ.innerText = '➡';
+        }
+
+        if(stepIdx !== -1 && steps[stepIdx]) {
+            const s = steps[stepIdx];
+            updatePointers(s.i, s.j);
+        } else {
+            updatePointers(-1, -1);
+        }
+    }
+
+    function renderCode() {
+        const html = SOL_CODES[currentSol].map((l, i) => 
+            `<div class="code-line" id="line-${i}">${l}</div>`
+        ).join('');
+        document.getElementById('codeContainer').innerHTML = html;
+    }
+
+    function renderArrays() {
+        // Array B
+        let htmlB = '';
+        dataB.forEach((v, i) => {
+            htmlB += `
+            <div class="cell-wrapper" id="wrap-B-${i}">
+                <div id="c-B-${i}" class="cell B">${v}</div>
+                <div class="cell-idx">${i+1}</div>
+            </div>`;
+        });
+        document.getElementById('containerB').innerHTML = htmlB;
+
+        // Array PL
+        let htmlPL = '';
+        dataPL.forEach((v, i) => {
+            htmlPL += `
+            <div class="cell-wrapper" id="wrap-PL-${i}">
+                <div id="c-PL-${i}" class="cell PL">${v}</div>
+                <div id="idx-PL-${i}" class="cell-idx">${i+1}</div>
+            </div>`;
+        });
+        document.getElementById('containerPL').innerHTML = htmlPL;
+    }
+
+    // --- Logic Generation ---
+    function calcSteps() {
+        steps = [];
+        let simPL = new Array(SIZE_PL).fill(0);
+        
+        if (currentSol === 1) { // Nested
+            for(let j=0; j<SIZE_PL; j++) {
+                steps.push({ line: 1, type: 'init', j:j, msg: `Αρχικοποίηση ΠΛ[${j+1}] <- 0` });
+            }
+
+            for (let i=0; i<SIZE_B; i++) {
+                steps.push({ line: 3, type: 'scan_i', i:i, msg: `Σάρωση Β[${i+1}] = ${dataB[i]}` });
+                for (let j=0; j<SIZE_PL; j++) {
+                    steps.push({ line: 4, type: 'scan_j', i:i, j:j, msg: `Έλεγχος j = ${j+1}` });
+                    steps.push({ line: 5, type: 'cmp', i:i, j:j, msg: `Β[${i+1}](${dataB[i]}) = ${j+1};` });
+                    
+                    if (dataB[i] === (j+1)) {
+                        simPL[j]++;
+                        steps.push({ line: 6, type: 'inc', i:i, j:j, val: simPL[j], msg: `Βρέθηκε! Αύξηση ΠΛ[${j+1}] σε ${simPL[j]}` });
+                    }
+                }
+            }
+        } else if (currentSol === 2) { // Direct
+            for(let i=0; i<SIZE_PL; i++) steps.push({ line: 1, type: 'init', j:i, msg: `Αρχικοποίηση ΠΛ` });
+
+            for (let i=0; i<SIZE_B; i++) {
+                let val = dataB[i];
+                let j_idx = val - 1; 
+                
+                steps.push({ line: 3, type: 'scan_i', i:i, msg: `i = ${i+1}. Τιμή = ${val}` });
+                steps.push({ line: 4, type: 'calc_j', i:i, j:j_idx, msg: `j <- ${val}` });
+                
+                simPL[j_idx]++;
+                steps.push({ line: 5, type: 'inc', i:i, j:j_idx, val: simPL[j_idx], msg: `ΠΛ[${val}] <- ${simPL[j_idx]}` });
+            }
+        } else if (currentSol === 3) { 
+            for(let j=0; j<SIZE_PL; j++) {
+                steps.push({ line: 1, type: 'init', j:j, msg: `Αρχικοποίηση ΠΛ[${j+1}] <- 0` });
+            }
+
+            for (let j=0; j<SIZE_PL; j++) {
+                steps.push({ line: 3, type: 'scan_j', j:j, msg: `Έλεγχος αριθμού j = ${j+1}` });
+                for (let i=0; i<SIZE_B; i++) {
+                    steps.push({ line: 4, type: 'scan_i', i:i, j:j, msg: `Σάρωση Β[${i+1}] = ${dataB[i]}` });
+                    steps.push({ line: 5, type: 'cmp', i:i, j:j, msg: `Β[${i+1}](${dataB[i]}) = ${j+1}?` });
+                    
+                    if (dataB[i] === (j+1)) {
+                        simPL[j]++;
+                        steps.push({ line: 6, type: 'inc', i:i, j:j, val: simPL[j], msg: `Βρέθηκε! Αύξηση ΠΛ[${j+1}] σε ${simPL[j]}` });
+                    }
+                }
+            }
+        }
+    }
+
+    // --- Pointer Positioning Logic ---
+    function updatePointers(i, j) {
+        movePointer('ptr-i', 'wrap-B-', i, 'containerB');
+        movePointer('ptr-j', 'wrap-PL-', j, 'containerPL');
+    }
+
+    function movePointer(ptrId, prefix, idx, containerId) {
+        const ptr = document.getElementById(ptrId);
+        if (idx === undefined || idx < 0) {
+            ptr.style.opacity = '0';
+            return;
+        }
+
+        const cell = document.getElementById(prefix + idx);
+        if (cell) {
+            ptr.style.opacity = '1';
+            
+            if (isHorizontal) {
+                // Horizontal Mode
+                // Center the pointer horizontally
+                const leftPos = cell.offsetLeft + (cell.offsetWidth / 2) - (ptr.offsetWidth / 2);
+                
+                // Δυναμικός υπολογισμός ύψους για να ακουμπάει
+                // offsetTop είναι η απόσταση από το parent.
+                // Το pointer είναι 50px ύψος (CSS).
+                // cell.offsetTop - 50 το βάζει ακριβώς από πάνω.
+                const topPos = cell.offsetTop - 50; 
+                
+                ptr.style.left = leftPos + 'px';
+                ptr.style.top = topPos + 'px'; 
+            } else {
+                // Vertical Mode
+                // Center vertical
+                const topPos = cell.offsetTop + (cell.offsetHeight / 2) - (ptr.offsetHeight / 2);
+                const leftPos = -70; 
+                
+                ptr.style.top = topPos + 'px';
+                ptr.style.left = leftPos + 'px';
+            }
+        }
+    }
+
+    function triggerIncrementAnim(j, val) {
+        const cell = document.getElementById(`c-PL-${j}`);
+        const idxElem = document.getElementById(`idx-PL-${j}`);
+        
+        if(cell) cell.innerText = val;
+
+        if(cell) {
+            cell.classList.remove('increment-bg');
+            void cell.offsetWidth;
+            cell.classList.add('increment-bg');
+            setTimeout(() => { cell.classList.remove('increment-bg'); }, 600);
+        }
+
+        if(idxElem) {
+            idxElem.classList.remove('pop-index');
+            void idxElem.offsetWidth; 
+            idxElem.classList.add('pop-index');
+        }
+    }
+
+    function updatePLVal(idx, val) {
+        const c = document.getElementById(`c-PL-${idx}`);
+        if(c) c.innerText = val;
+    }
+
+    function step() {
+        if (stepIdx === -1 && steps.length === 0) calcSteps();
+        if (stepIdx >= steps.length - 1) {
+            isPlaying = false;
+            document.getElementById('btnPlay').innerText = "▶️ Εκτέλεση";
+            return;
+        }
+        stepIdx++;
+        runStep(steps[stepIdx]);
+    }
+
+    function runStep(s) {
+        document.querySelectorAll('.code-line').forEach(e => e.classList.remove('active'));
+        if (s.line !== undefined) {
+             const lineEl = document.getElementById(`line-${s.line}`);
+             if(lineEl) {
+                 lineEl.classList.add('active');
+                 lineEl.scrollIntoView({behavior: "smooth", block: "nearest"});
+             }
+        }
+
+        if(s.msg) document.getElementById('narrativeBox').innerText = s.msg;
+
+        updatePointers(s.i, s.j);
+
+        document.querySelectorAll('.cell').forEach(c => c.classList.remove('comparing'));
+
+        if (s.type === 'inc') {
+            triggerIncrementAnim(s.j, s.val);
+        } 
+        else if (s.type === 'cmp') {
+            const bi = document.getElementById(`c-B-${s.i}`);
+            if(bi) bi.classList.add('comparing');
+        }
+
+        if (isPlaying) {
+            timer = setTimeout(step, speed);
+        }
+    }
+
+    function play() {
+        if (!isPlaying) {
+            isPlaying = true;
+            document.getElementById('btnPlay').innerText = "⏸ Παύση";
+            if(stepIdx === -1) calcSteps();
+            step();
+        } else {
+            isPlaying = false;
+            clearTimeout(timer);
+            document.getElementById('btnPlay').innerText = "▶️ Εκτέλεση";
+        }
+    }
+
+    function updateSpeed() {
+        speed = 1550 - document.getElementById('speedSlider').value;
+    }
+
+    function toggleCode() {
+        const codePanel = document.querySelector('.col-code');
+        codePanel.classList.toggle('hidden');
+        const btn = document.getElementById('btnCode');
+        btn.innerText = codePanel.classList.contains('hidden') ? "👁️ Εμφάνιση Κώδικα" : "👁️ Απόκρυψη Κώδικα";
+    }
+
+    init();
+
+</script>
+</body>
+</html>

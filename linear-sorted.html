@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Σειριακή Αναζήτηση (User Input)</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            
+            --col-arr: #3b82f6; 
+            
+            --text-white: #ffffff;
+            --check-color: #f59e0b; 
+            --found-color: #10b981; 
+            --stop-color: #ef4444;  
+            
+            --border-color: #cbd5e1;
+            --disabled-btn: #94a3b8;
+            
+            --ptr-color: #000000; 
+
+            --code-kw: #0000CD; 
+            --code-sym: #FF0000; 
+            --code-var: #000000; 
+            --code-num: #008000;
+            --code-str: #A020F0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        button {
+            padding: 8px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        button.primary { background-color: var(--col-arr); color: white; border: none; }
+        button:hover:not(:disabled) { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { background-color: var(--disabled-btn); color: #ccc; cursor: not-allowed; }
+
+        /* Input Group Style */
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: #eff6ff;
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: 1px solid #bfdbfe;
+        }
+        .input-group input {
+            width: 60px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .input-group span { font-weight: bold; font-size: 0.9rem; color: #1e3a8a; }
+
+        .slider-container { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin-left: 10px; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 15px;
+            gap: 15px;
+            height: calc(100% - 70px);
+            box-sizing: border-box;
+            overflow: hidden; 
+        }
+
+        /* LEFT: Code Panel */
+        .col-code {
+            flex: 0 0 520px;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .col-code.hidden { display: none; }
+
+        .tabs { display: flex; background: #f1f5f9; border-bottom: 1px solid var(--border-color); }
+        .tab {
+            flex: 1; text-align: center; padding: 12px; font-size: 0.9rem; cursor: pointer;
+            border-bottom: 3px solid transparent; color: #64748b; font-weight: bold;
+        }
+        .tab:hover { background: #e2e8f0; }
+        .tab.active { background: var(--panel-bg); border-bottom-color: var(--col-arr); color: var(--text-color); }
+
+        .code-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            white-space: pre; 
+        }
+        .code-line { padding: 1px 6px; border-radius: 3px; }
+        .code-line.active { background-color: var(--highlight-line); font-weight: bold; }
+
+        .kw { color: var(--code-kw); font-weight: bold; } 
+        .sym { color: var(--code-sym); font-weight: bold; }
+        .var { color: var(--code-var); }
+        .num { color: var(--code-num); font-weight: bold; }
+        .str { color: var(--code-str); }
+
+        /* CENTER: Visualization */
+        .col-viz {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            position: relative;
+            overflow: hidden; 
+        }
+
+        .narrative {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: rgba(59, 130, 246, 0.1); 
+            border-left: 4px solid var(--col-arr);
+            font-size: 0.95rem;
+            font-style: italic;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        /* Variables Box */
+        .vars-box {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #fff;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            width: 140px;
+            z-index: 50;
+        }
+        .var-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: monospace;
+            font-size: 1.1rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        .var-label { font-weight: bold; color: var(--text-color); }
+        .var-val { color: var(--col-arr); font-weight: bold; }
+        
+        .val-done { color: #888; }
+        .val-done.true { color: var(--found-color); }
+        .val-done.false { color: var(--stop-color); }
+
+        .scene-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 40px; 
+            padding-bottom: 20px;
+            position: relative;
+            overflow-y: auto;
+        }
+
+        /* Array */
+        .array-col { display: flex; flex-direction: column; align-items: center; position: relative; z-index: 2; }
+        .array-header { font-weight: bold; font-size: 1.1rem; margin-bottom: 10px; color: var(--text-color); } 
+        
+        /* Target X Display */
+        .target-box {
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background-color: #eff6ff;
+            border: 2px solid var(--col-arr);
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--col-arr);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .row-wrapper {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 5px;
+            position: relative;
+        }
+
+        .cell {
+            height: 40px;
+            width: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            box-sizing: border-box;
+            color: white;
+            box-shadow: 0 2px 3px rgba(0,0,0,0.1);
+            background-color: var(--col-arr);
+            transition: all 0.2s;
+        }
+
+        .cell-idx { 
+            position: absolute; 
+            left: -35px;
+            top: 10px;
+            font-size: 0.8rem; 
+            color: var(--text-color); 
+            opacity: 0.7; 
+            font-weight: bold; 
+        }
+
+        /* Pointer */
+        .ptr-container {
+            position: absolute;
+            width: 40px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end; 
+            transition: top 0.2s ease-out;
+            opacity: 0;
+            z-index: 10;
+            pointer-events: none;
+            left: -80px;
+        }
+        .ptr-i { color: var(--ptr-color); }
+        .ptr-arrow { font-size: 1.5rem; line-height: 1; font-weight: bold; margin-left: 5px; }
+        .ptr-label { font-size: 1rem; font-weight: bold; font-family: monospace; }
+
+        /* Highlights */
+        .check-highlight { 
+            background-color: var(--check-color) !important;
+            transform: scale(1.1); 
+            box-shadow: 0 0 10px var(--check-color); 
+            z-index: 20;
+        }
+        .found-highlight { 
+            background-color: var(--found-color) !important;
+            border: 3px solid #065f46 !important;
+        }
+        .stop-highlight { 
+            background-color: var(--stop-color) !important;
+            border: 3px solid #991b1b !important;
+        }
+
+        /* RIGHT: Output */
+        .col-output {
+            flex: 0 0 200px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .output-header { padding: 10px; background: #f1f5f9; font-weight: bold; border-bottom: 1px solid var(--border-color); }
+        .output-log { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 0.9rem; }
+        .log-item { border-bottom: 1px solid #eee; padding: 3px 0; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Σειριακή Αναζήτηση (Ταξινομημένος)</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button onclick="init()">🔄 Αρχή</button>
+        <button onclick="play()" id="btnPlay" class="primary">▶️ Αυτόματη Εκτέλεση</button>
+        <button onclick="step()" id="btnStep">Βήμα ⏩</button>
+        <button onclick="toggleCode()" id="btnCode">👁️ Εμφάνιση Κώδικα</button>
+        
+        <div class="input-group">
+            <span>χ:</span>
+            <input type="number" id="customInput" placeholder="Τιμή" onkeydown="if(event.key==='Enter') setTarget()">
+            <button onclick="setTarget()">ΟΚ</button>
+        </div>
+
+        <div class="slider-container">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="50" max="1500" value="800" id="speedSlider" oninput="updateSpeed()">
+        </div>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-code hidden">
+        <div class="tabs">
+            <div class="tab active" onclick="setMode(1)">1. Αύξουσα Διάταξη</div>
+            <div class="tab" onclick="setMode(2)">2. Φθίνουσα Διάταξη</div>
+        </div>
+        <div class="code-content" id="codeContainer"></div>
+    </div>
+
+    <div class="col-viz">
+        <div class="narrative" id="narrativeBox">Πατήστε εκτέλεση...</div>
+        
+        <div class="vars-box">
+            <div class="var-item"><span class="var-label">done:</span> <span id="val-done" class="var-val val-done">Ψευδής</span></div>
+            <div class="var-item"><span class="var-label">θ:</span> <span id="val-theta" class="var-val">-</span></div>
+            <div class="var-item"><span class="var-label">pos:</span> <span id="val-pos" class="var-val">-</span></div>
+        </div>
+
+        <div class="scene-wrapper">
+            <div class="array-col">
+                <div class="target-box" id="targetBox">Αναζήτηση χ: -</div>
+                
+                <div class="array-header">Πίνακας Α</div>
+                <div class="pointer-track">
+                    <div id="ptr-i" class="ptr-container ptr-i">
+                        <div class="ptr-label">ι</div><div class="ptr-arrow">➡</div>
+                    </div>
+                </div>
+                <div id="arraysContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">📺 Οθόνη Εξόδου</div>
+        <div class="output-log" id="outputLog"></div>
+    </div>
+
+</div>
+
+<script>
+    // --- Data & State ---
+    const SIZE = 12;
+    let dataA = [];
+    let targetX = 0;
+    
+    let currentMode = 1; // 1: Ascending, 2: Descending
+    let steps = [];
+    let stepIdx = -1;
+    let timer = null;
+    let isPlaying = false;
+    let speed = 800;
+
+    // --- Helpers ---
+    function kw(t) { return `<span class="kw">${t}</span>`; }
+    function sym(t) { return `<span class="sym">${t}</span>`; }
+    function v(t) { return `<span class="var">${t}</span>`; }
+    function n(t) { return `<span class="num">${t}</span>`; }
+    function str(t) { return `<span class="str">${t}</span>`; }
+
+    // Codes
+    function getCodes() {
+        const op = currentMode === 1 ? '>' : '<'; 
+        
+        return [
+            /* 0 */ `${kw("Διάβασε")} ${v("χ")}`,
+            /* 1 */ `${v("done")}${sym("<-")}${kw("ψευδής")}`,
+            /* 2 */ `${v("ι")}${sym("<-")}${n("1")}`,
+            /* 3 */ `${kw("Όσο")} ${v("ι")}${sym("<=")}${n("12")} ${kw("και")} ${v("done")}${sym("=")}${kw("ψευδής")} ${kw("επανάλαβε")}`,
+            /* 4 */ `  ${kw("Αν")} ${v("Α")}${sym("[")}${v("ι")}${sym("]")}${sym("=")}${v("χ")} ${kw("τότε")}`,
+            /* 5 */ `    ${v("done")}${sym("<-")}${kw("αληθής")}`,
+            /* 6 */ `    ${v("θ")}${sym("<-")}${v("ι")}`,
+            /* 7 */ `  ${kw("αλλιώς_αν")} ${v("Α")}${sym("[")}${v("ι")}${sym("]")}${sym(op)}${v("χ")} ${kw("τότε")}`,
+            /* 8 */ `    ${v("done")}${sym("<-")}${kw("αληθής")}`,
+            /* 9 */ `    ${v("θ")}${sym("<-")}${n("0")}`,
+            /* 10 */ `    ${v("pos")}${sym("<-")}${v("ι")}`,
+            /* 11 */ `  ${kw("αλλιως")}`,
+            /* 12 */ `    ${v("ι")}${sym("<-")}${v("ι")}${sym("+")}${n("1")}`,
+            /* 13 */ `  ${kw("Τέλος_αν")}`,
+            /* 14 */ `${kw("Τέλος_επανάληψης")}`,
+            /* 15 */ `${kw("Αν")} ${v("done")}${sym("=")}${kw("αληθής")} ${kw("τότε")}`,
+            /* 16 */ `  ${kw("Αν")} ${v("θ")}${sym("<>")}${n("0")} ${kw("τοτε")}`,
+            /* 17 */ `    ${kw("Γράψε")} ${str("'Βρέθηκε '")}${sym(",")}${v("θ")}`,
+            /* 18 */ `  ${kw("αλλιώς")}`,
+            /* 19 */ `    ${kw("Γράψε")} ${str("'Δε βρέθηκε-Διακοπή στη θέση '")}${sym(",")}${v("pos")}`,
+            /* 20 */ `  ${kw("Τέλος_αν")}`,
+            /* 21 */ `${kw("αλλιώς")}`,
+            /* 22 */ `  ${kw("Γράψε")} ${str("'Δε βρέθηκε'")}`,
+            /* 23 */ `${kw("τελος_αν")}`
+        ];
+    }
+
+    // --- Init ---
+    function init() {
+        generateData();
+        
+        // Reset everything
+        isPlaying = false;
+        clearTimeout(timer);
+        stepIdx = -1;
+        document.getElementById('outputLog').innerHTML = '';
+        document.getElementById('narrativeBox').innerText = "Πατήστε εκτέλεση...";
+        document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        
+        // Populate Input
+        document.getElementById('customInput').value = targetX;
+
+        renderCode();
+        renderArrays();
+        updateUIState();
+        updatePointer(-1);
+    }
+
+    function setTarget() {
+        const val = parseInt(document.getElementById('customInput').value);
+        if (!isNaN(val)) {
+            targetX = val;
+            
+            // Soft Reset: Keep Array, Reset Pointers
+            isPlaying = false;
+            clearTimeout(timer);
+            stepIdx = -1;
+            document.getElementById('outputLog').innerHTML = '';
+            document.getElementById('narrativeBox').innerText = "Ορίστηκε νέο χ. Πατήστε εκτέλεση.";
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+            
+            updateUIState();
+            updatePointer(-1);
+            renderArrays(); // Updates the visual box for X
+            
+            // Recalc logic for new X
+            steps = []; 
+        }
+    }
+
+    function generateData() {
+        let pool = new Set();
+        while(pool.size < SIZE) pool.add(Math.floor(Math.random() * 90) + 10);
+        dataA = Array.from(pool);
+        
+        if (currentMode === 1) dataA.sort((a,b) => a - b);
+        else dataA.sort((a,b) => b - a);
+
+        const scenario = Math.random();
+        if (scenario < 0.33) {
+            const r = Math.floor(Math.random() * SIZE);
+            targetX = dataA[r];
+        } else if (scenario < 0.66) {
+            const r = Math.floor(Math.random() * (SIZE - 2)) + 1;
+            if (currentMode === 1) targetX = dataA[r] - 2; 
+            else targetX = dataA[r] + 2; 
+            while(dataA.includes(targetX)) targetX++;
+        } else {
+            if (currentMode === 1) targetX = dataA[SIZE-1] + 5;
+            else targetX = dataA[SIZE-1] - 5;
+        }
+    }
+
+    function setMode(m) {
+        currentMode = m;
+        document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i+1 === m));
+        init(); 
+    }
+
+    function resetSim() { init(); }
+
+    function toggleCode() {
+        const p = document.querySelector('.col-code');
+        p.classList.toggle('hidden');
+        document.getElementById('btnCode').innerText = p.classList.contains('hidden') ? "👁️ Εμφάνιση Κώδικα" : "👁️ Απόκρυψη Κώδικα";
+    }
+
+    // --- Rendering ---
+    function renderCode() {
+        const lines = getCodes();
+        const html = lines.map((l, i) => `<div class="code-line" id="line-${i}">${l}</div>`).join('');
+        document.getElementById('codeContainer').innerHTML = html;
+    }
+
+    function renderArrays() {
+        document.getElementById('targetBox').innerText = `Αναζήτηση χ: ${targetX}`;
+        
+        let html = '';
+        for (let i = 0; i < SIZE; i++) {
+            html += `
+            <div class="row-wrapper" id="row-${i}">
+                <div class="cell-idx">${i+1}</div>
+                <div class="cell" id="cell-${i}">${dataA[i]}</div>
+            </div>`;
+        }
+        document.getElementById('arraysContainer').innerHTML = html;
+    }
+
+    function updateUIState() {
+        document.getElementById('val-done').innerText = 'Ψευδής';
+        document.getElementById('val-done').className = 'var-val val-done false';
+        document.getElementById('val-theta').innerText = '-';
+        document.getElementById('val-pos').innerText = '-';
+        
+        // Clean highlights
+        document.querySelectorAll('.cell').forEach(c => {
+            c.classList.remove('check-highlight', 'found-highlight', 'stop-highlight');
+        });
+    }
+
+    // --- Logic ---
+    function calcSteps() {
+        steps = [];
+        let done = false;
+        let theta = 0;
+        let pos = 0;
+        let i = 0; 
+
+        steps.push({ line: 0, msg: `Διάβασε χ=${targetX}` });
+        steps.push({ line: 1, type: 'var', done: false, msg: `done <- ψευδής` });
+        steps.push({ line: 2, type: 'var', i: 0, msg: `ι <- 1` });
+
+        while (i < SIZE && !done) {
+            steps.push({ line: 3, type: 'loop', i: i, msg: `Έλεγχος: ι(${i+1})<=12 και done=ψευδής` });
+            
+            steps.push({ line: 4, type: 'check', i: i, msg: `Α[${i+1}](${dataA[i]}) = ${targetX}?` });
+            
+            if (dataA[i] === targetX) {
+                done = true;
+                theta = i + 1;
+                steps.push({ line: 5, type: 'found', i: i, done: true, msg: `Βρέθηκε! done <- αληθής` });
+                steps.push({ line: 6, type: 'var', theta: theta, msg: `θ <- ${theta}` });
+            } else {
+                let stopCond = (currentMode === 1) ? (dataA[i] > targetX) : (dataA[i] < targetX);
+                let opStr = (currentMode === 1) ? '>' : '<';
+                
+                steps.push({ line: 7, type: 'check', i: i, msg: `Α[${i+1}](${dataA[i]}) ${opStr} ${targetX}?` });
+                
+                if (stopCond) {
+                    done = true;
+                    theta = 0;
+                    pos = i + 1;
+                    steps.push({ line: 8, type: 'stop', i: i, done: true, msg: `Συνθήκη τερματισμού! done <- αληθής` });
+                    steps.push({ line: 9, type: 'var', theta: 0, msg: `θ <- 0` });
+                    steps.push({ line: 10, type: 'var', pos: pos, msg: `pos <- ${pos}` });
+                } else {
+                    steps.push({ line: 11, msg: `αλλιώς...` });
+                    i++;
+                    steps.push({ line: 12, type: 'var', i: i, msg: `ι <- ${i+1}` });
+                }
+            }
+            steps.push({ line: 13, msg: `Τέλος_αν` });
+        }
+        steps.push({ line: 14, msg: `Τέλος επανάληψης` });
+
+        // Post Loop
+        steps.push({ line: 15, msg: `Αν done = αληθής` });
+        
+        if (done) {
+            steps.push({ line: 16, msg: `Αν θ <> 0` });
+            if (theta !== 0) {
+                steps.push({ line: 17, type: 'print', val: `Βρέθηκε ${theta}`, msg: `Εμφάνιση θέσης` });
+            } else {
+                steps.push({ line: 18, msg: `αλλιώς` });
+                steps.push({ line: 19, type: 'print', val: `Δε βρέθηκε-Διακοπή στη θέση ${pos}`, msg: `Εμφάνιση διακοπής` });
+            }
+            steps.push({ line: 20, msg: `Τέλος_αν` }); 
+        } else {
+            steps.push({ line: 21, msg: `αλλιώς` });
+            steps.push({ line: 22, type: 'print', val: `Δε βρέθηκε`, msg: `Εξαντλήθηκε ο πίνακας` });
+        }
+        steps.push({ line: 23, msg: `τελος_αν` }); 
+    }
+
+    // --- Visuals ---
+    function updatePointer(i) {
+        const ptr = document.getElementById('ptr-i');
+        if (i < 0 || i >= SIZE) {
+            ptr.style.opacity = '0';
+            return;
+        }
+        const row = document.getElementById(`row-${i}`);
+        if (row) {
+            ptr.style.top = (row.offsetTop + 5) + 'px';
+            ptr.style.opacity = '1';
+        }
+    }
+
+    function updateVars(s) {
+        if (s.done !== undefined) {
+            const el = document.getElementById('val-done');
+            el.innerText = s.done ? 'Αληθής' : 'Ψευδής';
+            el.className = s.done ? 'var-val val-done true' : 'var-val val-done false';
+        }
+        if (s.theta !== undefined) document.getElementById('val-theta').innerText = s.theta;
+        if (s.pos !== undefined) document.getElementById('val-pos').innerText = s.pos;
+    }
+
+    function highlight(idx, className) {
+        const c = document.getElementById(`cell-${idx}`);
+        if(c) {
+            // keep 'found' and 'stop' persistent until reset
+            if (className === 'check-highlight') {
+                c.classList.add(className);
+                setTimeout(() => c.classList.remove(className), speed * 0.8);
+            } else {
+                c.classList.add(className);
+            }
+        }
+    }
+
+    // --- Execution ---
+    function step() {
+        if (stepIdx === -1 && steps.length === 0) calcSteps();
+        if (stepIdx >= steps.length - 1) {
+            isPlaying = false;
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+            return;
+        }
+        stepIdx++;
+        runStep(steps[stepIdx]);
+    }
+
+    function runStep(s) {
+        document.querySelectorAll('.code-line').forEach(e => e.classList.remove('active'));
+        if (s.line !== undefined) {
+             const el = document.getElementById(`line-${s.line}`);
+             if(el) {
+                 el.classList.add('active');
+                 el.scrollIntoView({behavior: "smooth", block: "nearest"});
+             }
+        }
+
+        if(s.msg) document.getElementById('narrativeBox').innerText = s.msg;
+        if (s.i !== undefined) updatePointer(s.i);
+        updateVars(s);
+
+        if (s.type === 'check') {
+            highlight(s.i, 'check-highlight');
+        } else if (s.type === 'found') {
+            highlight(s.i, 'found-highlight');
+        } else if (s.type === 'stop') {
+            highlight(s.i, 'stop-highlight');
+        } else if (s.type === 'print') {
+            const log = document.getElementById('outputLog');
+            log.innerHTML += `<div class="log-item">${s.val}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        if (isPlaying) timer = setTimeout(step, speed);
+    }
+
+    function play() {
+        if (!isPlaying) {
+            isPlaying = true;
+            document.getElementById('btnPlay').innerText = "⏸ Παύση";
+            if(stepIdx === -1) calcSteps();
+            step();
+        } else {
+            isPlaying = false;
+            clearTimeout(timer);
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        }
+    }
+
+    function updateSpeed() {
+        speed = 1550 - document.getElementById('speedSlider').value;
+    }
+
+    init();
+
+</script>
+</body>
+</html>

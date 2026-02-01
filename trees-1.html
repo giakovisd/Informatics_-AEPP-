@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Δομές Δεδομένων: Δένδρα</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            
+            --col-main: #3b82f6; 
+            --col-sec: #8b5cf6;  
+            --col-success: #10b981; 
+            --col-error: #ef4444;
+            
+            --node-bg: #ffffff;
+            --node-stroke: #3b82f6;
+            --node-highlight: #f97316; /* Orange for active */
+            
+            --border-color: #cbd5e1;
+            --disabled-btn: #94a3b8;
+
+            /* Code Syntax */
+            --code-kw: #0000CD; 
+            --code-sym: #FF0000; 
+            --code-var: #000000; 
+            --code-num: #008000;
+            --code-str: #A020F0;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        button {
+            padding: 8px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        button.primary { background-color: var(--col-main); color: white; border: none; }
+        button:hover:not(:disabled) { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { background-color: var(--disabled-btn); color: #fff; cursor: not-allowed; }
+
+        .slider-container { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin-left: 10px; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 15px;
+            gap: 15px;
+            height: calc(100% - 70px);
+            box-sizing: border-box;
+            overflow: hidden; 
+        }
+
+        /* LEFT: Panel (Controls & Info) */
+        .col-left {
+            flex: 0 0 420px;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .tabs { display: flex; flex-direction: column; background: #f1f5f9; border-bottom: 1px solid var(--border-color); }
+        .tab {
+            text-align: left; padding: 10px 15px; font-size: 0.9rem; cursor: pointer;
+            border-left: 4px solid transparent; border-bottom: 1px solid #e2e8f0; color: #64748b; font-weight: bold;
+        }
+        .tab:hover { background: #e2e8f0; }
+        .tab.active { background: var(--panel-bg); border-left-color: var(--col-main); color: var(--text-color); }
+
+        .panel-content {
+            flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 15px;
+        }
+
+        .info-box {
+            background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px; font-size: 0.9rem; line-height: 1.4; color: #1e3a8a;
+        }
+        .info-header { font-weight: bold; display: block; margin-bottom: 5px; color: #1e40af; }
+
+        .control-group { border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; background: #fff; }
+        .control-label { display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px; color: #64748b; }
+        
+        select { width: 100%; padding: 6px; border-radius: 4px; border: 1px solid #cbd5e1; margin-bottom: 8px; }
+
+        /* Code Display (for BST) */
+        .code-display {
+            background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; 
+            padding: 10px; font-family: 'Consolas', monospace; font-size: 0.85rem;
+            display: none; /* Hidden unless needed */
+        }
+        .code-line { padding: 2px 4px; border-radius: 2px; }
+        .code-line.active { background-color: var(--highlight-line); font-weight: bold; }
+
+        /* CENTER: Visualization */
+        .col-viz {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            position: relative;
+            overflow: hidden; 
+        }
+
+        .narrative {
+            padding: 10px 15px;
+            background: rgba(59, 130, 246, 0.1); 
+            border-left: 4px solid var(--col-main);
+            font-size: 0.95rem;
+            font-style: italic;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .scene-wrapper {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            overflow: auto; /* Allow scrolling if tree is huge */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            background-color: #f8fafc;
+            position: relative;
+        }
+
+        /* SVG Styles */
+        svg { width: 100%; height: 100%; min-height: 500px; min-width: 600px; }
+        
+        .tree-node rect {
+            fill: var(--node-bg); stroke: var(--node-stroke); stroke-width: 2; rx: 8; ry: 8;
+            transition: all 0.3s; cursor: pointer;
+        }
+        .tree-node text {
+            font-family: 'Segoe UI', sans-serif; font-size: 14px; font-weight: 600;
+            text-anchor: middle; dominant-baseline: middle; pointer-events: none; fill: var(--text-color);
+        }
+        .tree-link { stroke: #94a3b8; stroke-width: 2; fill: none; transition: stroke 0.3s; }
+        
+        /* States */
+        .tree-node.selected rect { fill: var(--col-main); stroke: #1e40af; }
+        .tree-node.selected text { fill: white; }
+        
+        .tree-node.highlight rect { stroke: var(--node-highlight); stroke-width: 3; fill: #fff7ed; }
+        .tree-link.highlight { stroke: var(--node-highlight); stroke-width: 3; }
+
+        .tree-node.correct rect { fill: var(--col-success); stroke: #047857; }
+        .tree-node.correct text { fill: white; }
+        
+        .tree-node.wrong rect { fill: var(--col-error); stroke: #b91c1c; }
+        .tree-node.wrong text { fill: white; }
+
+        /* Animation Ball */
+        .anim-ball { fill: var(--node-highlight); }
+
+        /* RIGHT: Output */
+        .col-output {
+            flex: 0 0 220px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .output-header { padding: 10px; background: #f1f5f9; font-weight: bold; border-bottom: 1px solid var(--border-color); }
+        .output-log { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 0.9rem; }
+        .log-item { border-bottom: 1px solid #eee; padding: 5px 0; }
+        .log-success { color: var(--col-success); font-weight: bold; }
+        .log-error { color: var(--col-error); font-weight: bold; }
+
+        /* Helper classes */
+        .kw { color: var(--code-kw); font-weight: bold; } 
+        .sym { color: var(--code-sym); font-weight: bold; }
+        .var { color: var(--code-var); }
+        .num { color: var(--code-num); font-weight: bold; }
+        .str { color: var(--code-str); }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Διαδραστική Εφαρμογή: Δένδρα</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button onclick="initCurrentMode()">🔄 Αρχή</button>
+        <div id="bstControls" style="display:none; gap:5px;">
+            <button onclick="playBST()" id="btnPlay" class="primary">▶️ Εισαγωγή</button>
+            <button onclick="stepBST()" id="btnStep">Βήμα ⏩</button>
+        </div>
+        
+        <div class="slider-container">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="200" max="2000" value="800" id="speedSlider" oninput="updateSpeed()">
+        </div>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-left">
+        <div class="tabs">
+            <div class="tab active" onclick="setMode('general')">1. Γενικά Δένδρα (Ερωτήσεις)</div>
+            <div class="tab" onclick="setMode('binary')">2. Δυαδικά Δένδρα (Εισαγωγή)</div>
+            <div class="tab" onclick="setMode('bst')">3. ΔΔΑ (Αναζήτηση & Ασκήσεις)</div>
+            <div class="tab" onclick="setMode('decision')">4. Δένδρα Απόφασης (Σενάρια)</div>
+        </div>
+
+        <div class="panel-content" id="panelContent">
+            </div>
+    </div>
+
+    <div class="col-viz">
+        <div class="narrative" id="narrativeBox">Επιλέξτε μια καρτέλα για να ξεκινήσετε...</div>
+        
+        <div class="scene-wrapper" id="sceneWrapper">
+            <svg id="treeSvg"></svg>
+        </div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">📺 Ιστορικό / Επεξηγήσεις</div>
+        <div class="output-log" id="outputLog"></div>
+    </div>
+
+</div>
+
+<script>
+    // --- Global State ---
+    let currentMode = 'general';
+    let speed = 1200;
+    let nodes = []; // {id, label, x, y, children[], parent}
+    let nextId = 1;
+    let svg = document.getElementById('treeSvg');
+    let width = 0, height = 0;
+    
+    // Mode specific state
+    let generalQuestion = null; // {type, targetIds}
+    let selectedNodeIds = new Set();
+    
+    let bstInsertVal = null;
+    let bstPath = [];
+    let bstStepIdx = -1;
+    let bstTimer = null;
+    
+    // Exercises Data from PDF/File
+    const bstExercises = {
+        ex1: { label: "Άσκηση 49: 45, 23, 40, 78, 56, 100...", vals: [45, 23, 40, 78, 56, 100, 4, 9, 80, 30] },
+        ex2: { label: "Άσκηση 50: 6, 18, 14, 9, 15...", vals: [6, 18, 14, 9, 15, 21, 11, 5, 3, 31] },
+        ex3: { label: "Άσκηση 60: 55, 144, 21, 34...", vals: [55, 144, 21, 34, 89, 5, 233, 13] },
+        ex4: { label: "Άσκηση 44 (Γράμματα): Σ, Υ, Ν, Ν, Ε, Φ, Ι, Α", vals: ['Σ','Υ','Ν','Ν','Ε','Φ','Ι','Α'], type: 'char' }
+    };
+
+    const decisionScenarios = {
+        house: { title: "Καθαριότητα Σπιτιού", root: { label: "Καθαρό Σπίτι;", yes: "Χαλάρωση!", no: { label: "Καθαρό Πάτωμα;", yes: "Παράθυρα", no: "Σφουγγάρισμα" } } },
+        exam: { title: "Διαγώνισμα", root: { label: "Βαθμός >= 15;", yes: "Βόλτα", no: { label: "Άλλο τεστ σύντομα;", yes: "Διάβασμα", no: "Ξεκούραση" } } }
+    };
+
+    // --- Init ---
+    function initCurrentMode() {
+        // Clear state
+        nodes = [];
+        nextId = 1;
+        selectedNodeIds.clear();
+        document.getElementById('outputLog').innerHTML = '';
+        clearInterval(bstTimer);
+        
+        resizeSvg();
+
+        if(currentMode === 'general') initGeneral();
+        else if(currentMode === 'binary') initBinary();
+        else if(currentMode === 'bst') initBST();
+        else if(currentMode === 'decision') initDecision();
+    }
+
+    function setMode(m) {
+        currentMode = m;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        // Find tab by onclick attribute approximation or index (simple logic here)
+        const tabs = document.querySelectorAll('.tab');
+        if(m==='general') tabs[0].classList.add('active');
+        if(m==='binary') tabs[1].classList.add('active');
+        if(m==='bst') tabs[2].classList.add('active');
+        if(m==='decision') tabs[3].classList.add('active');
+
+        // Update Left Panel UI
+        updateLeftPanel();
+        
+        // Show/Hide Top Controls
+        document.getElementById('bstControls').style.display = (m === 'bst') ? 'flex' : 'none';
+
+        initCurrentMode();
+    }
+
+    function updateLeftPanel() {
+        const p = document.getElementById('panelContent');
+        p.innerHTML = '';
+
+        if(currentMode === 'general') {
+            p.innerHTML = `
+                <div class="info-box">
+                    <span class="info-header">Ορισμοί:</span>
+                    <ul>
+                        <li><b>Ρίζα:</b> Ο κορυφαίος κόμβος (χωρίς γονέα).</li>
+                        <li><b>Φύλλα:</b> Κόμβοι χωρίς παιδιά.</li>
+                        <li><b>Παιδιά:</b> Κόμβοι που συνδέονται κάτω από έναν άλλο.</li>
+                    </ul>
+                </div>
+                <div class="control-group">
+                    <span class="control-label">Λειτουργίες:</span>
+                    <button class="primary" style="width:100%; margin-bottom:5px;" onclick="initGeneral()">🎲 Νέο Τυχαίο Δένδρο</button>
+                    <button style="width:100%; margin-bottom:5px;" onclick="askQuestion()">❓ Νέα Ερώτηση</button>
+                    <button class="primary" style="width:100%;" onclick="checkGeneralAnswer()">✅ Έλεγχος Απάντησης</button>
+                </div>
+                <div id="questionBox" class="info-box" style="background:#fff; border-color:#cbd5e1; display:none;"></div>
+            `;
+        } else if(currentMode === 'binary') {
+            p.innerHTML = `
+                <div class="info-box">
+                    <span class="info-header">Δυαδικό Δένδρο:</span>
+                    Κάθε κόμβος έχει το πολύ 2 παιδιά.
+                </div>
+                <div class="control-group">
+                    <span class="control-label">Εισαγωγή Κόμβου:</span>
+                    <p style="font-size:0.85rem; margin-bottom:10px;">Κάντε κλικ σε ένα <b>φύλλο</b> για να προσθέσετε παιδί.</p>
+                    <button class="primary" style="width:100%;" onclick="initBinary()">🎲 Νέο Δένδρο</button>
+                </div>
+            `;
+        } else if(currentMode === 'bst') {
+            p.innerHTML = `
+                <div class="info-box">
+                    <span class="info-header">ΔΔΑ (BST):</span>
+                    Αριστερά &lt; Ρίζα, Δεξιά &ge; Ρίζα.
+                </div>
+                <div class="control-group">
+                    <span class="control-label">Εισαγωγή Τιμής:</span>
+                    <div style="display:flex; gap:5px;">
+                        <input type="number" id="bstValInput" placeholder="Τιμή" style="width:70px;">
+                        <button class="primary" onclick="prepareBSTInsert()">Εισαγωγή</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <span class="control-label">Ασκήσεις Φυλλαδίου:</span>
+                    <select id="exSelect" onchange="loadExercise()">
+                        <option value="">-- Επιλέξτε --</option>
+                        <option value="ex1">Άσκηση 49</option>
+                        <option value="ex2">Άσκηση 50</option>
+                        <option value="ex3">Άσκηση 60</option>
+                        <option value="ex4">Άσκηση 44 (Γράμματα)</option>
+                    </select>
+                </div>
+                <div class="code-display" id="bstCode">
+<div class="code-line" id="l1">Αν ρίζα κενή:</div>
+<div class="code-line" id="l2">  Δημιούργησε κόμβο</div>
+<div class="code-line" id="l3">Αλλιώς Αν τιμή < τρέχον:</div>
+<div class="code-line" id="l4">  Πήγαινε Αριστερά</div>
+<div class="code-line" id="l5">Αλλιώς:</div>
+<div class="code-line" id="l6">  Πήγαινε Δεξιά</div>
+                </div>
+            `;
+        } else if(currentMode === 'decision') {
+            p.innerHTML = `
+                <div class="info-box">
+                    <span class="info-header">Δένδρα Απόφασης:</span>
+                    Χρησιμοποιούνται για λήψη αποφάσεων βάσει ερωτήσεων (Ναι/Όχι).
+                </div>
+                <div class="control-group">
+                    <span class="control-label">Σενάρια:</span>
+                    <button style="width:100%; margin-bottom:5px;" onclick="loadDecision('house')">🏠 Καθαριότητα</button>
+                    <button style="width:100%; margin-bottom:5px;" onclick="loadDecision('exam')">📝 Διαγώνισμα</button>
+                </div>
+            `;
+        }
+    }
+
+    // --- Logic: General Trees ---
+    function initGeneral() {
+        nodes = [];
+        // Simple random tree generator
+        let root = createNode(null, "Ρίζα");
+        nodes.push(root);
+        
+        // Add random children levels
+        let queue = [root];
+        let idCounter = 2;
+        let labels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        
+        while(nodes.length < 8 && queue.length > 0) {
+            let parent = queue.shift();
+            let childrenCount = Math.floor(Math.random() * 3) + 1; // 1-3 children
+            for(let i=0; i<childrenCount; i++) {
+                if(nodes.length >= 10) break;
+                let child = createNode(parent, labels[idCounter-2] || idCounter);
+                parent.children.push(child);
+                nodes.push(child);
+                queue.push(child);
+                idCounter++;
+            }
+        }
+        recalcLayout();
+        drawTree();
+        narrate("Δημιουργήθηκε τυχαίο δένδρο. Πατήστε 'Νέα Ερώτηση'.");
+        document.getElementById('questionBox').style.display = 'none';
+        selectedNodeIds.clear();
+    }
+
+    function askQuestion() {
+        const types = ['root', 'leaf', 'child'];
+        const type = types[Math.floor(Math.random()*types.length)];
+        let qText = "";
+        
+        selectedNodeIds.clear();
+        drawTree(); // clear selection visuals
+
+        if(type === 'root') {
+            generalQuestion = { type: 'root', answer: [nodes[0].id] };
+            qText = "Επιλέξτε τη <b>Ρίζα</b> του δένδρου.";
+        } else if(type === 'leaf') {
+            let leaves = nodes.filter(n => n.children.length === 0).map(n => n.id);
+            generalQuestion = { type: 'leaf', answer: leaves };
+            qText = "Επιλέξτε <b>όλα τα Φύλλα</b>.";
+        } else {
+            // Find a node with children
+            let parents = nodes.filter(n => n.children.length > 0);
+            let target = parents[Math.floor(Math.random()*parents.length)];
+            let childrenIds = target.children.map(c => c.id);
+            generalQuestion = { type: 'child', answer: childrenIds };
+            qText = `Επιλέξτε τα <b>παιδιά</b> του κόμβου <b>${target.label}</b>.`;
+        }
+
+        const box = document.getElementById('questionBox');
+        box.style.display = 'block';
+        box.innerHTML = `<span class="info-header">Ερώτηση:</span>${qText}`;
+        narrate(qText.replace(/<[^>]*>/g, ''));
+    }
+
+    function toggleSelection(id) {
+        if(selectedNodeIds.has(id)) selectedNodeIds.delete(id);
+        else selectedNodeIds.add(id);
+        drawTree();
+    }
+
+    function checkGeneralAnswer() {
+        if(!generalQuestion) return;
+        
+        // Compare sets
+        let correct = true;
+        if(selectedNodeIds.size !== generalQuestion.answer.length) correct = false;
+        else {
+            for(let id of generalQuestion.answer) {
+                if(!selectedNodeIds.has(id)) correct = false;
+            }
+        }
+
+        const log = document.getElementById('outputLog');
+        if(correct) {
+            log.innerHTML += `<div class="log-item log-success">✅ Σωστή απάντηση!</div>`;
+            narrate("Μπράβο! Σωστή απάντηση.");
+            // Mark correct visually
+            nodes.forEach(n => {
+                if(selectedNodeIds.has(n.id)) n.status = 'correct';
+            });
+        } else {
+            log.innerHTML += `<div class="log-item log-error">❌ Λάθος. Προσπαθήστε ξανά.</div>`;
+            narrate("Λάθος επιλογή. Δοκιμάστε ξανά.");
+            nodes.forEach(n => {
+                if(selectedNodeIds.has(n.id) && !generalQuestion.answer.includes(n.id)) n.status = 'wrong';
+            });
+        }
+        drawTree();
+        setTimeout(() => { 
+            nodes.forEach(n => n.status = null); // clear status
+            drawTree();
+        }, 2000);
+    }
+
+    // --- Logic: Binary Tree ---
+    function initBinary() {
+        initGeneral(); // Use same generator but enforce binary constraint?
+        // Enforce max 2 children for cleanliness
+        nodes.forEach(n => {
+            if(n.children.length > 2) n.children = n.children.slice(0, 2);
+        });
+        recalcLayout();
+        drawTree();
+        narrate("Κάντε κλικ σε ένα Φύλλο για να προσθέσετε παιδί.");
+    }
+
+    function addBinaryNode(parentId) {
+        const parent = nodes.find(n => n.id === parentId);
+        if(parent.children.length >= 2) {
+            narrate("Ο κόμβος έχει ήδη 2 παιδιά.");
+            return;
+        }
+        let newVal = Math.floor(Math.random()*100);
+        let newNode = createNode(parent, newVal);
+        parent.children.push(newNode);
+        nodes.push(newNode);
+        
+        recalcLayout();
+        drawTree();
+        
+        // Animate path
+        highlightPathTo(newNode);
+        narrate(`Προστέθηκε κόμβος ${newVal} στον ${parent.label}.`);
+    }
+
+    // --- Logic: BST ---
+    function initBST() {
+        nodes = [];
+        nextId = 1;
+        document.getElementById('bstCode').style.display = 'block';
+        narrate("Εισάγετε τιμή ή επιλέξτε άσκηση.");
+        drawTree();
+    }
+
+    function prepareBSTInsert() {
+        let val = document.getElementById('bstValInput').value;
+        if(!val) val = Math.floor(Math.random()*99);
+        bstInsertVal = parseInt(val); // Assuming numbers primarily
+        
+        // Check if char exercise
+        const exSelect = document.getElementById('exSelect');
+        if(exSelect && exSelect.value === 'ex4') {
+             // Handle chars logic if needed, simplify to strings
+             bstInsertVal = String(val).toUpperCase();
+        }
+
+        startBSTAnimation(bstInsertVal);
+    }
+
+    function loadExercise() {
+        const key = document.getElementById('exSelect').value;
+        if(!key) return;
+        
+        initBST();
+        const data = bstExercises[key];
+        narrate(data.label);
+        
+        // Auto insert all sequentially for demo? Or just prep?
+        // Let's insert them one by one with delays
+        let i = 0;
+        function next() {
+            if(i >= data.vals.length) return;
+            startBSTAnimation(data.vals[i], () => {
+                i++;
+                setTimeout(next, 500);
+            });
+        }
+        next();
+    }
+
+    function startBSTAnimation(val, onComplete) {
+        if(nodes.length === 0) {
+            let root = createNode(null, val);
+            nodes.push(root);
+            recalcLayout();
+            drawTree();
+            log(`Ρίζα: ${val}`);
+            if(onComplete) onComplete();
+            return;
+        }
+
+        // Trace path
+        let curr = nodes[0]; // root
+        bstPath = [];
+        let parent = null;
+        let dir = '';
+
+        while(curr) {
+            bstPath.push({node: curr, step: 'compare'});
+            parent = curr;
+            if(val < curr.label) {
+                bstPath.push({node: curr, step: 'left'});
+                // Find left child
+                let left = curr.children.find(c => c.label < curr.label); // Logic simplification: relies on structure
+                // Actually structure holds children. In BST layout, children[0] is usually left. 
+                // We need proper left/right pointers. 
+                // For this viz, we will infer from values or store explicitly.
+                // Let's assume children are ordered or use explicit prop.
+                
+                // Better: find child with value < curr
+                // Since this is visualization, we just look at children array.
+                // WE NEED TO INSERT CORRECTLY FIRST.
+                
+                let next = null;
+                // Find visually left child (in layout x < parent.x)
+                // But we don't have layout yet.
+                // We need logic structure.
+                if(!curr.left && !curr.right) {
+                    // Check children array?
+                    // Let's stick to simple logic: we insert node then animate to it.
+                }
+                
+                // Let's pre-calculate insertion
+                if(curr.left) { curr = curr.left; dir='left'; }
+                else { dir='left_insert'; break; }
+            } else {
+                bstPath.push({node: curr, step: 'right'});
+                if(curr.right) { curr = curr.right; dir='right'; }
+                else { dir='right_insert'; break; }
+            }
+        }
+
+        // Add node
+        let newNode = createNode(parent, val);
+        if(dir.startsWith('left')) parent.left = newNode;
+        else parent.right = newNode;
+        parent.children.push(newNode); // for generic layout
+        nodes.push(newNode);
+        recalcLayout();
+        drawTree();
+
+        // Animate
+        animateBSTPath(bstPath, newNode, onComplete);
+    }
+
+    function animateBSTPath(path, targetNode, cb) {
+        let i = 0;
+        
+        function loop() {
+            if(i >= path.length) {
+                narrate(`Εισαγωγή ${targetNode.label}`);
+                log(`Εισαγωγή ${targetNode.label}`);
+                if(cb) cb();
+                return;
+            }
+            
+            let p = path[i];
+            // Highlight node
+            resetHighlights();
+            p.node.highlight = true;
+            
+            // Highlight code
+            let codeId = '';
+            if(p.step === 'compare') {
+                narrate(`Σύγκριση ${targetNode.label} με ${p.node.label}`);
+                codeId = 'l3'; // Else If
+            } else if(p.step === 'left') {
+                narrate("Μικρότερο -> Αριστερά");
+                codeId = 'l4';
+            } else {
+                narrate("Μεγαλύτερο -> Δεξιά");
+                codeId = 'l6';
+            }
+            highlightCode(codeId);
+            drawTree();
+            
+            i++;
+            setTimeout(loop, speed);
+        }
+        loop();
+    }
+
+    // --- Logic: Decision Trees ---
+    function initDecision() {
+        nodes = [];
+        narrate("Επιλέξτε ένα σενάριο.");
+        drawTree();
+    }
+
+    function loadDecision(key) {
+        const data = decisionScenarios[key];
+        nodes = [];
+        // Parse recursive obj to nodes
+        function parse(obj, parent) {
+            let n = createNode(parent, obj.label || obj);
+            nodes.push(n);
+            if(parent) parent.children.push(n);
+            
+            if(obj.yes) {
+                // Ideally denote Yes/No on links. visualization handles simple tree.
+                parse(obj.yes, n);
+            }
+            if(obj.no) {
+                parse(obj.no, n);
+            }
+        }
+        parse(data.root, null);
+        recalcLayout();
+        drawTree();
+        narrate(`Σενάριο: ${data.title}`);
+        log(`Φορτώθηκε: ${data.title}`);
+    }
+
+    // --- Core Tree Logic ---
+    function createNode(parent, label) {
+        return {
+            id: nextId++,
+            label: label,
+            x: 0, y: 0,
+            children: [],
+            parent: parent,
+            left: null, right: null, // For BST
+            highlight: false,
+            status: null // 'correct', 'wrong'
+        };
+    }
+
+    function recalcLayout() {
+        // Simple Reingold-Tilford-like layout or basic level-based
+        if(nodes.length === 0) return;
+        
+        let root = nodes[0];
+        // Reset
+        nodes.forEach(n => { n.x=0; n.y=0; });
+
+        // Calculate levels
+        let levels = {};
+        function getLevel(n, d) {
+            if(!levels[d]) levels[d] = [];
+            levels[d].push(n);
+            n.y = 50 + d * 80;
+            n.children.forEach(c => getLevel(c, d+1));
+        }
+        getLevel(root, 0);
+
+        // Assign X - simple spread
+        // A better way is to assign ranges.
+        let canvasW = svg.clientWidth || 800;
+        
+        function assignX(node, minX, maxX) {
+            let myX = (minX + maxX) / 2;
+            node.x = myX;
+            let width = maxX - minX;
+            let slice = width / node.children.length;
+            node.children.forEach((c, i) => {
+                assignX(c, minX + i*slice, minX + (i+1)*slice);
+            });
+        }
+        assignX(root, 0, canvasW);
+    }
+
+    function drawTree() {
+        let html = '';
+        
+        // Links
+        nodes.forEach(n => {
+            n.children.forEach(c => {
+                html += `<line x1="${n.x}" y1="${n.y}" x2="${c.x}" y2="${c.y}" class="tree-link" />`;
+                // Add labels for Decision Tree?
+                if(currentMode === 'decision') {
+                    // Hacky check: first child No, second Yes usually in my structure order
+                    // Or check position
+                    let txt = (c.x < n.x) ? "Όχι" : "Ναι";
+                    html += `<text x="${(n.x+c.x)/2}" y="${(n.y+c.y)/2 - 5}" font-size="11" fill="#64748b">${txt}</text>`;
+                }
+            });
+        });
+
+        // Nodes
+        nodes.forEach(n => {
+            let cls = 'tree-node';
+            if(selectedNodeIds.has(n.id)) cls += ' selected';
+            if(n.highlight) cls += ' highlight';
+            if(n.status) cls += ' ' + n.status;
+            
+            // Calc width based on text
+            let w = Math.max(40, String(n.label).length * 9 + 20);
+            
+            html += `
+            <g class="${cls}" onclick="handleNodeClick(${n.id})" transform="translate(${n.x}, ${n.y})">
+                <rect x="${-w/2}" y="-15" width="${w}" height="30"></rect>
+                <text>${n.label}</text>
+            </g>
+            `;
+        });
+
+        svg.innerHTML = html;
+    }
+
+    function handleNodeClick(id) {
+        if(currentMode === 'general') {
+            toggleSelection(id);
+        } else if(currentMode === 'binary') {
+            // Check if leaf
+            let n = nodes.find(x => x.id === id);
+            if(n.children.length === 0 || (n.children.length < 2)) {
+                addBinaryNode(id);
+            }
+        }
+    }
+
+    // --- Helpers ---
+    function log(msg) {
+        document.getElementById('outputLog').innerHTML += `<div class="log-item">${msg}</div>`;
+        let el = document.getElementById('outputLog');
+        el.scrollTop = el.scrollHeight;
+    }
+    
+    function narrate(msg) {
+        document.getElementById('narrativeBox').innerText = msg;
+    }
+
+    function highlightCode(id) {
+        document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+        if(id) document.getElementById(id).classList.add('active');
+    }
+
+    function resetHighlights() {
+        nodes.forEach(n => n.highlight = false);
+    }
+
+    function highlightPathTo(node) {
+        // Trace back to root
+        let curr = node;
+        while(curr) {
+            curr.highlight = true;
+            curr = curr.parent;
+        }
+        drawTree();
+        setTimeout(resetHighlights, 1000);
+        setTimeout(drawTree, 1000);
+    }
+
+    function resizeSvg() {
+        width = document.getElementById('sceneWrapper').clientWidth;
+        height = document.getElementById('sceneWrapper').clientHeight;
+    }
+
+    function updateSpeed() {
+        speed = 2200 - document.getElementById('speedSlider').value;
+    }
+
+    // Resize listener
+    window.onresize = () => { resizeSvg(); recalcLayout(); drawTree(); };
+
+    // Initial
+    setMode('general');
+
+</script>
+</body>
+</html>

@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Στοιβα-ουρά γέμισμα/άδεισμα</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            
+            --col-stack: #3b82f6; 
+            --col-queue: #8b5cf6; 
+            
+            --cell-bg: #ffffff;
+            --cell-filled: #dbeafe; 
+            
+            --border-color: #cbd5e1;
+            --disabled-btn: #94a3b8;
+            
+            --ptr-top: #dc2626;   
+            --ptr-front: #059669; 
+            --ptr-rear: #d97706;  
+            --anim-val-bg: #f59e0b; 
+
+            --code-kw: #0000CD; 
+            --code-sym: #FF0000; 
+            --code-var: #000000; 
+            --code-num: #008000;
+            --code-str: #A020F0;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        button {
+            padding: 8px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        button.action-btn { background-color: #fff; border: 2px solid var(--col-stack); color: var(--col-stack); }
+        button.action-btn:hover { background-color: var(--col-stack); color: white; }
+        button:hover:not(:disabled) { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { background-color: var(--disabled-btn); border-color: var(--disabled-btn); color: #fff; cursor: not-allowed; transform: none; }
+
+        /* Algorithm Toggle */
+        .algo-group {
+            display: flex;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-right: 10px;
+        }
+        .algo-btn {
+            padding: 6px 10px;
+            font-size: 0.8rem;
+            background: #f1f5f9;
+            cursor: pointer;
+            border-right: 1px solid #cbd5e1;
+        }
+        .algo-btn:last-child { border-right: none; }
+        .algo-btn.active-algo { background: var(--col-stack); color: white; }
+
+        .slider-container { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin-left: 10px; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 15px;
+            gap: 15px;
+            height: calc(100% - 70px);
+            box-sizing: border-box;
+            overflow: hidden; 
+        }
+
+        /* LEFT: Code Panel */
+        .col-code {
+            flex: 0 0 500px;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .col-code.hidden { display: none; }
+
+        .tabs { display: flex; background: #f1f5f9; border-bottom: 1px solid var(--border-color); }
+        .tab {
+            flex: 1; text-align: center; padding: 12px; font-size: 0.9rem; cursor: pointer;
+            border-bottom: 3px solid transparent; color: #64748b; font-weight: bold;
+        }
+        .tab:hover { background: #e2e8f0; }
+        .tab.active { background: var(--panel-bg); border-bottom-color: var(--col-stack); color: var(--text-color); }
+
+        .code-container-wrapper { flex: 1; overflow-y: auto; padding: 15px; }
+        
+        .code-block { margin-bottom: 25px; }
+        .code-block-title { font-weight: bold; color: #b45309; margin-bottom: 5px; font-size: 0.9rem; border-bottom: 1px solid #eee;}
+
+        .code-content {
+            font-family: 'Consolas', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            white-space: pre; 
+        }
+        .code-line { padding: 2px 6px; border-radius: 3px; }
+        .code-line.active { background-color: var(--highlight-line); font-weight: bold; }
+
+        .kw { color: var(--code-kw); font-weight: bold; } 
+        .sym { color: var(--code-sym); font-weight: bold; }
+        .var { color: var(--code-var); }
+        .num { color: var(--code-num); font-weight: bold; }
+        .str { color: var(--code-str); }
+
+        /* CENTER: Visualization */
+        .col-viz {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            position: relative;
+            overflow: hidden; 
+        }
+
+        .narrative {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: rgba(59, 130, 246, 0.1); 
+            border-left: 4px solid var(--col-stack);
+            font-size: 0.95rem;
+            font-style: italic;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .vars-box {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #fff;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            width: 120px;
+            z-index: 50;
+        }
+        .var-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: monospace;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 2px;
+        }
+        .var-val { font-weight: bold; color: var(--col-stack); }
+
+        .scene-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: auto;
+            background-color: #f8fafc;
+        }
+
+        /* STACK (Vertical) */
+        .stack-container {
+            display: flex;
+            flex-direction: column-reverse; 
+            gap: 2px;
+            position: relative;
+            padding-left: 60px; 
+            margin-top: 50px; 
+        }
+
+        /* QUEUE (Horizontal) */
+        .queue-container {
+            display: grid;
+            grid-template-columns: repeat(10, 60px);
+            gap: 2px;
+            position: relative;
+            padding-top: 60px; 
+            padding-bottom: 60px;
+            margin-left: 60px;
+            margin-right: 60px;
+        }
+
+        /* Array Cell */
+        .cell {
+            width: 60px;
+            height: 44px; 
+            background-color: var(--cell-bg);
+            border: 2px solid #94a3b8;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            transition: all 0.3s;
+        }
+        .cell.filled { background-color: var(--cell-filled); border-color: var(--col-stack); }
+        
+        .cell-content { font-weight: bold; font-size: 1.1rem; z-index: 2; }
+
+        .idx-lbl {
+            position: absolute; font-size: 0.75rem; color: #64748b; font-family: monospace; z-index: 5; 
+        }
+        .stack-container .idx-lbl { right: 2px; top: 2px; }
+        .queue-container .idx-lbl { right: 2px; bottom: 2px; }
+
+        /* POINTERS */
+        .pointer {
+            position: absolute; font-weight: bold; font-size: 1rem;
+            display: flex; align-items: center;
+            transition: all 0.3s ease-out; white-space: nowrap; z-index: 10;
+        }
+        
+        .ptr-top {
+            color: var(--ptr-top); left: -15px; height: 44px; line-height: 44px; display: flex; align-items: center;
+        }
+        .ptr-top::after { content: '➡'; font-size: 1.8rem; margin-left: 5px; line-height: 1;}
+
+        .ptr-front {
+            color: var(--ptr-front); top: -5px; flex-direction: column; width: 60px; justify-content: center;
+        }
+        .ptr-front::after { content: '⬇'; font-size: 1.5rem; margin-top: -5px; }
+
+        .ptr-rear {
+            color: var(--ptr-rear); bottom: -5px; flex-direction: column-reverse; width: 60px; justify-content: center;
+        }
+        .ptr-rear::after { content: '⬆'; font-size: 1.5rem; margin-bottom: -5px; }
+
+        /* --- ANIMATING VALUE (FIXED) --- */
+        .animating-val {
+            position: fixed; width: 56px; height: 40px; 
+            background-color: var(--anim-val-bg); color: white; font-weight: bold;
+            display: flex; justify-content: center; align-items: center;
+            border-radius: 4px; z-index: 9999; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); pointer-events: none;
+        }
+
+        /* RIGHT: Output */
+        .col-output {
+            flex: 0 0 200px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .output-header { padding: 10px; background: #f1f5f9; font-weight: bold; border-bottom: 1px solid var(--border-color); }
+        .output-log { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 0.9rem; }
+        .log-item { border-bottom: 1px solid #eee; padding: 3px 0; }
+        .log-error { color: #dc2626; font-weight: bold; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Μαζικές Λειτουργίες: Στοίβα & Ουρά</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button onclick="init()">🔄 Αρχή</button>
+        
+        <div class="algo-group">
+            <div id="algoRepeat" class="algo-btn active-algo" onclick="setAlgo('repeat')">ΜΕΧΡΙΣ_ΟΤΟΥ</div>
+            <div id="algoWhile" class="algo-btn" onclick="setAlgo('while')">ΟΣΟ</div>
+        </div>
+
+        <button class="action-btn" id="btnFill" onclick="startMassOp('fill')">Γέμισμα ⏩</button>
+        <button class="action-btn" id="btnEmpty" onclick="startMassOp('empty')">Άδειασμα ⏩</button>
+
+        <button onclick="toggleCode()" id="btnCode">👁️ Απόκρυψη Κώδικα</button>
+
+        <div class="slider-container">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="500" max="5000" value="2000" id="speedSlider" oninput="updateSpeed()">
+        </div>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-code">
+        <div class="tabs">
+            <div class="tab active" onclick="setMode(1)">Μαζική Στοίβα</div>
+            <div class="tab" onclick="setMode(2)">Μαζική Ουρά</div>
+        </div>
+        <div class="code-container-wrapper">
+            <div id="codeDisplay"></div>
+        </div>
+    </div>
+
+    <div class="col-viz">
+        <div class="narrative" id="narrativeBox">Επιλέξτε αλγόριθμο και πατήστε Γέμισμα ή Άδειασμα...</div>
+        <div class="vars-box" id="varsBox"></div>
+        <div class="scene-wrapper" id="sceneWrapper"></div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">📺 Οθόνη Εξόδου</div>
+        <div class="output-log" id="outputLog"></div>
+    </div>
+
+</div>
+
+<script>
+    // --- State ---
+    let currentMode = 1; // 1: Stack, 2: Queue
+    let currentAlgo = 'repeat'; // 'repeat' or 'while'
+    const SIZE = 10;
+    let arr = new Array(SIZE).fill(null);
+    let topPtr = 0;
+    let frontPtr = 0;
+    let rearPtr = 0;
+    
+    let isRunning = false;
+    let stopFlag = false;
+    let speed = 3000;
+
+    // --- Helpers ---
+    function kw(t) { return `<span class="kw">${t}</span>`; }
+    function sym(t) { return `<span class="sym">${t}</span>`; }
+    function v(t) { return `<span class="var">${t}</span>`; }
+    function n(t) { return `<span class="num">${t}</span>`; }
+    function str(t) { return `<span class="str">${t}</span>`; }
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    // --- Codes ---
+    function getCodes() {
+        const stackRepeatFill = [
+            `${kw("Αν")} ${v("top")}${sym("=")}${n("10")} ${kw("τότε")}`,
+            `   ${kw("Γράψε")} ${str("'Γεμάτη στοίβα'")}`,
+            `${kw("αλλιώς")}`,
+            `   ${kw("Αρχή_επανάληψης")}`,
+            `      ${kw("Διάβασε")} ${v("x")}`,
+            `      ${v("top")} ${sym("<-")} ${v("top")} ${sym("+")} ${n("1")}`,
+            `      ${v("Π")}${sym("[")}${v("top")}${sym("]")} ${sym("<-")} ${v("x")}`,
+            `   ${kw("Μέχρις_ότου")} ${v("top")}${sym("=")}${n("10")}`,
+            `${kw("Τέλος_αν")}`
+        ];
+        const stackRepeatEmpty = [
+            `${kw("Αν")} ${v("top")}${sym("=")}${n("0")} ${kw("τότε")}`,
+            `   ${kw("Γράψε")} ${str("'Άδεια στοίβα'")}`,
+            `${kw("αλλιώς")}`,
+            `   ${kw("Αρχή_επανάληψης")}`,
+            `      ${kw("Γράψε")} ${v("Π")}${sym("[")}${v("top")}${sym("]")}`,
+            `      ${v("top")} ${sym("<-")} ${v("top")} ${sym("-")} ${n("1")}`,
+            `   ${kw("Μέχρις_ότου")} ${v("top")}${sym("=")}${n("0")}`,
+            `${kw("Τέλος_αν")}`
+        ];
+
+        // WHILE STACK
+        const stackWhileFill = [
+            `${kw("Αν")} ${v("top")}${sym("=")}${n("10")} ${kw("τότε")}`,
+            `   ${kw("Γράψε")} ${str("'γεμάτη στοίβα'")}`,
+            `${kw("αλλιώς")}`,
+            `   ${kw("Όσο")} ${v("top")} ${sym("<")} ${n("10")} ${kw("επαναλαβε")}`,
+            `      ${kw("Διάβασε")} ${v("α")}`,
+            `      ${v("top")} ${sym("<-")} ${v("top")} ${sym("+")} ${n("1")}`,
+            `      ${v("Π")}${sym("[")}${v("top")}${sym("]")} ${sym("<-")} ${v("α")}`,
+            `   ${kw("τελος_επαναληψης")}`,
+            `${kw("Τέλος_αν")}`
+        ];
+        const stackWhileEmpty = [
+            `${kw("Αν")} ${v("top")}${sym("=")}${n("0")} ${kw("τότε")}`,
+            `   ${kw("Γράψε")} ${str("'Αδεια στοίβα'")}`,
+            `${kw("αλλιώς")}`,
+            `   ${kw("Όσο")} ${v("top")} ${sym(">")} ${n("0")} ${kw("επαναλαβε")}`,
+            `      ${kw("Γράψε")} ${v("Π")}${sym("[")}${v("top")}${sym("]")}`,
+            `      ${v("top")} ${sym("<-")} ${v("top")} ${sym("-")} ${n("1")}`,
+            `   ${kw("τελος_επαναληψης")}`,
+            `${kw("Τέλος_αν")}`
+        ];
+
+        // --- QUEUE CODES ---
+        const queueRepeatFill = [
+            `${kw("Αν")} ${v("rear")}${sym("=")}${n("10")} ${kw("τότε")}`,
+            `   ${kw("Γράψε")} ${str("'Γεμάτη ουρά'")}`,
+            `${kw("αλλιώς")}`,
+            `   ${kw("Αρχή_επανάληψης")}`,
+            `      ${kw("Διάβασε")} ${v("x")}`,
+            `      ${v("rear")} ${sym("<-")} ${v("rear")} ${sym("+")} ${n("1")}`,
+            `      ${v("Π")}${sym("[")}${v("rear")}${sym("]")} ${sym("<-")} ${v("x")}`,
+            `   ${kw("Μέχρις_ότου")} ${v("rear")}${sym("=")}${n("10")}`,
+            `${kw("Τέλος_αν")}`
+        ];
+        
+        const queueRepeatEmpty = [
+            `${kw("Αν")} ${v("front")}${sym("=")}${n("0")} ${kw("τότε")}`,
+            `   ${kw("Γράψε")} ${str("'Άδεια ουρά'")}`,
+            `${kw("αλλιώς")}`,
+            `   ${kw("Αρχή_επανάληψης")}`,
+            `      ${kw("Γράψε")} ${v("Π")}${sym("[")}${v("front")}${sym("]")}`,
+            `      ${v("front")} ${sym("<-")} ${v("front")} ${sym("+")} ${n("1")}`,
+            `   ${kw("Μέχρις_ότου")} ${v("front")}${sym(">")}${v("rear")}`,
+            `   ${v("front")}${sym("<-")}${n("0")}`,
+            `   ${v("rear")}${sym("<-")}${n("0")}`,
+            `${kw("Τέλος_αν")}`
+        ];
+
+        // WHILE QUEUE (NEW)
+        const queueWhileFill = [
+            `${kw("Αν")} ${v("rear")}${sym("=")}${n("10")} ${kw("τότε")}`,
+            `   ${kw("Γράψε")} ${str("'Γεμάτη ουρά'")}`,
+            `${kw("αλλιώς")}`,
+            `   ${kw("Όσο")} ${v("rear")} ${sym("<")} ${n("10")} ${kw("επαναλαβε")}`,
+            `      ${kw("Διάβασε")} ${v("x")}`,
+            `      ${v("rear")} ${sym("<-")} ${v("rear")} ${sym("+")} ${n("1")}`,
+            `      ${v("Π")}${sym("[")}${v("rear")}${sym("]")} ${sym("<-")} ${v("x")}`,
+            `   ${kw("τελος_επαναληψης")}`,
+            `${kw("Τέλος_αν")}`
+        ];
+        const queueWhileEmpty = [
+            `${kw("Αν")} ${v("front")}${sym("=")}${n("0")} ${kw("τότε")}`,
+            `   ${kw("Γράψε")} ${str("'Άδεια ουρά'")}`,
+            `${kw("αλλιώς")}`,
+            `   ${kw("Όσο")} ${v("front")} ${sym("<=")} ${v("rear")} ${kw("επαναλαβε")}`,
+            `      ${kw("Γράψε")} ${v("Π")}${sym("[")}${v("front")}${sym("]")}`,
+            `      ${v("front")} ${sym("<-")} ${v("front")} ${sym("+")} ${n("1")}`,
+            `   ${kw("τελος_επαναληψης")}`,
+            `   ${v("front")}${sym("<-")}${n("0")}`,
+            `   ${v("rear")}${sym("<-")}${n("0")}`,
+            `${kw("Τέλος_αν")}`
+        ];
+
+        return {
+            stack: {
+                repeat: { fill: stackRepeatFill, empty: stackRepeatEmpty },
+                while: { fill: stackWhileFill, empty: stackWhileEmpty }
+            },
+            queue: {
+                repeat: { fill: queueRepeatFill, empty: queueRepeatEmpty },
+                while: { fill: queueWhileFill, empty: queueWhileEmpty }
+            }
+        };
+    }
+
+    // --- Init ---
+    function init() {
+        if(isRunning) stopFlag = true;
+        arr = new Array(SIZE).fill(null);
+        topPtr = 0; frontPtr = 0; rearPtr = 0;
+        document.getElementById('outputLog').innerHTML = '';
+        renderScene();
+        updateVars();
+        renderCodeDisplay();
+        updateSpeed();
+    }
+
+    function setMode(m) {
+        if(isRunning) return;
+        currentMode = m;
+        document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i+1 === m));
+        
+        // Colors
+        const root = document.documentElement;
+        if(m===1) {
+            root.style.setProperty('--col-stack', '#3b82f6');
+            document.querySelector('.tab.active').style.borderBottomColor = '#3b82f6';
+        } else {
+            root.style.setProperty('--col-stack', '#8b5cf6');
+            document.querySelector('.tab.active').style.borderBottomColor = '#8b5cf6';
+        }
+        renderCodeDisplay();
+        renderScene();
+        updateVars();
+    }
+
+    function setAlgo(algo) {
+        if(isRunning) return;
+        currentAlgo = algo;
+        document.getElementById('algoRepeat').className = algo === 'repeat' ? 'algo-btn active-algo' : 'algo-btn';
+        document.getElementById('algoWhile').className = algo === 'while' ? 'algo-btn active-algo' : 'algo-btn';
+        renderCodeDisplay();
+    }
+
+    function toggleCode() {
+        const p = document.querySelector('.col-code');
+        p.classList.toggle('hidden');
+        const btn = document.getElementById('btnCode');
+        btn.innerText = p.classList.contains('hidden') ? "👁️ Εμφάνιση Κώδικα" : "👁️ Απόκρυψη Κώδικα";
+    }
+
+    function renderCodeDisplay() {
+        const codes = getCodes();
+        const modeKey = currentMode === 1 ? 'stack' : 'queue';
+        const algoObj = codes[modeKey][currentAlgo];
+        
+        const display = document.getElementById('codeDisplay');
+        display.innerHTML = '';
+
+        // Block 1: Fill
+        const blockFill = document.createElement('div');
+        blockFill.className = 'code-block';
+        blockFill.innerHTML = `<div class="code-block-title">Γέμισμα (${currentAlgo === 'repeat' ? 'ΜΕΧΡΙΣ_ΟΤΟΥ' : 'ΟΣΟ'})</div>`;
+        const fillHtml = algoObj.fill.map((l, i) => `<div class="code-line" id="fill-line-${i}">${l}</div>`).join('');
+        blockFill.innerHTML += `<div class="code-content">${fillHtml}</div>`;
+        display.appendChild(blockFill);
+
+        // Block 2: Empty
+        const blockEmpty = document.createElement('div');
+        blockEmpty.className = 'code-block';
+        blockEmpty.innerHTML = `<div class="code-block-title">Άδειασμα (${currentAlgo === 'repeat' ? 'ΜΕΧΡΙΣ_ΟΤΟΥ' : 'ΟΣΟ'})</div>`;
+        const emptyHtml = algoObj.empty.map((l, i) => `<div class="code-line" id="empty-line-${i}">${l}</div>`).join('');
+        blockEmpty.innerHTML += `<div class="code-content">${emptyHtml}</div>`;
+        display.appendChild(blockEmpty);
+    }
+
+    // --- Visualization Updates ---
+    function updateVars() {
+        const box = document.getElementById('varsBox');
+        if(currentMode === 1) {
+            box.innerHTML = `<div class="var-item"><span>top:</span> <span class="var-val">${topPtr}</span></div>`;
+        } else {
+            box.innerHTML = `
+                <div class="var-item"><span>front:</span> <span class="var-val" style="color:var(--ptr-front)">${frontPtr}</span></div>
+                <div class="var-item"><span>rear:</span> <span class="var-val" style="color:var(--ptr-rear)">${rearPtr}</span></div>
+            `;
+        }
+    }
+
+    function renderScene() {
+        const wrapper = document.getElementById('sceneWrapper');
+        wrapper.innerHTML = '';
+
+        if(currentMode === 1) { // STACK
+            const container = document.createElement('div');
+            container.className = 'stack-container';
+            for(let i=1; i<=SIZE; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell' + (arr[i-1] ? ' filled' : '');
+                cell.id = `cell-${i}`;
+                cell.innerHTML = `<span class="idx-lbl">${i}</span><span class="cell-content">${arr[i-1] || ''}</span>`;
+                container.appendChild(cell);
+            }
+            const ptr = document.createElement('div');
+            ptr.className = 'pointer ptr-top'; ptr.id = 'ptr-top'; ptr.innerText = 'top';
+            ptr.style.bottom = ((topPtr > 0 ? (topPtr - 1) * 46 : -46)) + 'px'; 
+            ptr.style.opacity = topPtr === 0 ? '0' : '1';
+            container.appendChild(ptr);
+            wrapper.appendChild(container);
+        } else { // QUEUE
+            const container = document.createElement('div');
+            container.className = 'queue-container';
+            for(let i=1; i<=SIZE; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell' + (arr[i-1] ? ' filled' : '');
+                cell.id = `cell-${i}`;
+                cell.innerHTML = `<span class="idx-lbl">${i}</span><span class="cell-content">${arr[i-1] || ''}</span>`;
+                container.appendChild(cell);
+            }
+            const fPtr = document.createElement('div'); fPtr.className = 'pointer ptr-front'; fPtr.id = 'ptr-front'; fPtr.innerText = 'F';
+            const rPtr = document.createElement('div'); rPtr.className = 'pointer ptr-rear'; rPtr.id = 'ptr-rear'; rPtr.innerText = 'R';
+            setQueuePointerPos(fPtr, frontPtr);
+            setQueuePointerPos(rPtr, rearPtr);
+            container.appendChild(fPtr); container.appendChild(rPtr);
+            wrapper.appendChild(container);
+        }
+    }
+
+    function setQueuePointerPos(el, idx) {
+        if (idx === 0) { el.style.opacity = '0'; } else { el.style.opacity = '1'; el.style.left = ((idx - 1) * 62) + 'px'; }
+    }
+
+    function updatePointersAnim() {
+        if(currentMode === 1) {
+            const ptr = document.getElementById('ptr-top');
+            ptr.style.bottom = ((topPtr > 0 ? (topPtr - 1) * 46 : -46)) + 'px';
+            ptr.style.opacity = topPtr === 0 ? '0' : '1';
+        } else {
+            const fPtr = document.getElementById('ptr-front');
+            const rPtr = document.getElementById('ptr-rear');
+            setQueuePointerPos(fPtr, frontPtr);
+            setQueuePointerPos(rPtr, rearPtr);
+        }
+        updateVars();
+    }
+
+    function clearHighlights() {
+        document.querySelectorAll('.code-line').forEach(l => l.classList.remove('active'));
+    }
+    function highlight(type, idx) {
+        clearHighlights();
+        const el = document.getElementById(`${type}-line-${idx}`);
+        if(el) {
+            el.classList.add('active');
+            el.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+        }
+    }
+
+    // --- ANIMATIONS ---
+    async function animatePush(targetCellId, value) {
+        const targetCell = document.getElementById(targetCellId);
+        const rect = targetCell.getBoundingClientRect();
+        const topCell = document.getElementById('cell-10');
+        const topRect = topCell.getBoundingClientRect();
+
+        const animEl = document.createElement('div');
+        animEl.className = 'animating-val';
+        animEl.innerText = value;
+        document.body.appendChild(animEl); 
+
+        const startTop = topRect.top - 60; 
+        animEl.style.left = `${rect.left + 2}px`;
+        animEl.style.top = `${startTop}px`;
+        void animEl.offsetWidth; 
+
+        animEl.style.transition = `top ${speed*0.9}ms cubic-bezier(0.25, 1, 0.5, 1)`;
+        animEl.style.top = `${rect.top + 2}px`;
+
+        await sleep(speed*0.9);
+        animEl.remove();
+        targetCell.classList.add('filled');
+        targetCell.querySelector('.cell-content').innerText = value;
+    }
+
+    async function animatePop(sourceCellId) {
+        const sourceCell = document.getElementById(sourceCellId);
+        const valStr = sourceCell.querySelector('.cell-content').innerText;
+        const rect = sourceCell.getBoundingClientRect();
+        const topCell = document.getElementById('cell-10');
+        const topRect = topCell.getBoundingClientRect();
+
+        const animEl = document.createElement('div');
+        animEl.className = 'animating-val';
+        animEl.innerText = valStr;
+        document.body.appendChild(animEl);
+
+        animEl.style.left = `${rect.left + 2}px`;
+        animEl.style.top = `${rect.top + 2}px`;
+        sourceCell.classList.remove('filled');
+        sourceCell.querySelector('.cell-content').innerText = '';
+        void animEl.offsetWidth;
+
+        animEl.style.transition = `all ${speed*0.7}ms ease-in`;
+        animEl.style.top = `${topRect.top - 100}px`; 
+        animEl.style.opacity = '0';
+
+        await sleep(speed*0.7);
+        animEl.remove();
+    }
+
+    async function animateEnqueue(targetCellId, value) {
+        const targetCell = document.getElementById(targetCellId);
+        const rect = targetCell.getBoundingClientRect();
+        const rightCell = document.getElementById('cell-10');
+        const rightRect = rightCell.getBoundingClientRect();
+
+        const animEl = document.createElement('div');
+        animEl.className = 'animating-val';
+        animEl.innerText = value;
+        document.body.appendChild(animEl);
+
+        animEl.style.left = `${rightRect.right + 20}px`; 
+        animEl.style.top = `${rect.top + 2}px`;
+        void animEl.offsetWidth;
+
+        animEl.style.transition = `left ${speed*0.9}ms cubic-bezier(0.25, 1, 0.5, 1)`;
+        animEl.style.left = `${rect.left + 2}px`;
+
+        await sleep(speed*0.9);
+        animEl.remove();
+        targetCell.classList.add('filled');
+        targetCell.querySelector('.cell-content').innerText = value;
+    }
+
+    async function animateDequeue(sourceCellId) {
+        const sourceCell = document.getElementById(sourceCellId);
+        const valStr = sourceCell.querySelector('.cell-content').innerText;
+        const rect = sourceCell.getBoundingClientRect();
+
+        const animEl = document.createElement('div');
+        animEl.className = 'animating-val';
+        animEl.innerText = valStr;
+        document.body.appendChild(animEl);
+
+        animEl.style.left = `${rect.left + 2}px`;
+        animEl.style.top = `${rect.top + 2}px`;
+        sourceCell.classList.remove('filled');
+        sourceCell.querySelector('.cell-content').innerText = '';
+        void animEl.offsetWidth;
+
+        animEl.style.transition = `all ${speed*0.6}ms ease-in`;
+        animEl.style.left = `${rect.left - 100}px`;
+        animEl.style.opacity = '0';
+
+        await sleep(speed*0.6);
+        animEl.remove();
+    }
+
+    function log(msg) {
+        const div = document.createElement('div');
+        div.className = 'log-item'; div.innerText = msg;
+        const c = document.getElementById('outputLog'); c.appendChild(div); c.scrollTop = c.scrollHeight;
+    }
+    function narrate(msg) { document.getElementById('narrativeBox').innerText = msg; }
+
+    // --- MASS LOGIC ---
+    async function startMassOp(action) {
+        if(isRunning) return;
+        isRunning = true; stopFlag = false;
+        
+        narrate(`Εκτέλεση: ${action === 'fill' ? 'Γέμισμα' : 'Άδειασμα'} (${currentAlgo.toUpperCase()})`);
+
+        if(currentMode === 1) { // STACK
+            if(action === 'fill') {
+                if(currentAlgo === 'repeat') await stackFillRepeat(); else await stackWhileFill();
+            } else {
+                if(currentAlgo === 'repeat') await stackEmptyRepeat(); else await stackWhileEmpty();
+            }
+        } else { // QUEUE
+            if(action === 'fill') {
+                if(currentAlgo === 'repeat') await queueFillRepeat(); else await queueWhileFill();
+            } else {
+                if(currentAlgo === 'repeat') await queueEmptyRepeat(); else await queueWhileEmpty();
+            }
+        }
+
+        clearHighlights();
+        narrate("Ολοκληρώθηκε.");
+        isRunning = false;
+    }
+
+    // --- STACK ALGORITHMS ---
+    async function stackFillRepeat() {
+        highlight('fill', 0); await sleep(speed*0.3); // If top=10
+        if(topPtr === 10) {
+            highlight('fill', 1); log("Γεμάτη στοίβα"); await sleep(speed);
+        } else {
+            highlight('fill', 2); // Else
+            do {
+                if(stopFlag) break;
+                highlight('fill', 3); // Arxi
+                let val = Math.floor(Math.random()*90)+10;
+                highlight('fill', 4); narrate(`Διάβασε ${val}`); await sleep(speed*0.3);
+                
+                highlight('fill', 5); topPtr++; updatePointersAnim(); narrate("top <- top + 1"); await sleep(speed*0.5);
+                
+                highlight('fill', 6); narrate(`Εισαγωγή ${val}`); 
+                await animatePush(`cell-${topPtr}`, val); arr[topPtr-1] = val;
+                
+                highlight('fill', 7); // Until
+                await sleep(speed*0.3);
+            } while (topPtr < 10);
+        }
+        highlight('fill', 8);
+    }
+
+    async function stackEmptyRepeat() {
+        highlight('empty', 0); await sleep(speed*0.3);
+        if(topPtr === 0) {
+            highlight('empty', 1); log("Άδεια στοίβα"); await sleep(speed);
+        } else {
+            highlight('empty', 2);
+            do {
+                if(stopFlag) break;
+                highlight('empty', 3); // Arxi
+                highlight('empty', 4); // Write
+                let val = arr[topPtr-1];
+                log(`Εξαγωγή: ${val}`); 
+                await animatePop(`cell-${topPtr}`); arr[topPtr-1] = null;
+                
+                highlight('empty', 5); topPtr--; updatePointersAnim(); narrate("top <- top - 1"); await sleep(speed*0.5);
+                
+                highlight('empty', 6); // Until
+                await sleep(speed*0.3);
+            } while (topPtr > 0);
+        }
+        highlight('empty', 7);
+    }
+
+    async function stackWhileFill() {
+        highlight('fill', 0); await sleep(speed*0.3); // Check Full
+        if(topPtr === 10) {
+            highlight('fill', 1); log("γεμάτη στοίβα"); await sleep(speed);
+        } else {
+            highlight('fill', 2); // Else
+            while(topPtr < 10) {
+                if(stopFlag) break;
+                highlight('fill', 3); await sleep(speed*0.3); // Check Condition
+                
+                let val = Math.floor(Math.random()*90)+10;
+                highlight('fill', 4); narrate(`Διάβασε ${val}`); await sleep(speed*0.3);
+                
+                highlight('fill', 5); topPtr++; updatePointersAnim(); await sleep(speed*0.5);
+                
+                highlight('fill', 6); 
+                await animatePush(`cell-${topPtr}`, val); arr[topPtr-1] = val;
+                
+                highlight('fill', 7); await sleep(speed*0.3);
+            }
+            highlight('fill', 3); // Final check fail
+        }
+        highlight('fill', 8);
+    }
+
+    async function stackWhileEmpty() {
+        highlight('empty', 0); await sleep(speed*0.3);
+        if(topPtr === 0) {
+            highlight('empty', 1); log("Αδεια στοίβα"); await sleep(speed);
+        } else {
+            highlight('empty', 2);
+            while(topPtr > 0) {
+                if(stopFlag) break;
+                highlight('empty', 3); await sleep(speed*0.3); // Check Condition
+                
+                highlight('empty', 4); 
+                let val = arr[topPtr-1]; log(`Εξαγωγή: ${val}`);
+                await animatePop(`cell-${topPtr}`); arr[topPtr-1] = null;
+
+                highlight('empty', 5); topPtr--; updatePointersAnim(); await sleep(speed*0.5);
+                
+                highlight('empty', 6); await sleep(speed*0.3);
+            }
+            highlight('empty', 3); // Final check fail
+        }
+        highlight('empty', 7);
+    }
+
+    // --- QUEUE ALGORITHMS ---
+    async function queueFillRepeat() {
+        highlight('fill', 0); await sleep(speed*0.3);
+        if(rearPtr === 10) {
+            highlight('fill', 1); log("Γεμάτη ουρά"); await sleep(speed);
+        } else {
+            highlight('fill', 2);
+            // Implicit front init logic if empty
+            if(frontPtr === 0) { frontPtr = 1; updatePointersAnim(); } 
+
+            do {
+                if(stopFlag) break;
+                highlight('fill', 3);
+                let val = Math.floor(Math.random()*90)+10;
+                highlight('fill', 4); narrate(`Διάβασε ${val}`); await sleep(speed*0.3);
+
+                highlight('fill', 5); // Check front
+                // Only visual highlight, logic handled above
+                
+                highlight('fill', 7); rearPtr++; updatePointersAnim(); await sleep(speed*0.5);
+
+                highlight('fill', 8);
+                await animateEnqueue(`cell-${rearPtr}`, val); arr[rearPtr-1] = val;
+
+                highlight('fill', 9); await sleep(speed*0.3); // Until
+            } while (rearPtr < 10);
+        }
+        highlight('fill', 10);
+    }
+
+    async function queueEmptyRepeat() {
+        highlight('empty', 0); await sleep(speed*0.3);
+        if(frontPtr === 0) {
+            highlight('empty', 1); log("Άδεια ουρά"); await sleep(speed);
+        } else {
+            highlight('empty', 2);
+            do {
+                if(stopFlag) break;
+                highlight('empty', 3);
+                highlight('empty', 4); 
+                let val = arr[frontPtr-1]; log(`Εξαγωγή: ${val}`);
+                await animateDequeue(`cell-${frontPtr}`); arr[frontPtr-1]=null;
+
+                highlight('empty', 5); frontPtr++; updatePointersAnim(); await sleep(speed*0.5);
+                
+                highlight('empty', 6); // Until front > rear
+                await sleep(speed*0.3);
+            } while (frontPtr <= rearPtr);
+
+            highlight('empty', 7); frontPtr=0; updatePointersAnim();
+            highlight('empty', 8); rearPtr=0; updatePointersAnim(); await sleep(speed*0.5);
+        }
+        highlight('empty', 9);
+    }
+
+    async function queueWhileFill() {
+        highlight('fill', 0); await sleep(speed*0.3);
+        if(rearPtr === 10) {
+            highlight('fill', 1); log("Γεμάτη ουρά"); await sleep(speed);
+        } else {
+            highlight('fill', 2);
+            // Implicit front init
+            if(frontPtr === 0) { frontPtr = 1; updatePointersAnim(); } 
+
+            while(rearPtr < 10) {
+                if(stopFlag) break;
+                highlight('fill', 3); await sleep(speed*0.3); // Check Condition
+                let val = Math.floor(Math.random()*90)+10;
+                highlight('fill', 4); narrate(`Διάβασε ${val}`); await sleep(speed*0.3);
+
+                highlight('fill', 5); rearPtr++; updatePointersAnim(); await sleep(speed*0.5);
+
+                highlight('fill', 6);
+                await animateEnqueue(`cell-${rearPtr}`, val); arr[rearPtr-1] = val;
+
+                highlight('fill', 7); await sleep(speed*0.3);
+            }
+            highlight('fill', 3); // Final check fail
+        }
+        highlight('fill', 8);
+    }
+
+    async function queueWhileEmpty() {
+        highlight('empty', 0); await sleep(speed*0.3);
+        if(frontPtr === 0) {
+            highlight('empty', 1); log("Άδεια ουρά"); await sleep(speed);
+        } else {
+            highlight('empty', 2);
+            while(frontPtr <= rearPtr) {
+                if(stopFlag) break;
+                highlight('empty', 3); await sleep(speed*0.3); // Check Condition
+                
+                highlight('empty', 4);
+                let val = arr[frontPtr-1]; log(`Εξαγωγή: ${val}`);
+                await animateDequeue(`cell-${frontPtr}`); arr[frontPtr-1]=null;
+
+                highlight('empty', 5); frontPtr++; updatePointersAnim(); await sleep(speed*0.5);
+                
+                highlight('empty', 6); await sleep(speed*0.3);
+            }
+            highlight('empty', 3); // Final check fail
+            
+            highlight('empty', 7); frontPtr=0; updatePointersAnim();
+            highlight('empty', 8); rearPtr=0; updatePointersAnim(); await sleep(speed*0.5);
+        }
+        highlight('empty', 9);
+    }
+
+    function updateSpeed() {
+        speed = 5500 - document.getElementById('speedSlider').value;
+    }
+
+    init();
+
+</script>
+</body>
+</html>

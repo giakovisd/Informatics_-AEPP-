@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Φυσαλίδα γραμμής-στηλης</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            
+            --col-arr: #3b82f6; 
+            --col-on: #8b5cf6; 
+            --col-header: #64748b;
+            
+            --text-white: #ffffff;
+            
+            /* Visual States */
+            --scan-bg: #d1fae5;       /* Soft Green for active row/col */
+            --scan-border: #34d399;
+            
+            --compare-bg: #fde047;    /* Yellow/Orange for comparison */
+            --swap-bg: #fca5a5;       /* Red tint during swap motion */
+            
+            --border-color: #cbd5e1;
+            --disabled-btn: #94a3b8;
+
+            /* Code Syntax */
+            --code-kw: #0000CD; 
+            --code-sym: #FF0000; 
+            --code-var: #000000; 
+            --code-num: #008000;
+            --code-str: #A020F0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        button {
+            padding: 8px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        button.primary { background-color: var(--col-arr); color: white; border: none; }
+        button:hover:not(:disabled) { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { background-color: var(--disabled-btn); color: #ccc; cursor: not-allowed; }
+
+        .slider-container { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin-left: 10px; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 15px;
+            gap: 15px;
+            height: calc(100% - 70px);
+            box-sizing: border-box;
+            overflow: hidden; 
+        }
+
+        /* LEFT: Code Panel */
+        .col-code {
+            flex: 0 0 500px;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .col-code.hidden { display: none; }
+
+        .tabs { display: flex; background: #f1f5f9; border-bottom: 1px solid var(--border-color); }
+        .tab {
+            flex: 1; text-align: center; padding: 12px; font-size: 0.9rem; cursor: pointer;
+            border-bottom: 3px solid transparent; color: #64748b; font-weight: bold;
+        }
+        .tab:hover { background: #e2e8f0; }
+        .tab.active { background: var(--panel-bg); border-bottom-color: var(--col-arr); color: var(--text-color); }
+
+        .problem-info {
+            padding: 15px;
+            background-color: #fffbeb;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        .info-header { font-weight: bold; color: #b45309; margin-bottom: 5px; display: block; }
+        .info-text { color: var(--text-color); }
+
+        .code-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            white-space: pre; 
+        }
+        .code-line { padding: 2px 6px; border-radius: 3px; }
+        .code-line.active { background-color: var(--highlight-line); font-weight: bold; }
+
+        .kw { color: var(--code-kw); font-weight: bold; } 
+        .sym { color: var(--code-sym); font-weight: bold; }
+        .var { color: var(--code-var); }
+        .num { color: var(--code-num); font-weight: bold; }
+        .str { color: var(--code-str); }
+
+        /* CENTER: Visualization */
+        .col-viz {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            position: relative;
+            overflow: hidden; 
+        }
+
+        .narrative {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: rgba(59, 130, 246, 0.1); 
+            border-left: 4px solid var(--col-arr);
+            font-size: 0.95rem;
+            font-style: italic;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        /* Vars */
+        .vars-box {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #fff;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            width: 140px;
+            z-index: 50;
+        }
+        .var-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: monospace;
+            font-size: 1rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 3px;
+        }
+        .var-val.changed { animation: pop 0.3s ease; font-weight: bold; color: var(--col-arr); }
+        @keyframes pop { 50% { transform: scale(1.3); } }
+
+        .scene-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            position: relative;
+            overflow: auto;
+            padding-top: 20px;
+        }
+
+        /* --- UNIFIED GRID --- */
+        .unified-grid {
+            display: grid;
+            grid-template-columns: 120px 30px repeat(5, 55px);
+            grid-template-rows: 30px repeat(12, 35px); 
+            gap: 6px;
+            position: relative;
+            padding: 20px;
+        }
+
+        .u-cell {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.9rem;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: transform 0.4s ease; /* Smooth motion */
+            position: relative;
+            z-index: 1;
+        }
+
+        .u-header {
+            color: var(--col-header);
+            font-size: 0.8rem;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            padding-bottom: 5px;
+        }
+
+        .u-name {
+            background-color: var(--col-on);
+            color: white;
+            justify-content: flex-start;
+            padding-left: 10px;
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+            font-size: 0.85rem;
+        }
+        .idx-lbl { opacity: 0.6; margin-right: 8px; font-size: 0.75rem; width: 15px; text-align: right; display:inline-block;}
+
+        .u-grade {
+            background-color: white;
+            border: 1px solid #cbd5e1;
+            color: var(--text-color);
+        }
+
+        /* HIGHLIGHTS */
+        
+        /* The entire row/col being sorted (Soft Green) */
+        .u-cell.scanning, .u-header.scanning {
+            background-color: var(--scan-bg) !important;
+            border-color: var(--scan-border) !important;
+            z-index: 0;
+        }
+        .u-name.scanning {
+            background-color: var(--scan-bg) !important;
+            color: #064e3b !important;
+            border-color: var(--scan-border) !important;
+        }
+
+        /* Comparing two cells (Orange) */
+        .u-grade.comparing {
+            background-color: var(--compare-bg) !important;
+            transform: scale(1.1);
+            z-index: 10;
+            box-shadow: 0 0 8px rgba(0,0,0,0.2);
+        }
+
+        /* Active Swap State */
+        .u-grade.moving {
+            background-color: var(--swap-bg) !important;
+            z-index: 20; /* On top while moving */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* RIGHT: Output */
+        .col-output {
+            flex: 0 0 200px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .output-header { padding: 10px; background: #f1f5f9; font-weight: bold; border-bottom: 1px solid var(--border-color); }
+        .output-log { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 0.9rem; }
+        .log-item { border-bottom: 1px solid #eee; padding: 3px 0; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Φυσαλίδα σε κάθε γραμμή/στήλη</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button onclick="init()">🔄 Αρχή</button>
+        <button onclick="play()" id="btnPlay" class="primary">▶️ Αυτόματη Εκτέλεση</button>
+        <button onclick="step()" id="btnStep">Βήμα ⏩</button>
+        <button onclick="toggleCode()" id="btnCode">👁️ Απόκρυψη Κώδικα</button>
+        
+        <div class="slider-container">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="50" max="1500" value="800" id="speedSlider" oninput="updateSpeed()">
+        </div>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-code">
+        <div class="tabs">
+            <div class="tab active" onclick="setMode(1)">1. Ταξινόμηση κατά Γραμμές</div>
+            <div class="tab" onclick="setMode(2)">2. Ταξινόμηση κατά Στήλες</div>
+        </div>
+        
+        <div class="problem-info" id="problemInfo">
+            <span class="info-header">Δεδομένα: ΟΝ[12], Β[12,5]</span>
+            <span class="info-text" id="problemText">
+                Ταξινόμηση των βαθμών κάθε μαθητή ξεχωριστά σε αύξουσα σειρά.
+            </span>
+        </div>
+
+        <div class="code-content" id="codeContainer"></div>
+    </div>
+
+    <div class="col-viz">
+        <div class="narrative" id="narrativeBox">Πατήστε εκτέλεση...</div>
+        
+        <div class="vars-box">
+            <div class="var-item"><span class="var-label">temp:</span> <span id="val-temp" class="var-val">-</span></div>
+        </div>
+
+        <div class="scene-wrapper">
+            <div class="unified-grid" id="mainGrid">
+                </div>
+        </div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">📺 Οθόνη Εξόδου</div>
+        <div class="output-log" id="outputLog"></div>
+    </div>
+
+</div>
+
+<script>
+    // --- Configuration ---
+    const ROWS = 12;
+    const COLS = 5;
+    const NAMES = [
+        "Γιώργος", "Μαρία", "Νίκος", "Ελένη", "Κώστας", "Άννα",
+        "Πέτρος", "Σοφία", "Γιάννης", "Κατερίνα", "Δημήτρης", "Χαρά"
+    ];
+    
+    // --- State ---
+    let currentMode = 1; 
+    let dataB = []; 
+    let steps = [];
+    let stepIdx = -1;
+    let timer = null;
+    let isPlaying = false;
+    let speed = 800;
+
+    // --- Helpers ---
+    function kw(t) { return `<span class="kw">${t}</span>`; }
+    function sym(t) { return `<span class="sym">${t}</span>`; }
+    function v(t) { return `<span class="var">${t}</span>`; }
+    function n(t) { return `<span class="num">${t}</span>`; }
+    function str(t) { return `<span class="str">${t}</span>`; }
+
+    // Codes
+    function getCodes() {
+        return {
+            1: [ // Sort Rows (Each student's grades)
+                `${kw("Για")} ${v("i")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("12")}`,
+                `  ${kw("Για")} ${v("j")} ${kw("από")} ${n("2")} ${kw("μέχρι")} ${n("5")}`,
+                `    ${kw("Για")} ${v("k")} ${kw("από")} ${n("5")} ${kw("μέχρι")} ${v("j")} ${kw("με_βήμα")} ${n("-1")}`,
+                `      ${kw("Αν")} ${v("Β")}${sym("[")}${v("i")}${sym(",")}${v("k")}${sym("]")} ${sym("<")} ${v("Β")}${sym("[")}${v("i")}${sym(",")}${v("k-1")}${sym("]")} ${kw("Τότε")}`,
+                `        ${str("! Ανταλλαγή")}`,
+                `        ${v("temp")} ${sym("<-")} ${v("Β")}${sym("[")}${v("i")}${sym(",")}${v("k")}${sym("]")}`,
+                `        ${v("Β")}${sym("[")}${v("i")}${sym(",")}${v("k")}${sym("]")} ${sym("<-")} ${v("Β")}${sym("[")}${v("i")}${sym(",")}${v("k-1")}${sym("]")}`,
+                `        ${v("Β")}${sym("[")}${v("i")}${sym(",")}${v("k-1")}${sym("]")} ${sym("<-")} ${v("temp")}`,
+                `      ${kw("Τέλος_αν")}`,
+                `    ${kw("Τέλος_επανάληψης")}`,
+                `  ${kw("Τέλος_επανάληψης")}`,
+                `${kw("Τέλος_επανάληψης")}`
+            ],
+            2: [ // Sort Cols (Each subject's grades)
+                `${kw("Για")} ${v("j")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("5")}`,
+                `  ${kw("Για")} ${v("i")} ${kw("από")} ${n("2")} ${kw("μέχρι")} ${n("12")}`,
+                `    ${kw("Για")} ${v("k")} ${kw("από")} ${n("12")} ${kw("μέχρι")} ${v("i")} ${kw("με_βήμα")} ${n("-1")}`,
+                `      ${kw("Αν")} ${v("Β")}${sym("[")}${v("k")}${sym(",")}${v("j")}${sym("]")} ${sym("<")} ${v("Β")}${sym("[")}${v("k-1")}${sym(",")}${v("j")}${sym("]")} ${kw("Τότε")}`,
+                `        ${str("! Ανταλλαγή")}`,
+                `        ${v("temp")} ${sym("<-")} ${v("Β")}${sym("[")}${v("k")}${sym(",")}${v("j")}${sym("]")}`,
+                `        ${v("Β")}${sym("[")}${v("k")}${sym(",")}${v("j")}${sym("]")} ${sym("<-")} ${v("Β")}${sym("[")}${v("k-1")}${sym(",")}${v("j")}${sym("]")}`,
+                `        ${v("Β")}${sym("[")}${v("k-1")}${sym(",")}${v("j")}${sym("]")} ${sym("<-")} ${v("temp")}`,
+                `      ${kw("Τέλος_αν")}`,
+                `    ${kw("Τέλος_επανάληψης")}`,
+                `  ${kw("Τέλος_επανάληψης")}`,
+                `${kw("Τέλος_επανάληψης")}`
+            ]
+        };
+    }
+
+    // --- Init ---
+    function init() {
+        generateData();
+        renderCode();
+        renderViz();
+        
+        isPlaying = false;
+        clearTimeout(timer);
+        stepIdx = -1;
+        document.getElementById('outputLog').innerHTML = '';
+        document.getElementById('narrativeBox').innerText = "Πατήστε εκτέλεση...";
+        document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        document.getElementById('val-temp').innerText = '-';
+    }
+
+    function generateData() {
+        dataB = [];
+        for(let i=0; i<ROWS; i++) {
+            let row = [];
+            for(let j=0; j<COLS; j++) {
+                row.push(Math.floor(Math.random() * 20) + 80); // 80-99
+            }
+            dataB.push(row);
+        }
+    }
+
+    function setMode(m) {
+        currentMode = m;
+        document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i+1 === m));
+        
+        const desc = document.getElementById('problemText');
+        if(m === 1) desc.innerText = "Ταξινόμηση των βαθμών κάθε μαθητή (γραμμή) σε αύξουσα σειρά.";
+        else desc.innerText = "Ταξινόμηση των βαθμών κάθε μαθήματος (στήλη) σε αύξουσα σειρά.";
+
+        init();
+    }
+
+    function resetSim() { init(); }
+
+    function toggleCode() {
+        const p = document.querySelector('.col-code');
+        p.classList.toggle('hidden');
+        const btn = document.getElementById('btnCode');
+        btn.innerText = p.classList.contains('hidden') ? "👁️ Εμφάνιση Κώδικα" : "👁️ Απόκρυψη Κώδικα";
+    }
+
+    function renderCode() {
+        const codes = getCodes();
+        const html = codes[currentMode].map((l, i) => `<div class="code-line" id="line-${i}">${l}</div>`).join('');
+        document.getElementById('codeContainer').innerHTML = html;
+    }
+
+    function renderViz() {
+        const grid = document.getElementById('mainGrid');
+        grid.innerHTML = '';
+
+        // Header Spacer + Cols
+        const hSpacer1 = document.createElement('div'); hSpacer1.className = 'u-header'; grid.appendChild(hSpacer1);
+        const hSpacer2 = document.createElement('div'); hSpacer2.className = 'u-header'; grid.appendChild(hSpacer2);
+
+        for(let j=1; j<=COLS; j++) {
+            const h = document.createElement('div');
+            h.className = 'u-header';
+            h.innerText = `Μ${j}`;
+            h.id = `head-col-${j}`;
+            grid.appendChild(h);
+        }
+
+        // Rows
+        for(let i=1; i<=ROWS; i++) {
+            // Name
+            const nameCell = document.createElement('div');
+            nameCell.className = 'u-cell u-name';
+            nameCell.id = `name-${i}`;
+            nameCell.innerHTML = `<span class="idx-lbl">${i}</span>${NAMES[i-1]}`;
+            grid.appendChild(nameCell);
+
+            // Spacer
+            const spacer = document.createElement('div');
+            spacer.className = 'u-cell u-spacer';
+            grid.appendChild(spacer);
+
+            // Grades
+            for(let j=1; j<=COLS; j++) {
+                const cell = document.createElement('div');
+                cell.className = 'u-cell u-grade';
+                cell.id = `cell-${i}-${j}`;
+                cell.innerText = dataB[i-1][j-1];
+                grid.appendChild(cell);
+            }
+        }
+    }
+
+    // --- Logic ---
+    function calcSteps() {
+        steps = [];
+        let simData = JSON.parse(JSON.stringify(dataB));
+
+        if (currentMode === 1) { // ROW SORT
+            for(let i=1; i<=ROWS; i++) {
+                steps.push({ line: 0, type: 'scan_row', r: i, msg: `Ταξινόμηση μαθητή ${i}` });
+                
+                for(let j=2; j<=COLS; j++) {
+                    for(let k=COLS; k>=j; k--) {
+                        let val2 = simData[i-1][k-1];
+                        let val1 = simData[i-1][k-2]; // previous
+                        
+                        steps.push({ 
+                            line: 3, type: 'compare', 
+                            r1: i, c1: k-1, r2: i, c2: k,
+                            msg: `  Σύγκριση: ${val2} < ${val1} ;` 
+                        });
+
+                        if(val2 < val1) {
+                            let temp = simData[i-1][k-1];
+                            simData[i-1][k-1] = simData[i-1][k-2];
+                            simData[i-1][k-2] = temp;
+                            
+                            steps.push({ 
+                                line: 6, type: 'swap', 
+                                r1: i, c1: k-1, r2: i, c2: k,
+                                valA: simData[i-1][k-2], valB: simData[i-1][k-1],
+                                temp: temp,
+                                msg: `    Ναι. Ανταλλαγή.` 
+                            });
+                        }
+                    }
+                }
+            }
+        } else { // COL SORT
+            for(let j=1; j<=COLS; j++) {
+                steps.push({ line: 0, type: 'scan_col', c: j, msg: `Ταξινόμηση μαθήματος ${j}` });
+                
+                for(let i=2; i<=ROWS; i++) {
+                    for(let k=ROWS; k>=i; k--) {
+                        let val2 = simData[k-1][j-1];
+                        let val1 = simData[k-2][j-1]; // previous row
+                        
+                        steps.push({ 
+                            line: 3, type: 'compare', 
+                            r1: k-1, c1: j, r2: k, c2: j,
+                            msg: `  Σύγκριση: ${val2} < ${val1} ;` 
+                        });
+
+                        if(val2 < val1) {
+                            let temp = simData[k-1][j-1];
+                            simData[k-1][j-1] = simData[k-2][j-1];
+                            simData[k-2][j-1] = temp;
+                            
+                            steps.push({ 
+                                line: 6, type: 'swap', 
+                                r1: k-1, c1: j, r2: k, c2: j,
+                                valA: simData[k-2][j-1], valB: simData[k-1][j-1],
+                                temp: temp,
+                                msg: `    Ναι. Ανταλλαγή.` 
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        steps.push({ line: 11, msg: "Τέλος ταξινόμησης." });
+    }
+
+    // --- Visuals ---
+    function highlightScan(r, c, type) {
+        document.querySelectorAll('.scanning').forEach(e => e.classList.remove('scanning'));
+        
+        if (type === 'row') {
+            document.getElementById(`name-${r}`).classList.add('scanning');
+            for(let j=1; j<=COLS; j++) document.getElementById(`cell-${r}-${j}`).classList.add('scanning');
+        } else {
+            document.getElementById(`head-col-${c}`).classList.add('scanning');
+            for(let i=1; i<=ROWS; i++) document.getElementById(`cell-${i}-${c}`).classList.add('scanning');
+        }
+    }
+
+    function highlightCompare(r1, c1, r2, c2) {
+        document.querySelectorAll('.comparing').forEach(e => e.classList.remove('comparing'));
+        const el1 = document.getElementById(`cell-${r1}-${c1}`);
+        const el2 = document.getElementById(`cell-${r2}-${c2}`);
+        if(el1) el1.classList.add('comparing');
+        if(el2) el2.classList.add('comparing');
+    }
+
+    function performSwapAnimate(el1, el2, valA, valB, tempVal) {
+        // Mark moving
+        el1.classList.add('moving');
+        el2.classList.add('moving');
+
+        // Calculate positions relative to viewport
+        const rect1 = el1.getBoundingClientRect();
+        const rect2 = el2.getBoundingClientRect();
+        
+        const deltaX = rect2.left - rect1.left;
+        const deltaY = rect2.top - rect1.top;
+
+        // Animate
+        // Move el1 to el2's pos
+        el1.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+        // Move el2 to el1's pos
+        el2.style.transform = `translate(${-deltaX}px, ${-deltaY}px)`;
+
+        // Update temp var display
+        document.getElementById('val-temp').innerText = tempVal;
+
+        // Wait for animation to finish then swap text and reset
+        const animSpeed = speed * 0.7; // Ensure faster than step interval
+        
+        // Adjust CSS transition duration dynamically based on speed slider
+        el1.style.transitionDuration = `${animSpeed}ms`;
+        el2.style.transitionDuration = `${animSpeed}ms`;
+
+        setTimeout(() => {
+            // Swap Text
+            el1.innerText = valA;
+            el2.innerText = valB;
+
+            // Disable transition to reset position instantly
+            el1.style.transition = 'none';
+            el2.style.transition = 'none';
+            el1.style.transform = 'none';
+            el2.style.transform = 'none';
+            
+            el1.classList.remove('moving');
+            el2.classList.remove('moving');
+
+            // Force reflow
+            void el1.offsetWidth; 
+
+            // Re-enable transition for next time (handled by CSS class mainly)
+        }, animSpeed);
+    }
+
+    // --- Execution ---
+    function step() {
+        if (stepIdx === -1 && steps.length === 0) calcSteps();
+        if (stepIdx >= steps.length - 1) {
+            isPlaying = false;
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+            return;
+        }
+        stepIdx++;
+        runStep(steps[stepIdx]);
+    }
+
+    function runStep(s) {
+        document.querySelectorAll('.code-line').forEach(e => e.classList.remove('active'));
+        if (s.line !== undefined) {
+             const el = document.getElementById(`line-${s.line}`);
+             if(el) {
+                 el.classList.add('active');
+                 el.scrollIntoView({behavior: "smooth", block: "nearest"});
+             }
+        }
+
+        if(s.msg) document.getElementById('narrativeBox').innerText = s.msg;
+
+        if (s.type === 'scan_row') highlightScan(s.r, null, 'row');
+        else if (s.type === 'scan_col') highlightScan(null, s.c, 'col');
+        
+        else if (s.type === 'compare') {
+            highlightCompare(s.r1, s.c1, s.r2, s.c2);
+        }
+        else if (s.type === 'swap') {
+            const el1 = document.getElementById(`cell-${s.r1}-${s.c1}`);
+            const el2 = document.getElementById(`cell-${s.r2}-${s.c2}`);
+            if(el1 && el2) {
+                performSwapAnimate(el1, el2, s.valA, s.valB, s.temp);
+            }
+        }
+
+        if (isPlaying) timer = setTimeout(step, speed);
+    }
+
+    function play() {
+        if (!isPlaying) {
+            isPlaying = true;
+            document.getElementById('btnPlay').innerText = "⏸ Παύση";
+            if(stepIdx === -1) calcSteps();
+            step();
+        } else {
+            isPlaying = false;
+            clearTimeout(timer);
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        }
+    }
+
+    function updateSpeed() {
+        speed = 1550 - document.getElementById('speedSlider').value;
+    }
+
+    init();
+
+</script>
+</body>
+</html>

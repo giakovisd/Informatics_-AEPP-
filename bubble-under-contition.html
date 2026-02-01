@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ταξινόμηση μερικών στοιχείων (Animated)</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            --array-item-bg: #3b82f6;
+            --array-item-text: #ffffff;
+            --compare-color: #f59e0b;
+            --swap-color: #ef4444;
+            --border-color: #cbd5e1;
+            --arrow-color: #dc2626;
+            --disabled-btn: #94a3b8;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --text-color: #f1f5f9;
+            --panel-bg: #1e293b;
+            --highlight-line: #475569;
+            --array-item-bg: #2563eb;
+            --border-color: #334155;
+            --arrow-color: #f87171;
+            --disabled-btn: #475569;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header & Controls --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        button {
+            padding: 8px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        button.primary { background-color: var(--array-item-bg); color: white; border: none; }
+        button:hover:not(:disabled) { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { background-color: var(--disabled-btn); color: #ccc; cursor: not-allowed; transform: none; border-color: transparent; }
+
+        .slider-container { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin-left: 10px; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 15px;
+            gap: 15px;
+            height: calc(100% - 70px);
+            box-sizing: border-box;
+        }
+
+        /* LEFT: Code Panel */
+        .col-code {
+            flex: 0 0 360px;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: width 0.3s ease, padding 0.3s ease;
+        }
+        .col-code.hidden { display: none; }
+
+        .tabs { display: flex; border-bottom: 1px solid var(--border-color); background: #f1f5f9; }
+        .tab {
+            flex: 1; text-align: center; padding: 12px; cursor: pointer; font-size: 0.9rem;
+            border-bottom: 3px solid transparent; color: #64748b;
+        }
+        .tab.active { background: var(--panel-bg); border-bottom-color: var(--array-item-bg); color: var(--text-color); font-weight: bold; }
+
+        .code-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        .code-line { padding: 2px 6px; border-radius: 3px; }
+        .code-line.active { background-color: var(--highlight-line); color: #000; font-weight: bold; }
+
+        /* CENTER: Visualization */
+        .col-viz {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            position: relative;
+        }
+
+        .narrative {
+            padding: 10px;
+            margin-bottom: 15px;
+            background: rgba(59, 130, 246, 0.08);
+            border-left: 4px solid var(--array-item-bg);
+            font-size: 0.95rem;
+            font-style: italic;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+        }
+
+        .arrays-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            gap: 120px;
+            overflow: hidden;
+            align-items: flex-start;
+            padding-top: 20px;
+            position: relative;
+        }
+
+        .array-col { display: flex; flex-direction: column; align-items: center; position: relative; }
+        .array-header { font-weight: bold; margin-bottom: 10px; font-size: 1rem; color: var(--text-color); }
+
+        .cell-wrapper {
+            position: relative;
+            height: 34px;
+            width: 130px;
+            margin-bottom: 4px;
+        }
+
+        .cell {
+            width: 100%;
+            height: 100%;
+            background-color: var(--array-item-bg);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            box-sizing: border-box;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 1;
+        }
+
+        .cell-idx { position: absolute; left: -25px; font-size: 0.75rem; color: var(--text-color); opacity: 0.6; top: 9px; }
+        .cell-val { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+
+        /* States */
+        .comparing { background-color: var(--compare-color) !important; transform: scale(1.05); z-index: 10; transition: transform 0.2s; }
+        .swapping { background-color: var(--swap-color) !important; z-index: 20; }
+        .hidden-slot { opacity: 0.15; background: #94a3b8; border: 1px dashed #64748b; }
+
+        /* POINTER ARROW */
+        .pointer-container {
+            position: absolute;
+            right: -100px; 
+            top: 0;
+            height: 100%;
+            width: 90px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            animation: slideIn 0.2s ease-out;
+            pointer-events: none;
+            z-index: 30;
+        }
+
+        .pointer-arrow-symbol {
+            font-size: 1.8rem;
+            color: var(--arrow-color);
+            line-height: 1;
+            font-weight: bold;
+        }
+
+        .pointer-label {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--arrow-color);
+            font-family: monospace;
+        }
+
+        /* FLYING ELEMENT FOR COPY */
+        .flying-cell {
+            position: absolute;
+            background-color: var(--swap-color);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 6px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 100;
+            font-weight: bold;
+            font-size: 0.9rem;
+            pointer-events: none;
+        }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* RIGHT: Output */
+        .col-output {
+            flex: 0 0 220px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .output-header { padding: 10px; background: #f1f5f9; font-weight: bold; border-bottom: 1px solid var(--border-color); }
+        .output-log { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 0.85rem; }
+        .log-item { border-bottom: 1px solid #eee; padding: 3px 0; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Ταξινόμηση Μαθητών B' τάξης</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button onclick="resetSim()">🔄 Αρχή</button>
+        <button onclick="stepBack()">⏪ Πίσω</button>
+        <button class="primary" onclick="togglePlay()" id="btnPlay">▶️ Αυτόματη Εκτέλεση</button>
+        <button onclick="stepForwardAsync()">Βήμα ⏩</button>
+        <button onclick="fastForwardSort()" id="btnFast" style="border: 2px solid var(--border-color);">⏩ Τέλος Ταξινόμησης</button>
+        <button onclick="toggleCode()" id="btnCode">👁️ Κώδικας</button>
+
+        <div class="slider-container">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="50" max="2000" value="800" id="speedSlider" oninput="updateSpeed()">
+        </div>
+
+        <button onclick="toggleTheme()" id="btnTheme">🌙</button>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-code">
+        <div class="tabs">
+            <div class="tab active" onclick="setSol(1)" id="t1">Λύση 1: Παράλληλη</div>
+            <div class="tab" onclick="setSol(2)" id="t2">Λύση 2: Αντιγραφή</div>
+        </div>
+        <div class="code-content" id="codeContainer"></div>
+    </div>
+
+    <div class="col-viz">
+        <div class="narrative" id="narrativeBox">Έτοιμο για εκτέλεση...</div>
+        
+        <div class="arrays-wrapper" id="arraysContainer">
+            </div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">📺 Οθόνη Εξόδου</div>
+        <div class="output-log" id="outputLog"></div>
+    </div>
+
+</div>
+
+<script>
+    // --- Data ---
+    const NAMES = [
+        "Γεωργίου", "Παπαδόπουλος", "Αλεξίου", "Δημητρίου", "Βασιλείου",
+        "Ιωάννου", "Νικολάου", "Κωνσταντίνου", "Μανώλης", "Χρήστου",
+        "Αντωνίου", "Σωτηρίου" 
+    ];
+    const CLASSES = ['Α', 'Β', 'Γ', 'Β', 'Α', 'Γ', 'Β', 'Β', 'Α', 'Γ', 'Β', 'Α'];
+
+    const CODE1 = [
+        "Αλγόριθμος ταξ",
+        "Για i από 2 μέχρι 12",
+        "  Για j από 12 μέχρι i με_βήμα -1",
+        "    Αν ΟΝ[j-1] > ΟΝ[j] τότε",
+        "      temp1 ← ON[j-1]",
+        "      ON[j-1] ← ON[j]",
+        "      ON[j] ← temp1",
+        "      temp2 ← T[j-1]",
+        "      T[j-1] ← T[j]",
+        "      T[j] ← temp2",
+        "    Τέλος_αν",
+        "  Τέλος_επανάληψης",
+        "Τέλος_επανάληψης",
+        "Για i από 1 μέχρι 12",
+        "  Αν T[i] = 'Β' τότε",
+        "    Γράψε ON[i], ' ', T[i]",
+        "  Τέλος_αν",
+        "Τέλος_επανάληψης",
+        "Τελος ταξ"
+    ];
+
+    const CODE2 = [
+        "k ← 0",
+        "Για i από 1 μέχρι 12",
+        "  Αν T[i] = 'Β' τότε",
+        "    k ← k + 1",
+        "    ONB[k] ← ON[i]",
+        "  Τέλος_αν",
+        "Τέλος_επανάληψης",
+        "Για i από 2 μέχρι k",
+        "  Για j από k μέχρι i με_βήμα -1",
+        "    Αν ONB[j-1] > ONB[j] τότε",
+        "      temp ← ONB[j-1]",
+        "      ONB[j-1] ← ONB[j]",
+        "      ONB[j] ← temp",
+        "    Τέλος_αν",
+        "  Τέλος_επανάληψης",
+        "Τέλος_επανάληψης",
+        "Για i από 1 μέχρι k",
+        "  Γράψε ONB[i]",
+        "Τέλος_επανάληψης"
+    ];
+
+    // --- State ---
+    let sol = 1;
+    let data = { ON: [], T: [], ONB: [] };
+    let steps = [];
+    let stepIdx = -1;
+    let timer = null;
+    let isPlaying = false;
+    let speed = 800; // Duration in ms
+
+    // --- Helpers ---
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    // --- Init ---
+    function init() {
+        data.ON = [...NAMES];
+        data.T = [...CLASSES];
+        data.ONB = new Array(12).fill(null); 
+        
+        renderCode();
+        renderBaseArrays();
+        calcSteps();
+        updateUI();
+        checkFastButtonState();
+    }
+
+    function setSol(n) {
+        sol = n;
+        document.getElementById('t1').className = n===1 ? 'tab active' : 'tab';
+        document.getElementById('t2').className = n===2 ? 'tab active' : 'tab';
+        resetSim();
+    }
+
+    function resetSim() {
+        stop();
+        stepIdx = -1;
+        document.getElementById('outputLog').innerHTML = '';
+        document.getElementById('narrativeBox').innerText = "Έτοιμο...";
+        document.querySelectorAll('.active').forEach(e => e.classList.remove('active'));
+        document.querySelectorAll('.pointer-container').forEach(e => e.remove());
+        init();
+    }
+
+    function toggleCode() {
+        const p = document.querySelector('.col-code');
+        p.classList.toggle('hidden');
+        document.getElementById('btnCode').innerText = p.classList.contains('hidden') ? "👁️ Εμφάνιση Κώδικα" : "👁️ Απόκρυψη Κώδικα";
+    }
+
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+
+    // --- Rendering ---
+    function renderCode() {
+        const lines = sol === 1 ? CODE1 : CODE2;
+        const html = lines.map((l, i) => 
+            `<div class="code-line" id="line-${i}"><span style="color:#888; margin-right:8px; user-select:none;">${i+1}</span>${l.replace(/\s/g, '&nbsp;')}</div>`
+        ).join('');
+        document.getElementById('codeContainer').innerHTML = html;
+    }
+
+    function renderBaseArrays() {
+        const con = document.getElementById('arraysContainer');
+        let html = '';
+
+        // ON Column
+        html += `<div class="array-col"><div class="array-header">Πίνακας ΟΝ</div>`;
+        data.ON.forEach((v, i) => html += createCell('ON', i, v));
+        html += `</div>`;
+
+        // T Column
+        html += `<div class="array-col"><div class="array-header">Πίνακας Τ</div>`;
+        data.T.forEach((v, i) => {
+            let style = v==='Β' ? 'font-weight:bold; color:var(--highlight-line);' : '';
+            html += createCell('T', i, v, style);
+        });
+        html += `</div>`;
+
+        // ONB Column (Only Sol 2)
+        if (sol === 2) {
+            html += `<div class="array-col"><div class="array-header">Πίνακας ΟΝB</div>`;
+            for(let i=0; i<12; i++) {
+                html += createCell('ONB', i, '', '', true);
+            }
+            html += `</div>`;
+        }
+
+        con.innerHTML = html;
+    }
+
+    function createCell(arr, idx, val, extraStyle='', isEmpty=false) {
+        const cls = isEmpty ? 'cell hidden-slot' : 'cell';
+        return `
+            <div class="cell-wrapper" id="wrap-${arr}-${idx}">
+                <div id="c-${arr}-${idx}" class="${cls}" style="${extraStyle}">
+                    <span class="cell-idx">${idx+1}</span>
+                    <span class="cell-val">${val}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    // --- Logic steps ---
+    function calcSteps() {
+        steps = [];
+        let sON = [...NAMES];
+        let sT = [...CLASSES];
+        let sONB = [];
+        let k = 0;
+
+        if (sol === 1) {
+            for (let i = 1; i < 12; i++) {
+                steps.push({ line: 1, type: 'loop', ptr: {arr:'ON', idx:i, label:'i'}, msg: `Εξωτερική επανάληψη: i=${i+1}` });
+                for (let j = 11; j >= i; j--) {
+                    steps.push({ 
+                        line: 2, type: 'loop', ptr: {arr:'ON', idx:j, label:'j'}, 
+                        msg: `Εσωτερική επανάληψη: j=${j+1}` 
+                    });
+                    
+                    steps.push({ 
+                        line: 3, type: 'cmp', arr: 'ON', idx1: j-1, idx2: j, 
+                        msg: `Σύγκριση: ${sON[j-1]} > ${sON[j]}`,
+                        ptr: {arr:'ON', idx:j, label:'j'}
+                    });
+
+                    if (sON[j-1] > sON[j]) {
+                        [sON[j-1], sON[j]] = [sON[j], sON[j-1]];
+                        steps.push({ line: 4, type: 'swap', arr: 'ON', idx1: j-1, idx2: j, msg: 'Αντιμετάθεση Ονομάτων', ptr: {arr:'ON', idx:j, label:'j'} });
+                        
+                        [sT[j-1], sT[j]] = [sT[j], sT[j-1]];
+                        steps.push({ line: 7, type: 'swap', arr: 'T', idx1: j-1, idx2: j, msg: 'Αντιμετάθεση Τάξεων' });
+                    }
+                }
+            }
+            steps.push({ line: 13, type: 'info', msg: 'Ολοκλήρωση ταξινόμησης. Έναρξη εκτύπωσης.' });
+            for (let i = 0; i < 12; i++) {
+                steps.push({ line: 14, type: 'chk', arr: 'T', idx: i, msg: `Έλεγχος T[${i+1}] = 'Β'`, ptr: {arr:'T', idx:i, label:'i'} });
+                if (sT[i] === 'Β') {
+                    steps.push({ line: 15, type: 'print', val: `${sON[i]} (${sT[i]})`, ptr: {arr:'ON', idx:i, label:'i'} });
+                }
+            }
+        } else {
+            steps.push({ line: 0, type: 'info', msg: 'k <- 0' });
+            for(let i=0; i<12; i++) {
+                steps.push({ line: 1, type: 'loop', ptr:{arr:'ON', idx:i, label:'i'}, msg: `Διάσχιση πίνακα: i=${i+1}` });
+                if(sT[i] === 'Β') {
+                    k++;
+                    sONB[k-1] = sON[i];
+                    steps.push({ line: 3, type: 'calc', msg: `Βρέθηκε μαθητής. Το k γίνεται ${k}`, ptr: {arr:'ONB', idx:k-1, label:'k'} });
+                    steps.push({ 
+                        line: 4, type: 'copy', src: i, dest: k-1, val: sON[i], 
+                        msg: `Αντιγραφή ${sON[i]} στον πίνακα ONB[${k}]`,
+                        ptr: {arr:'ONB', idx:k-1, label:'k'}
+                    });
+                }
+            }
+            for(let i=1; i<k; i++) {
+                steps.push({ line: 7, type: 'loop', ptr: {arr:'ONB', idx:i, label:'i'}, msg: `Ταξινόμηση ONB: i=${i+1}` });
+                for(let j=k-1; j>=i; j--) {
+                    steps.push({ 
+                        line: 9, type: 'cmp', arr:'ONB', idx1: j-1, idx2: j, 
+                        msg: `Σύγκριση ONB`, ptr: {arr:'ONB', idx:j, label:'j'}
+                    });
+                    if(sONB[j-1] > sONB[j]) {
+                        [sONB[j-1], sONB[j]] = [sONB[j], sONB[j-1]];
+                        steps.push({ 
+                            line: 10, type: 'swap', arr: 'ONB', idx1: j-1, idx2: j, 
+                            msg: 'Αντιμετάθεση στο ONB', ptr: {arr:'ONB', idx:j, label:'j'}
+                        });
+                    }
+                }
+            }
+            steps.push({ line: 16, type: 'info', msg: 'Εκτύπωση τελικού πίνακα' });
+            for(let i=0; i<k; i++) {
+                steps.push({ line: 17, type: 'print', val: sONB[i], ptr: {arr:'ONB', idx:i, label:'i'} });
+            }
+        }
+    }
+
+    // --- ANIMATION LOGIC ---
+    
+    async function animateSwap(id1, id2) {
+        const el1 = document.getElementById(id1);
+        const el2 = document.getElementById(id2);
+        if (!el1 || !el2) return;
+
+        // Position calc
+        const rect1 = el1.getBoundingClientRect();
+        const rect2 = el2.getBoundingClientRect();
+        const dy = rect2.top - rect1.top;
+
+        // Animate
+        el1.style.transition = `transform ${speed*0.7}ms ease-in-out`;
+        el2.style.transition = `transform ${speed*0.7}ms ease-in-out`;
+        el1.style.zIndex = '100';
+        el2.style.zIndex = '100';
+        
+        el1.style.transform = `translateY(${dy}px)`;
+        el2.style.transform = `translateY(${-dy}px)`;
+
+        await sleep(speed * 0.75);
+
+        // Reset Styles (visual only)
+        el1.style.transition = 'none';
+        el2.style.transition = 'none';
+        el1.style.transform = 'none';
+        el2.style.transform = 'none';
+        el1.style.zIndex = '';
+        el2.style.zIndex = '';
+    }
+
+    async function animateMove(srcId, destId, val) {
+        const srcEl = document.getElementById(srcId);
+        const destEl = document.getElementById(destId);
+        if(!srcEl || !destEl) return;
+
+        const rectSrc = srcEl.getBoundingClientRect();
+        const rectDest = destEl.getBoundingClientRect();
+
+        // Create Flying Element
+        const fly = document.createElement('div');
+        fly.className = 'flying-cell';
+        fly.innerText = val;
+        fly.style.width = rectSrc.width + 'px';
+        fly.style.height = rectSrc.height + 'px';
+        fly.style.left = rectSrc.left + 'px';
+        fly.style.top = rectSrc.top + 'px';
+        document.body.appendChild(fly);
+
+        // Wait a tick then move
+        await sleep(20);
+        fly.style.transition = `all ${speed*0.8}ms ease-in-out`;
+        fly.style.left = rectDest.left + 'px';
+        fly.style.top = rectDest.top + 'px';
+
+        await sleep(speed * 0.85);
+        fly.remove();
+    }
+
+    // --- Execution ---
+    async function stepForwardAsync() {
+        if (stepIdx >= steps.length - 1) return;
+        stepIdx++;
+        
+        // Disable controls during animation
+        document.body.style.pointerEvents = 'none';
+        await runStepAsync(steps[stepIdx]);
+        document.body.style.pointerEvents = 'auto';
+        
+        checkFastButtonState();
+    }
+
+    async function runStepAsync(s, isBack=false) {
+        // UI Updates
+        document.querySelectorAll('.code-line').forEach(e => e.classList.remove('active'));
+        const lineEl = document.getElementById(`line-${s.line}`);
+        if(lineEl) { lineEl.classList.add('active'); lineEl.scrollIntoView({block:"nearest", behavior:"smooth"}); }
+        if(s.msg) document.getElementById('narrativeBox').innerText = s.msg;
+        
+        document.querySelectorAll('.cell').forEach(c => c.classList.remove('comparing', 'swapping'));
+        document.querySelectorAll('.pointer-container').forEach(p => p.remove());
+
+        if (s.ptr) showPointer(s.ptr.arr, s.ptr.idx, s.ptr.label);
+
+        // Actions
+        if (s.type === 'cmp' || s.type === 'chk') {
+            if(s.idx1 !== undefined) {
+                high(s.arr, s.idx1, 'comparing');
+                high(s.arr, s.idx2, 'comparing');
+            } else {
+                high(s.arr, s.idx, 'comparing');
+            }
+            await sleep(speed * 0.5);
+        }
+        else if (s.type === 'swap') {
+            high(s.arr, s.idx1, 'swapping');
+            high(s.arr, s.idx2, 'swapping');
+            
+            // Animation
+            if (!isBack && !document.getElementById('btnFast').disabled) {
+                 await animateSwap(`c-${s.arr}-${s.idx1}`, `c-${s.arr}-${s.idx2}`);
+            }
+
+            // Logical Update
+            let dArr = s.arr==='ON'? data.ON : (s.arr==='T'? data.T : data.ONB);
+            [dArr[s.idx1], dArr[s.idx2]] = [dArr[s.idx2], dArr[s.idx1]];
+            updateCell(s.arr, s.idx1, dArr[s.idx1]);
+            updateCell(s.arr, s.idx2, dArr[s.idx2]);
+        }
+        else if (s.type === 'copy') {
+            high('ON', s.src, 'comparing');
+            
+            if(!isBack) await animateMove(`c-ON-${s.src}`, `c-ONB-${s.dest}`, s.val);
+            
+            data.ONB[s.dest] = s.val;
+            updateCell('ONB', s.dest, s.val);
+            high('ONB', s.dest, 'swapping');
+        }
+        else if (s.type === 'print' && !isBack) {
+            const log = document.getElementById('outputLog');
+            log.innerHTML += `<div class="log-item">${s.val}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+    }
+
+    // --- Fast Forward & Loop ---
+    function stepBack() {
+        if (stepIdx <= 0) { resetSim(); return; }
+        // Simple Reset and Fast Forward logic to prev state
+        let target = stepIdx - 1;
+        data.ON = [...NAMES]; data.T = [...CLASSES]; data.ONB = new Array(12).fill(null);
+        document.getElementById('outputLog').innerHTML = '';
+        
+        for(let i=0; i<=target; i++) applyLogicOnly(steps[i]);
+        stepIdx = target;
+        
+        refreshArraysVisually();
+        runStepAsync(steps[stepIdx], true); // true = no animation
+    }
+
+    function applyLogicOnly(s) {
+        if(s.type === 'swap') {
+            let dArr = s.arr==='ON'? data.ON : (s.arr==='T'? data.T : data.ONB);
+            [dArr[s.idx1], dArr[s.idx2]] = [dArr[s.idx2], dArr[s.idx1]];
+        } else if (s.type === 'copy') {
+            data.ONB[s.dest] = s.val;
+        } else if (s.type === 'print') {
+            document.getElementById('outputLog').innerHTML += `<div class="log-item">${s.val}</div>`;
+        }
+    }
+
+    function fastForwardSort() {
+        stop();
+        let targetLine = (sol === 1) ? 13 : 16; 
+        let foundIdx = steps.findIndex(s => s.line >= targetLine);
+        if (foundIdx === -1) foundIdx = steps.length - 1;
+
+        // Reset & Run fast
+        data.ON = [...NAMES]; data.T = [...CLASSES]; data.ONB = new Array(12).fill(null);
+        document.getElementById('outputLog').innerHTML = '';
+        for(let i=0; i < foundIdx; i++) applyLogicOnly(steps[i]);
+        
+        stepIdx = foundIdx - 1;
+        refreshArraysVisually();
+        stepForwardAsync();
+    }
+
+    async function loop() {
+        if(isPlaying && stepIdx < steps.length-1) {
+            await stepForwardAsync();
+            if(isPlaying) setTimeout(loop, 100);
+        } else {
+            stop();
+        }
+    }
+
+    // --- Visual Helpers ---
+    function refreshArraysVisually() {
+        for(let i=0; i<12; i++) {
+            updateCell('ON', i, data.ON[i]);
+            updateCell('T', i, data.T[i]);
+            if(sol===2) updateCell('ONB', i, data.ONB[i]);
+        }
+    }
+    
+    function showPointer(arr, idx, label) {
+        const wrapper = document.getElementById(`wrap-${arr}-${idx}`);
+        if(wrapper) {
+            const container = document.createElement('div');
+            container.className = 'pointer-container';
+            container.innerHTML = `<span class="pointer-arrow-symbol">⬅</span><span class="pointer-label">${label}</span>`;
+            wrapper.appendChild(container);
+        }
+    }
+
+    function high(arr, idx, cls) {
+        const el = document.getElementById(`c-${arr}-${idx}`);
+        if(el) el.classList.add(cls);
+    }
+
+    function updateCell(arr, idx, val) {
+        const el = document.getElementById(`c-${arr}-${idx}`);
+        if(!el) return;
+        el.querySelector('.cell-val').innerText = val || '';
+        if(arr === 'ONB') {
+            if(val) el.classList.remove('hidden-slot'); else el.classList.add('hidden-slot');
+        }
+    }
+
+    function checkFastButtonState() {
+        const btn = document.getElementById('btnFast');
+        if (sol === 1) btn.disabled = false;
+        else {
+            if (stepIdx > -1 && steps[stepIdx].line >= 7) btn.disabled = false;
+            else btn.disabled = true; 
+        }
+    }
+
+    function togglePlay() { isPlaying ? stop() : start(); }
+    function start() { isPlaying=true; document.getElementById('btnPlay').innerText = "⏸ Παύση"; loop(); }
+    function stop() { isPlaying=false; clearTimeout(timer); document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση"; }
+    function updateSpeed() { speed = 2050 - document.getElementById('speedSlider').value; }
+
+    init();
+</script>
+</body>
+</html>

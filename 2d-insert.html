@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Γέμισμα Δισδιάστατου (Final Arrows)</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            
+            --col-arr: #3b82f6; 
+            --col-header: #64748b;
+            
+            --text-white: #ffffff;
+            --active-cell: #f59e0b; 
+            --filled-cell: #10b981; 
+            
+            --border-color: #cbd5e1;
+            --disabled-btn: #94a3b8;
+            
+            --ptr-color: #dc2626; /* Red for the pointer */
+
+            /* Code Syntax */
+            --code-kw: #0000CD; 
+            --code-sym: #FF0000; 
+            --code-var: #000000; 
+            --code-num: #008000;
+            --code-str: #A020F0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        button {
+            padding: 8px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        button.primary { background-color: var(--col-arr); color: white; border: none; }
+        button:hover:not(:disabled) { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { background-color: var(--disabled-btn); color: #ccc; cursor: not-allowed; }
+
+        .slider-container { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin-left: 10px; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 15px;
+            gap: 15px;
+            height: calc(100% - 70px);
+            box-sizing: border-box;
+            overflow: hidden; 
+        }
+
+        /* LEFT: Code Panel */
+        .col-code {
+            flex: 0 0 450px;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .col-code.hidden { display: none; }
+
+        .tabs { display: flex; background: #f1f5f9; border-bottom: 1px solid var(--border-color); }
+        .tab {
+            flex: 1; text-align: center; padding: 12px; font-size: 0.9rem; cursor: pointer;
+            border-bottom: 3px solid transparent; color: #64748b; font-weight: bold;
+        }
+        .tab:hover { background: #e2e8f0; }
+        .tab.active { background: var(--panel-bg); border-bottom-color: var(--col-arr); color: var(--text-color); }
+
+        .code-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            font-family: 'Consolas', monospace;
+            font-size: 1rem;
+            line-height: 1.5;
+            white-space: pre; 
+        }
+        .code-line { padding: 2px 6px; border-radius: 3px; }
+        .code-line.active { background-color: var(--highlight-line); font-weight: bold; }
+
+        .kw { color: var(--code-kw); font-weight: bold; } 
+        .sym { color: var(--code-sym); font-weight: bold; }
+        .var { color: var(--code-var); }
+        .num { color: var(--code-num); font-weight: bold; }
+        .str { color: var(--code-str); }
+
+        /* CENTER: Visualization */
+        .col-viz {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            position: relative;
+            overflow: hidden; 
+        }
+
+        .narrative {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: rgba(59, 130, 246, 0.1); 
+            border-left: 4px solid var(--col-arr);
+            font-size: 0.95rem;
+            font-style: italic;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .scene-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            overflow: auto;
+            padding-top: 10px;
+        }
+
+        /* --- Input Queue --- */
+        .queue-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            background: #f1f5f9;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            max-width: 90%;
+            overflow-x: hidden; 
+            position: relative;
+            height: 50px;
+        }
+        .queue-label { font-weight: bold; font-size: 0.9rem; margin-right: 10px; white-space: nowrap; }
+        .queue-items { display: flex; gap: 5px; transition: transform 0.3s ease; }
+        .q-item {
+            width: 40px;
+            height: 35px;
+            background: white;
+            border: 1px solid #ccc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+        .q-item.next {
+            background-color: var(--active-cell);
+            color: white;
+            border-color: #d97706;
+            transform: scale(1.1);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        /* --- 2D Array Grid --- */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(5, 70px);
+            grid-template-rows: repeat(4, 70px);
+            gap: 8px;
+            position: relative;
+            padding: 40px; 
+            margin-top: 20px;
+        }
+
+        .grid-label {
+            position: absolute;
+            font-weight: bold;
+            color: var(--col-header);
+            font-size: 0.9rem;
+        }
+        .lbl-col { top: 10px; text-align: center; width: 70px; }
+        .lbl-row { left: 10px; height: 70px; display: flex; align-items: center; justify-content: center; width: 20px;}
+
+        .cell {
+            background-color: #e2e8f0;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--text-color);
+            position: relative;
+            transition: all 0.3s;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .cell.active {
+            background-color: var(--active-cell);
+            color: white;
+            border-color: #d97706;
+            transform: scale(1.05);
+            z-index: 10;
+            box-shadow: 0 0 15px var(--active-cell);
+        }
+
+        .cell.filled {
+            background-color: var(--col-arr);
+            color: white;
+            border-color: #1e40af;
+        }
+
+        .cell-coords {
+            position: absolute;
+            top: 2px;
+            left: 5px;
+            font-size: 0.65rem;
+            color: rgba(0,0,0,0.3);
+            font-family: monospace;
+        }
+        .cell.active .cell-coords, .cell.filled .cell-coords {
+            color: rgba(255,255,255,0.6); 
+        }
+
+        /* --- Pointer Arrow (Relative to Grid) --- */
+        .pointer-arrow {
+            position: absolute;
+            font-size: 2.5rem; 
+            color: var(--ptr-color);
+            font-weight: bold;
+            z-index: 50;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-shadow: 1px 1px 0px white;
+            opacity: 0;
+            line-height: 1;
+            pointer-events: none;
+        }
+
+        /* RIGHT: Output */
+        .col-output {
+            flex: 0 0 200px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .output-header { padding: 10px; background: #f1f5f9; font-weight: bold; border-bottom: 1px solid var(--border-color); }
+        .output-log { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 0.9rem; }
+        .log-item { border-bottom: 1px solid #eee; padding: 3px 0; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Γέμισμα Πίνακα Π[4,5]</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button onclick="resetSim()">🔄 Αρχή</button>
+        <button onclick="play()" id="btnPlay" class="primary">▶️ Αυτόματη Εκτέλεση</button>
+        <button onclick="step()" id="btnStep">Βήμα ⏩</button>
+        <button onclick="toggleCode()" id="btnCode">👁️ Εμφάνιση Κώδικα</button>
+        
+        <div class="slider-container">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="50" max="1500" value="800" id="speedSlider" oninput="updateSpeed()">
+        </div>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-code hidden">
+        <div class="tabs">
+            <div class="tab active" onclick="setMode(1)">1. Κατά Γραμμές</div>
+            <div class="tab" onclick="setMode(2)">2. Κατά Στήλες</div>
+        </div>
+        <div class="code-content" id="codeContainer"></div>
+    </div>
+
+    <div class="col-viz">
+        <div class="narrative" id="narrativeBox">Πατήστε εκτέλεση...</div>
+        
+        <div class="scene-wrapper">
+            <div class="queue-container">
+                <div class="queue-label">Επόμενη Τιμή:</div>
+                <div class="queue-items" id="queueItems"></div>
+            </div>
+
+            <div class="grid-container" id="gridContainer">
+                <div id="gridPointer" class="pointer-arrow">➡</div>
+                </div>
+        </div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">📺 Οθόνη Εξόδου</div>
+        <div class="output-log" id="outputLog"></div>
+    </div>
+
+</div>
+
+<script>
+    // --- Configuration ---
+    const ROWS = 4;
+    const COLS = 5;
+    const TOTAL_CELLS = ROWS * COLS;
+    
+    // --- State ---
+    let currentMode = 1; // 1: Rows, 2: Cols
+    let steps = [];
+    let stepIdx = -1;
+    let timer = null;
+    let isPlaying = false;
+    let speed = 800;
+    
+    let inputQueue = []; 
+
+    // --- Helpers ---
+    function kw(t) { return `<span class="kw">${t}</span>`; }
+    function sym(t) { return `<span class="sym">${t}</span>`; }
+    function v(t) { return `<span class="var">${t}</span>`; }
+    function n(t) { return `<span class="num">${t}</span>`; }
+
+    // Codes
+    function getCodes() {
+        return {
+            1: [ // By Row
+                `${kw("Για")} ${v("i")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("4")}`,
+                `  ${kw("Για")} ${v("j")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("5")}`,
+                `    ${kw("Διάβασε")} ${v("Π")}${sym("[")}${v("i")}${sym(",")}${v("j")}${sym("]")}`,
+                `  ${kw("Τέλος_επανάληψης")}`,
+                `${kw("Τέλος_επανάληψης")}`
+            ],
+            2: [ // By Col
+                `${kw("Για")} ${v("j")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("5")}`,
+                `  ${kw("Για")} ${v("i")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("4")}`,
+                `    ${kw("Διάβασε")} ${v("Π")}${sym("[")}${v("i")}${sym(",")}${v("j")}${sym("]")}`,
+                `  ${kw("Τέλος_επανάληψης")}`,
+                `${kw("Τέλος_επανάληψης")}`
+            ]
+        };
+    }
+
+    // --- Init ---
+    function init() {
+        generateData();
+        renderCode();
+        renderGrid();
+        renderQueue();
+        
+        isPlaying = false;
+        clearTimeout(timer);
+        stepIdx = -1;
+        document.getElementById('outputLog').innerHTML = '';
+        document.getElementById('narrativeBox').innerText = "Πατήστε εκτέλεση για γέμισμα...";
+        document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        updatePointer(null, null); 
+    }
+
+    function generateData() {
+        inputQueue = [];
+        for(let i=0; i<TOTAL_CELLS; i++) {
+            inputQueue.push(Math.floor(Math.random() * 90) + 10);
+        }
+    }
+
+    function setMode(m) {
+        currentMode = m;
+        document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i+1 === m));
+        init();
+    }
+
+    function resetSim() { init(); }
+
+    function toggleCode() {
+        const p = document.querySelector('.col-code');
+        p.classList.toggle('hidden');
+        document.getElementById('btnCode').innerText = p.classList.contains('hidden') ? "👁️ Εμφάνιση Κώδικα" : "👁️ Απόκρυψη Κώδικα";
+    }
+
+    // --- Rendering ---
+    function renderCode() {
+        const codes = getCodes();
+        const html = codes[currentMode].map((l, i) => `<div class="code-line" id="line-${i}">${l}</div>`).join('');
+        document.getElementById('codeContainer').innerHTML = html;
+    }
+
+    function renderGrid() {
+        const container = document.getElementById('gridContainer');
+        // Clear cells but keep pointer
+        const ptr = document.getElementById('gridPointer');
+        container.innerHTML = ''; 
+        container.appendChild(ptr);
+
+        // Add Column Labels (Top)
+        for (let j = 1; j <= COLS; j++) {
+            const lbl = document.createElement('div');
+            lbl.className = 'grid-label lbl-col';
+            lbl.style.left = ((j-1) * 78 + 40) + 'px';
+            lbl.innerText = j;
+            container.appendChild(lbl);
+        }
+
+        // Add Row Labels (Left)
+        for (let i = 1; i <= ROWS; i++) {
+            const lbl = document.createElement('div');
+            lbl.className = 'grid-label lbl-row';
+            lbl.style.top = ((i-1) * 78 + 40) + 'px';
+            lbl.innerText = i;
+            container.appendChild(lbl);
+        }
+
+        // Create Cells
+        for (let i = 1; i <= ROWS; i++) {
+            for (let j = 1; j <= COLS; j++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.id = `cell-${i}-${j}`;
+                
+                const coords = document.createElement('span');
+                coords.className = 'cell-coords';
+                coords.innerText = `${i},${j}`;
+                
+                cell.appendChild(coords);
+                container.appendChild(cell);
+            }
+        }
+    }
+
+    function renderQueue() {
+        const qContainer = document.getElementById('queueItems');
+        let html = '';
+        inputQueue.forEach((val, idx) => {
+            html += `<div class="q-item" id="q-item-${idx}">${val}</div>`;
+        });
+        qContainer.innerHTML = html;
+        qContainer.style.transform = 'translateX(0)';
+    }
+
+    // --- Logic ---
+    function calcSteps() {
+        steps = [];
+        let qIdx = 0;
+        
+        if (currentMode === 1) { // Row-major
+            for (let i = 1; i <= ROWS; i++) {
+                steps.push({ line: 0, msg: `Για i = ${i} (Γραμμή)` });
+                for (let j = 1; j <= COLS; j++) {
+                    steps.push({ line: 1, msg: `  Για j = ${j} (Στήλη)` });
+                    steps.push({ 
+                        line: 2, 
+                        type: 'fill', 
+                        r: i, c: j, 
+                        val: inputQueue[qIdx],
+                        qIdx: qIdx,
+                        msg: `    Διάβασε Π[${i},${j}]` 
+                    });
+                    qIdx++;
+                }
+                steps.push({ line: 3, msg: `  Τέλος εσωτερικής επανάληψης` });
+            }
+            steps.push({ line: 4, msg: `Τέλος εξωτερικής επανάληψης` });
+
+        } else { // Col-major
+            for (let j = 1; j <= COLS; j++) {
+                steps.push({ line: 0, msg: `Για j = ${j} (Στήλη)` });
+                for (let i = 1; i <= ROWS; i++) {
+                    steps.push({ line: 1, msg: `  Για i = ${i} (Γραμμή)` });
+                    steps.push({ 
+                        line: 2, 
+                        type: 'fill', 
+                        r: i, c: j, 
+                        val: inputQueue[qIdx],
+                        qIdx: qIdx,
+                        msg: `    Διάβασε Π[${i},${j}]` 
+                    });
+                    qIdx++;
+                }
+                steps.push({ line: 3, msg: `  Τέλος εσωτερικής επανάληψης` });
+            }
+            steps.push({ line: 4, msg: `Τέλος εξωτερικής επανάληψης` });
+        }
+    }
+
+    // --- Visuals ---
+    function updatePointer(r, c) {
+        const ptr = document.getElementById('gridPointer');
+        if (r === null) {
+            ptr.style.opacity = '0';
+            return;
+        }
+        
+        // Exact Calculation based on CSS Grid:
+        // padding: 40px
+        // gap: 8px
+        // cell size: 70px
+        // stride: 78px
+        const cellLeft = 40 + (c-1)*78;
+        const cellTop = 40 + (r-1)*78;
+
+        if (currentMode === 1) { 
+            // Rows: Horizontal Arrow (Left of cell)
+            ptr.innerText = '➡';
+            ptr.style.left = (cellLeft - 25) + 'px'; // 50px left
+            ptr.style.top = (cellTop + 10) + 'px';   // Centered vertically roughly
+        } else { 
+            // Cols: Vertical Arrow (Top of cell)
+            ptr.innerText = '⬇';
+            ptr.style.left = (cellLeft + 15) + 'px'; // Centered horizontally roughly
+            ptr.style.top = (cellTop - 25) + 'px';   // 50px above
+        }
+        
+        ptr.style.opacity = '1';
+    }
+
+    function activateCell(r, c, val, qIdx) {
+        const cell = document.getElementById(`cell-${r}-${c}`);
+        const qItem = document.getElementById(`q-item-${qIdx}`);
+        
+        // Queue Animation
+        if(qItem) {
+            qItem.classList.add('next');
+            const container = document.querySelector('.queue-items');
+            const offset = qItem.offsetLeft - container.parentElement.offsetLeft;
+            container.style.transform = `translateX(-${offset}px)`;
+        }
+
+        if(cell) {
+            cell.classList.add('active');
+            
+            setTimeout(() => {
+                cell.innerHTML = `<span class="cell-coords">${r},${c}</span>${val}`;
+                cell.classList.remove('active');
+                cell.classList.add('filled');
+                if(qItem) qItem.style.opacity = '0.3'; 
+            }, speed * 0.8);
+        }
+    }
+
+    // --- Execution ---
+    function step() {
+        if (stepIdx === -1 && steps.length === 0) calcSteps();
+        if (stepIdx >= steps.length - 1) {
+            isPlaying = false;
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+            return;
+        }
+        stepIdx++;
+        runStep(steps[stepIdx]);
+    }
+
+    function runStep(s) {
+        document.querySelectorAll('.code-line').forEach(e => e.classList.remove('active'));
+        if (s.line !== undefined) {
+             const el = document.getElementById(`line-${s.line}`);
+             if(el) el.classList.add('active');
+        }
+
+        if(s.msg) document.getElementById('narrativeBox').innerText = s.msg;
+
+        if (s.type === 'fill') {
+            updatePointer(s.r, s.c);
+            activateCell(s.r, s.c, s.val, s.qIdx);
+            
+            const log = document.getElementById('outputLog');
+            log.innerHTML += `<div class="log-item">Input: ${s.val}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        if (isPlaying) timer = setTimeout(step, speed);
+    }
+
+    function play() {
+        if (!isPlaying) {
+            isPlaying = true;
+            document.getElementById('btnPlay').innerText = "⏸ Παύση";
+            if(stepIdx === -1) calcSteps();
+            step();
+        } else {
+            isPlaying = false;
+            clearTimeout(timer);
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        }
+    }
+
+    function updateSpeed() {
+        speed = 1550 - document.getElementById('speedSlider').value;
+    }
+
+    init();
+
+</script>
+</body>
+</html>

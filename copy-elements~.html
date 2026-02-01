@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Λειτουργία Αντιγραφής πινάκων</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            --array-item-bg: #3b82f6;
+            --array-item-text: #ffffff;
+            --compare-color: #f59e0b;
+            --flyer-bg: #ea580c;
+            --border-color: #cbd5e1;
+            --arrow-color: #dc2626;
+            --disabled-btn: #94a3b8;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --text-color: #f1f5f9;
+            --panel-bg: #1e293b;
+            --highlight-line: #475569;
+            --array-item-bg: #2563eb;
+            --border-color: #334155;
+            --arrow-color: #f87171;
+            --disabled-btn: #475569;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        button {
+            padding: 8px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        button.primary { background-color: var(--array-item-bg); color: white; border: none; }
+        button:hover:not(:disabled) { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { background-color: var(--disabled-btn); color: #ccc; cursor: not-allowed; }
+
+        .slider-container { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin-left: 10px; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 15px;
+            gap: 15px;
+            height: calc(100% - 70px);
+            box-sizing: border-box;
+        }
+
+        /* LEFT: Code Panel */
+        .col-code {
+            flex: 0 0 360px;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .tabs { display: flex; border-bottom: 1px solid var(--border-color); background: #f1f5f9; }
+        .tab {
+            flex: 1; text-align: center; padding: 12px; font-size: 0.9rem;
+            border-bottom: 3px solid var(--array-item-bg); color: var(--text-color); font-weight: bold; background: var(--panel-bg);
+        }
+
+        .code-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        .code-line { padding: 2px 6px; border-radius: 3px; }
+        .code-line.active { background-color: var(--highlight-line); color: #000; font-weight: bold; }
+
+        /* CENTER: Visualization */
+        .col-viz {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            position: relative;
+        }
+
+        .narrative {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: rgba(59, 130, 246, 0.08);
+            border-left: 4px solid var(--array-item-bg);
+            font-size: 0.95rem;
+            font-style: italic;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .arrays-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            gap: 220px; /* Λίγο μεγαλύτερο κενό για τα βελάκια */
+            overflow-y: auto; 
+            align-items: flex-start;
+            padding-top: 10px;
+            padding-bottom: 40px; 
+            padding-left: 50px; /* Extra padding left for the far left arrow */
+        }
+
+        .array-col { display: flex; flex-direction: column; align-items: center; position: relative; }
+        
+        .array-header { 
+            font-weight: bold; 
+            height: 40px; 
+            display: flex; 
+            align-items: center; 
+            font-size: 1rem; 
+            color: var(--text-color); 
+        }
+
+        .cell-wrapper {
+            position: relative;
+            height: 42px; 
+            width: 130px;
+            margin-bottom: 8px; 
+        }
+
+        .cell {
+            width: 100%;
+            height: 100%;
+            background-color: var(--array-item-bg);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 12px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            box-sizing: border-box;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .cell-idx { position: absolute; left: -25px; font-size: 0.8rem; color: var(--text-color); opacity: 0.7; font-weight: bold; top: 12px; }
+        .hidden-slot { opacity: 0.15; background: #94a3b8; border: 1px dashed #64748b; }
+        .highlight-check { transform: scale(1.1); background-color: var(--compare-color) !important; z-index: 5; transition: transform 0.2s; }
+
+        /* --- POINTERS (FIXED ALIGNMENT) --- */
+        .pointer-track {
+            position: absolute;
+            /* ΑΛΛΑΓΗ: Μετακίνηση πολύ πιο αριστερά (-130px) για να μην καλύπτει τους αριθμούς */
+            left: -130px; 
+            top: 40px; 
+            width: 100px;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .sliding-pointer {
+            position: absolute;
+            top: 0;
+            right: 0;
+            height: 42px; 
+            display: flex;
+            align-items: center; 
+            justify-content: flex-end;
+            gap: 5px;
+            transition: top 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            opacity: 1;
+        }
+
+        .pointer-arrow-symbol { font-size: 1.8rem; color: var(--arrow-color); line-height: 0; font-weight: bold; padding-bottom: 4px; }
+        .pointer-label { font-size: 1.3rem; font-weight: bold; color: var(--arrow-color); font-family: monospace; }
+
+        /* --- FLYING ELEMENT --- */
+        .flying-cell {
+            position: fixed;
+            z-index: 9999;
+            background-color: var(--flyer-bg);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            pointer-events: none;
+        }
+
+        /* RIGHT: Output */
+        .col-output {
+            flex: 0 0 220px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .output-header { padding: 10px; background: #f1f5f9; font-weight: bold; border-bottom: 1px solid var(--border-color); }
+        .output-log { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 0.85rem; }
+        .log-item { border-bottom: 1px solid #eee; padding: 3px 0; }
+/* Κλάση για να κρύβει τον κώδικα */
+.col-code.hidden {
+    display: none;
+}
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Αντιγραφή των θετικών αριθμών σε νέο πίνακα</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button onclick="resetSim()">🔄 Αρχή</button>
+        <button onclick="play()" id="btnPlay" class="primary">▶️ Αυτόματη Εκτέλεση</button>
+        <button onclick="step()" id="btnStep">Βήμα ⏩</button>
+        <button onclick="toggleCode()" id="btnCode">👁️ Κώδικας</button>
+        
+        <div class="slider-container">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="50" max="1500" value="800" id="speedSlider" oninput="updateSpeed()">
+        </div>
+
+        <button onclick="toggleTheme()" id="btnTheme">🌙</button>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-code">
+        <div class="tabs">
+            <div class="tab">Αντιγραφή από Α σε Β</div>
+        </div>
+        <div class="code-content" id="codeContainer"></div>
+    </div>
+
+    <div class="col-viz">
+        <div class="narrative" id="narrativeBox">Έτοιμο για εκτέλεση...</div>
+        
+        <div class="arrays-wrapper" id="arraysContainer">
+            </div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">📺 Οθόνη Εξόδου</div>
+        <div class="output-log" id="outputLog"></div>
+    </div>
+
+</div>
+
+<script>
+    // --- Data ---
+    const NUMBERS = [15, -3, 8, -10, 0, 4, 12, -5, 9, -2, 20, -1];
+    
+    const CODE = [
+        "k ← 0",
+        "Για i από 1 μέχρι 12",
+        "  Αν Α[i] > 0 τότε",
+        "    k ← k + 1",
+        "    Β[k] ← Α[i]",
+        "  Τέλος_αν",
+        "Τέλος_επανάληψης",
+        "Για i από 1 μέχρι k",
+        "  Γράψε Β[i]",
+        "Τέλος_επανάληψης"
+    ];
+
+    // --- State ---
+    let data = { A: [], B: [] };
+    let steps = [];
+    let stepIdx = -1;
+    let timer = null;
+    let isPlaying = false;
+    let isAnimating = false;
+    let speed = 800;
+
+    const STEP_HEIGHT = 50; 
+    const HEADER_OFFSET = -50; 
+
+    // --- Init ---
+    function init() {
+        data.A = [...NUMBERS];
+        data.B = new Array(12).fill(null); 
+        
+        renderCode();
+        renderBaseArrays();
+        calcSteps();
+        
+        updatePointers(-1, -1);
+    }
+
+    function resetSim() {
+        isPlaying = false;
+        isAnimating = false;
+        clearTimeout(timer);
+        stepIdx = -1;
+        document.getElementById('outputLog').innerHTML = '';
+        document.getElementById('narrativeBox').innerText = "Έτοιμο...";
+        document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        document.querySelectorAll('.active').forEach(e => e.classList.remove('active'));
+        document.querySelectorAll('.flying-cell').forEach(e => e.remove());
+        
+        init();
+    }
+
+    // --- Rendering ---
+    function renderCode() {
+        const html = CODE.map((l, i) => 
+            `<div class="code-line" id="line-${i}">
+                <span style="color:#888; margin-right:8px; user-select:none;">${i+1}</span>
+                ${l.replace(/ /g, '&nbsp;')}
+             </div>`
+        ).join('');
+        document.getElementById('codeContainer').innerHTML = html;
+    }
+
+    function renderBaseArrays() {
+        const con = document.getElementById('arraysContainer');
+        let html = '';
+
+        // Array A
+        html += `<div class="array-col">
+                    <div class="array-header">Πίνακας Α</div>
+                    <div class="pointer-track">
+                        <div id="ptr-i" class="sliding-pointer" style="top: ${HEADER_OFFSET}px;">
+                            <span class="pointer-label">i</span>
+                            <span class="pointer-arrow-symbol">➡</span>
+                        </div>
+                    </div>`;
+        data.A.forEach((v, i) => html += createCell('A', i, v));
+        html += `</div>`;
+
+        // Array B
+        html += `<div class="array-col">
+                    <div class="array-header">Πίνακας Β</div>
+                    <div class="pointer-track">
+                        <div id="ptr-k" class="sliding-pointer" style="top: ${HEADER_OFFSET}px;">
+                            <span class="pointer-label">k</span>
+                            <span class="pointer-arrow-symbol">➡</span>
+                        </div>
+                    </div>`;
+        for(let i=0; i<12; i++) html += createCell('B', i, '', '', true);
+        html += `</div>`;
+
+        con.innerHTML = html;
+    }
+
+    function createCell(arr, idx, val, extraStyle='', isEmpty=false) {
+        const cls = isEmpty ? 'cell hidden-slot' : 'cell';
+        return `
+            <div class="cell-wrapper" id="wrap-${arr}-${idx}">
+                <div id="c-${arr}-${idx}" class="${cls}" style="${extraStyle}">
+                    <span class="cell-idx">${idx+1}</span>
+                    <span class="cell-val">${val}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    // --- Logic ---
+    function calcSteps() {
+        steps = [];
+        let k = 0;
+
+        steps.push({ line: 0, type: 'info', msg: 'Αρχικοποίηση: k ← 0', i: -1, k: 0 });
+
+        for (let i = 0; i < 12; i++) {
+            steps.push({ line: 1, type: 'loop', msg: `Επανάληψη για i = ${i+1}`, i: i, k: k });
+            
+            steps.push({ 
+                line: 2, type: 'cmp', 
+                msg: `Έλεγχος: Είναι το ${NUMBERS[i]} > 0;`, 
+                i: i, k: k 
+            });
+
+            if (NUMBERS[i] > 0) {
+                k++;
+                steps.push({ 
+                    line: 3, type: 'calc', 
+                    msg: `Ναι. Το k αυξάνεται σε ${k}`,
+                    i: i, k: k 
+                });
+
+                steps.push({ 
+                    line: 4, type: 'copy_anim', 
+                    srcIdx: i, destIdx: k-1, val: NUMBERS[i], 
+                    msg: `Αντιγραφή του ${NUMBERS[i]} στη θέση Β[${k}]`,
+                    i: i, k: k
+                });
+            }
+        }
+
+        steps.push({ line: 7, type: 'info', msg: 'Τέλος αντιγραφής. Εκτύπωση.', i: 11, k: k });
+        for (let j = 0; j < k; j++) {
+            steps.push({ 
+                line: 8, type: 'print', val: data.A.filter(x=>x>0)[j], 
+                msg: `Εκτύπωση στοιχείου Β[${j+1}]`,
+                i: -1, k: j+1 
+            });
+        }
+    }
+
+    // --- Pointers Logic ---
+    function updatePointers(i, k) {
+        const ptrI = document.getElementById('ptr-i');
+        const ptrK = document.getElementById('ptr-k');
+
+        if (i >= 0) {
+            ptrI.style.top = (i * STEP_HEIGHT) + 'px';
+        } else {
+            ptrI.style.top = HEADER_OFFSET + 'px';
+        }
+
+        if (k > 0) {
+            ptrK.style.top = ((k - 1) * STEP_HEIGHT) + 'px';
+        } else if (k === 0) {
+            ptrK.style.top = HEADER_OFFSET + 'px';
+        } else {
+             ptrK.style.top = ((k - 1) * STEP_HEIGHT) + 'px';
+        }
+    }
+
+    // --- Animation Logic ---
+    function flyElement(srcIdx, destIdx, val, callback) {
+        const srcEl = document.getElementById(`c-A-${srcIdx}`);
+        const destWrap = document.getElementById(`wrap-B-${destIdx}`);
+        
+        // Scroll into view
+        srcEl.scrollIntoView({behavior: "smooth", block: "center"});
+
+        setTimeout(() => {
+            const r1 = srcEl.getBoundingClientRect();
+            const r2 = destWrap.getBoundingClientRect();
+
+            const flyer = document.createElement('div');
+            flyer.className = 'flying-cell';
+            flyer.innerText = val;
+            flyer.style.width = r1.width + 'px';
+            flyer.style.height = r1.height + 'px';
+            flyer.style.left = r1.left + 'px';
+            flyer.style.top = r1.top + 'px';
+            
+            document.body.appendChild(flyer);
+
+            flyer.getBoundingClientRect();
+
+            const dur = speed * 0.8; 
+            flyer.style.transition = `all ${dur}ms ease-in-out`;
+            flyer.style.left = r2.left + 'px';
+            flyer.style.top = r2.top + 'px';
+
+            setTimeout(() => {
+                flyer.remove();
+                callback();
+            }, dur + 50);
+        }, 100);
+    }
+
+    // --- Execution ---
+    function step() {
+        if (isAnimating) return; 
+        if (stepIdx >= steps.length - 1) {
+            isPlaying = false;
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+            return;
+        }
+
+        stepIdx++;
+        runStep(steps[stepIdx]);
+    }
+
+    function runStep(s) {
+        document.querySelectorAll('.code-line').forEach(e => e.classList.remove('active'));
+        const lineEl = document.getElementById(`line-${s.line}`);
+        if(lineEl) lineEl.classList.add('active');
+
+        document.getElementById('narrativeBox').innerText = s.msg;
+        document.querySelectorAll('.highlight-check').forEach(e => e.classList.remove('highlight-check'));
+
+        updatePointers(s.i, s.k);
+
+        if (s.type === 'cmp') {
+            document.getElementById(`c-A-${s.i}`).classList.add('highlight-check');
+            const el = document.getElementById(`wrap-A-${s.i}`);
+            if (el) el.scrollIntoView({behavior: "smooth", block: "center"});
+        }
+        else if (s.type === 'copy_anim') {
+            isAnimating = true;
+            toggleControls(false);
+
+            flyElement(s.srcIdx, s.destIdx, s.val, () => {
+                updateCellB(s.destIdx, s.val);
+                isAnimating = false;
+                toggleControls(true);
+                if (isPlaying) timer = setTimeout(step, speed * 0.2);
+            });
+            return; 
+        }
+        else if (s.type === 'print') {
+            const log = document.getElementById('outputLog');
+            log.innerHTML += `<div class="log-item">${s.val}</div>`;
+            log.scrollTop = log.scrollHeight;
+            const el = document.getElementById(`wrap-B-${s.k-1}`); 
+            if(el) el.classList.add('highlight-check');
+        }
+
+        if (isPlaying) {
+            timer = setTimeout(step, speed);
+        }
+    }
+
+    function updateCellB(idx, val) {
+        const el = document.getElementById(`c-B-${idx}`);
+        el.querySelector('.cell-val').innerText = val;
+        el.classList.remove('hidden-slot');
+    }
+
+    function toggleControls(enable) {
+        document.getElementById('btnStep').disabled = !enable;
+    }
+
+    function play() {
+        if (isAnimating) return;
+        if (!isPlaying) {
+            isPlaying = true;
+            document.getElementById('btnPlay').innerText = "⏸ Παύση";
+            step();
+        } else {
+            isPlaying = false;
+            clearTimeout(timer);
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        }
+    }
+
+    function updateSpeed() {
+        speed = 1550 - document.getElementById('speedSlider').value;
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle('dark-mode');
+    }
+
+    init();
+function toggleCode() {
+    const codePanel = document.querySelector('.col-code');
+    codePanel.classList.toggle('hidden');
+    
+    // Προαιρετικό: Αλλάζει το κείμενο του κουμπιού αν θες
+    const btn = document.getElementById('btnCode');
+    if (codePanel.classList.contains('hidden')) {
+        btn.innerText = "👁️ Εμφάνιση Κώδικα";
+    } else {
+        btn.innerText = "👁️ Απόκρυψη Κώδικα";
+    }
+}
+</script>
+</body>
+</html>

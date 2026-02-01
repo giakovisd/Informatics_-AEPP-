@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Αφαίρεση Διπλότυπων</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            
+            --col-on: #3b82f6; /* Blue for ON */
+            --col-a: #10b981;  /* Green for A */
+            
+            --text-white: #ffffff;
+            --compare-yellow: #facc15; /* YELLOW for comparisons */
+            --border-color: #cbd5e1;
+            --disabled-btn: #94a3b8;
+            
+            /* Pointers */
+            --ptr-i: #dc2626; /* Red */
+            --ptr-j: #2563eb; /* Blue */
+            --ptr-k: #10b981; /* Green */
+
+            /* Code Syntax */
+            --code-kw: #0000CD; 
+            --code-sym: #FF0000; 
+            --code-var: #000000; 
+            --code-num: #008000;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        button {
+            padding: 8px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        button.primary { background-color: var(--col-on); color: white; border: none; }
+        button:hover:not(:disabled) { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { background-color: var(--disabled-btn); color: #ccc; cursor: not-allowed; }
+
+        /* Skip Button Style */
+        #btnSkip {
+            background-color: #f59e0b; 
+            color: white; 
+            border: none;
+            display: none; /* Hidden by default */
+        }
+
+        .slider-container { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin-left: 10px; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 15px;
+            gap: 15px;
+            height: calc(100% - 70px);
+            box-sizing: border-box;
+            overflow: hidden; 
+        }
+
+        /* LEFT: Code Panel */
+        .col-code {
+            flex: 0 0 500px;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .tabs { display: flex; background: #f1f5f9; border-bottom: 1px solid var(--border-color); }
+        .tab {
+            flex: 1; text-align: center; padding: 12px; font-size: 0.9rem; cursor: pointer;
+            border-bottom: 3px solid transparent; color: #64748b; font-weight: bold;
+        }
+        .tab:hover { background: #e2e8f0; }
+        .tab.active { background: var(--panel-bg); border-bottom-color: var(--col-on); color: var(--text-color); }
+
+        .code-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            white-space: pre; 
+        }
+        .code-line { 
+            padding: 1px 6px; 
+            border-radius: 3px; 
+        }
+        .code-line.active { background-color: var(--highlight-line); font-weight: bold; }
+
+        .kw { color: var(--code-kw); font-weight: bold; } 
+        .sym { color: var(--code-sym); font-weight: bold; }
+        .var { color: var(--code-var); }
+        .num { color: var(--code-num); font-weight: bold; }
+
+        /* CENTER: Visualization */
+        .col-viz {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            position: relative;
+            overflow: hidden; 
+        }
+
+        .narrative {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: rgba(59, 130, 246, 0.1); 
+            border-left: 4px solid var(--col-on);
+            font-size: 0.95rem;
+            font-style: italic;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .scene-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 40px; 
+            padding-bottom: 20px;
+            position: relative;
+            overflow-y: auto;
+            gap: 150px; 
+        }
+
+        /* Arrays */
+        .array-col { display: flex; flex-direction: column; align-items: center; position: relative; z-index: 2; }
+        .array-header { font-weight: bold; font-size: 1.1rem; margin-bottom: 10px; color: var(--text-color); } 
+        
+        .cell-wrapper {
+            position: relative;
+            width: 120px; 
+            height: 40px;
+            margin-bottom: 5px;
+            transition: transform 0.3s;
+        }
+
+        .cell {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: flex-start; 
+            align-items: center;
+            padding-left: 10px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            box-sizing: border-box;
+            color: white;
+            box-shadow: 0 2px 3px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+
+        .cell.ON { background-color: var(--col-on); }
+        .cell.A { 
+            background-color: var(--col-a); 
+            opacity: 0.3; 
+            color: transparent;
+        }
+        .cell.A.filled { opacity: 1; color: white; }
+
+        .cell-idx { 
+            position: absolute; 
+            left: -35px;
+            top: 10px;
+            font-size: 0.75rem; 
+            color: var(--text-color); 
+            opacity: 0.7; 
+            font-weight: bold; 
+        }
+
+        /* Pointers */
+        .ptr-container {
+            position: absolute;
+            width: 60px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end; 
+            transition: top 0.2s ease-out;
+            opacity: 0;
+            z-index: 10;
+            pointer-events: none;
+            left: -110px; 
+        }
+        
+        .ptr-i .ptr-label, .ptr-i .ptr-arrow { color: var(--ptr-i); }
+        .ptr-j .ptr-label, .ptr-j .ptr-arrow { color: var(--ptr-j); }
+        .ptr-k .ptr-label, .ptr-k .ptr-arrow { color: var(--ptr-k); }
+
+        .ptr-arrow { font-size: 1.5rem; line-height: 1; font-weight: bold; margin-left: 5px; }
+        .ptr-label { font-size: 1rem; font-weight: bold; font-family: monospace; }
+
+        /* Variable done display */
+        .var-done {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            background: #fff1f2;
+            padding: 5px 10px;
+            border: 2px solid #ef4444;
+            color: #ef4444;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            display: none;
+        }
+        .var-done.true { background: #f0fdf4; border-color: #10b981; color: #10b981; }
+
+        /* Highlights */
+        .comparing { 
+            /* Yellow Highlight Logic */
+            background-color: var(--compare-yellow) !important;
+            color: black !important;
+            transform: scale(1.05); 
+            box-shadow: 0 0 15px var(--compare-yellow); 
+            z-index: 20;
+        }
+        
+        .flying-cell {
+            position: fixed;
+            z-index: 1000;
+            width: 120px;
+            height: 40px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: flex-start;
+            padding-left: 10px;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+            background-color: var(--col-a);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            pointer-events: none;
+        }
+
+        /* RIGHT: Output */
+        .col-output {
+            flex: 0 0 200px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .output-header { padding: 10px; background: #f1f5f9; font-weight: bold; border-bottom: 1px solid var(--border-color); }
+        .output-log { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 0.85rem; }
+        .log-item { border-bottom: 1px solid #eee; padding: 3px 0; }
+/* Κλάση για να κρύβει τον κώδικα */
+.col-code.hidden {
+    display: none;
+}
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Μοναδικότητα (διαγραφή διπλοτύπων)</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button onclick="init()">🔄 Αρχή</button>
+        <button onclick="play()" id="btnPlay" class="primary">▶️ Αυτόματη Εκτέλεση</button>
+        <button onclick="step()" id="btnStep">Βήμα ⏩</button>
+        <button onclick="skipSort()" id="btnSkip">⏩ Μετά την ταξινόμηση</button>
+        <button onclick="toggleCode()" id="btnCode">👁️ Κώδικας</button>
+        
+        <div class="slider-container">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="50" max="1500" value="800" id="speedSlider" oninput="updateSpeed()">
+        </div>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-code">
+        <div class="tabs">
+            <div class="tab active" onclick="setSolution(1)" id="t1">1. Αναζήτηση (Σειριακή)</div>
+            <div class="tab" onclick="setSolution(2)" id="t2">2. Ταξινόμηση & Αντιγραφή</div>
+        </div>
+        <div class="code-content" id="codeContainer"></div>
+    </div>
+
+    <div class="col-viz">
+        <div class="narrative" id="narrativeBox">Πατήστε εκτέλεση...</div>
+        <div id="varDone" class="var-done">done = ΨΕΥΔΗΣ</div>
+        
+        <div class="scene-wrapper">
+            <div class="array-col">
+                <div class="array-header">Πίνακας ΟΝ</div>
+                <div class="pointer-track">
+                    <div id="ptr-i" class="ptr-container ptr-i">
+                        <div class="ptr-label">i</div><div class="ptr-arrow">➡</div>
+                    </div>
+                </div>
+                <div id="containerON"></div>
+            </div>
+
+            <div class="array-col">
+                <div class="array-header">Πίνακας Α (Μοναδικά)</div>
+                <div class="pointer-track">
+                    <div id="ptr-j" class="ptr-container ptr-j">
+                        <div class="ptr-label">j</div><div class="ptr-arrow">➡</div>
+                    </div>
+                    <div id="ptr-k" class="ptr-container ptr-k">
+                        <div class="ptr-label">κ</div><div class="ptr-arrow">➡</div>
+                    </div>
+                </div>
+                <div id="containerA"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">📺 Οθόνη Εξόδου</div>
+        <div class="output-log" id="outputLog"></div>
+    </div>
+
+</div>
+
+<script>
+    // --- Configuration ---
+    const SIZE = 15;
+    const NAMES_POOL = [
+        "Γιώργος", "Μαρία", "Νίκος", "Ελένη", "Κώστας", 
+        "Άννα", "Γιάννης", "Σοφία", "Δημήτρης", "Κατερίνα"
+    ];
+    let dataON = [];
+    let dataA = [];
+    
+    // --- Helpers ---
+    function kw(t) { return `<span class="kw">${t}</span>`; }
+    function sym(t) { return `<span class="sym">${t}</span>`; }
+    function v(t) { return `<span class="var">${t}</span>`; }
+    function n(t) { return `<span class="num">${t}</span>`; }
+
+    // Codes
+    const SOL_CODES = {
+        1: [
+            `${v("A")}${sym("[")}${n("1")}${sym("]")} ${sym("<-")} ${v("ON")}${sym("[")}${n("1")}${sym("]")}`,
+            `${v("κ")} ${sym("<-")} ${n("1")}`,
+            `${kw("Για")} ${v("i")} ${kw("από")} ${n("2")} ${kw("μέχρι")} ${n("15")}`,
+            `  ${v("done")} ${sym("<-")} ${kw("ΨΕΥΔΗΣ")}`,
+            `  ${v("j")} ${sym("<-")} ${n("1")}`,
+            `  ${kw("Όσο")} ${v("j")} ${sym("<=")} ${v("κ")} ${kw("ΚΑΙ")} ${v("done")} ${sym("=")} ${kw("ΨΕΥΔΗΣ")} ${kw("επανάλαβε")}`,
+            `    ${kw("Αν")} ${v("Α")}${sym("[")}${v("j")}${sym("]")} ${sym("=")} ${v("ON")}${sym("[")}${v("i")}${sym("]")} ${kw("τότε")}`,
+            `      ${v("done")} ${sym("<-")} ${kw("ΑΛΗΘΗΣ")}`,
+            `    ${kw("αλλιώς")}`,
+            `      ${v("j")} ${sym("<-")} ${v("j")} ${sym("+")} ${n("1")}`,
+            `    ${kw("Τέλος_αν")}`,
+            `  ${kw("Τέλος_επανάληψης")}`,
+            `  ${kw("Αν")} ${v("done")} ${sym("=")} ${kw("ΨΕΥΔΗΣ")} ${kw("τότε")}`,
+            `    ${v("κ")} ${sym("<-")} ${v("κ")} ${sym("+")} ${n("1")}`,
+            `    ${v("Α")}${sym("[")}${v("κ")}${sym("]")} ${sym("<-")} ${v("ΟΝ")}${sym("[")}${v("i")}${sym("]")}`,
+            `  ${kw("Τέλος_αν")}`,
+            `${kw("Τέλος_επανάληψης")}`
+        ],
+        2: [
+            `${kw("Για")} ${v("i")} ${kw("από")} ${n("2")} ${kw("μέχρι")} ${n("15")}`,
+            `  ${kw("Για")} ${v("j")} ${kw("από")} ${n("15")} ${kw("μέχρι")} ${v("i")} ${kw("με_βήμα")} ${n("-1")}`,
+            `    ${kw("Αν")} ${v("ΟΝ")}${sym("[")}${v("j")}${sym("-")}${n("1")}${sym("]")} ${sym(">")} ${v("ΟΝ")}${sym("[")}${v("j")}${sym("]")} ${kw("τότε")}`,
+            `      ${kw("αντιμετάθεσε")} ${v("ΟΝ")}${sym("[")}${v("j")}${sym("]")}${sym(",")} ${v("ΟΝ")}${sym("[")}${v("j")}${sym("-")}${n("1")}${sym("]")}`,
+            `    ${kw("Τέλος_αν")}`,
+            `  ${kw("Τέλος_επανάληψης")}`,
+            `${kw("Τέλος_επανάληψης")}`,
+            `${v("A")}${sym("[")}${n("1")}${sym("]")} ${sym("<-")} ${v("ON")}${sym("[")}${n("1")}${sym("]")}`,
+            `${v("κ")} ${sym("<-")} ${n("1")}`,
+            `${kw("Για")} ${v("i")} ${kw("από")} ${n("2")} ${kw("μέχρι")} ${n("15")}`,
+            `  ${kw("Αν")} ${v("ΟΝ")}${sym("[")}${v("i")}${sym("-")}${n("1")}${sym("]")} ${sym("<>")} ${v("ON")}${sym("[")}${v("i")}${sym("]")} ${kw("τότε")}`,
+            `    ${v("κ")} ${sym("<-")} ${v("κ")} ${sym("+")} ${n("1")}`,
+            `    ${v("Α")}${sym("[")}${v("κ")}${sym("]")} ${sym("<-")} ${v("ΟΝ")}${sym("[")}${v("i")}${sym("]")}`,
+            `  ${kw("Τέλος_αν")}`,
+            `${kw("Τέλος_επανάληψης")}`
+        ]
+    };
+
+    // --- State ---
+    let currentSol = 1;
+    let steps = [];
+    let stepIdx = -1;
+    let timer = null;
+    let isPlaying = false;
+    let isAnimating = false;
+    let speed = 800;
+
+    // --- Init ---
+    function init() {
+        generateData();
+        dataA = new Array(SIZE).fill("");
+        
+        isPlaying = false;
+        clearTimeout(timer);
+        stepIdx = -1;
+        document.getElementById('outputLog').innerHTML = '';
+        document.getElementById('narrativeBox').innerText = "Πατήστε εκτέλεση...";
+        document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        
+        // Show/Hide Skip Button
+        document.getElementById('btnSkip').style.display = (currentSol === 2) ? 'inline-block' : 'none';
+
+        renderCode();
+        renderArrays();
+        updatePointers(-1, -1, -1);
+        updateDone(null);
+    }
+
+    function generateData() {
+        dataON = [];
+        for (let i=0; i<SIZE; i++) {
+            const r = Math.floor(Math.random() * NAMES_POOL.length);
+            dataON.push(NAMES_POOL[r]);
+        }
+    }
+
+    function setSolution(n) {
+        currentSol = n;
+        document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i+1 === n));
+        init();
+    }
+
+    function resetSim() { init(); }
+
+    // --- Skip Functionality ---
+    function skipSort() {
+        if (currentSol !== 2) return;
+        
+        // Stop current
+        isPlaying = false;
+        clearTimeout(timer);
+        isAnimating = false;
+        document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+
+        // Logic: Calculate steps if not done
+        if (steps.length === 0) calcSteps();
+
+        // Find index of 'sorted' message
+        let sortedStepIdx = -1;
+        for(let i=0; i<steps.length; i++) {
+            if (steps[i].type === 'sorted') {
+                sortedStepIdx = i;
+                break;
+            }
+        }
+
+        if (sortedStepIdx !== -1) {
+            // Apply sorting to dataON immediately
+            dataON.sort((a,b) => a.localeCompare(b));
+            
+            // Re-render Array ON
+            renderArrays(); // Refreshes both but A is empty anyway at this stage mostly
+            
+            // Update pointers/state to that step
+            stepIdx = sortedStepIdx;
+            runStep(steps[stepIdx]);
+        }
+    }
+
+    // --- Rendering ---
+    function renderCode() {
+        const html = SOL_CODES[currentSol].map((l, i) => 
+            `<div class="code-line" id="line-${i}">${l}</div>`
+        ).join('');
+        document.getElementById('codeContainer').innerHTML = html;
+    }
+
+    function renderArrays() {
+        // ON
+        let htmlON = '';
+        dataON.forEach((v, i) => {
+            htmlON += `
+            <div class="cell-wrapper" id="wrap-ON-${i}">
+                <div class="cell-idx">${i+1}</div>
+                <div id="c-ON-${i}" class="cell ON">${v}</div>
+            </div>`;
+        });
+        document.getElementById('containerON').innerHTML = htmlON;
+
+        // A
+        let htmlA = '';
+        dataA.forEach((v, i) => {
+            htmlA += `
+            <div class="cell-wrapper" id="wrap-A-${i}">
+                <div class="cell-idx">${i+1}</div>
+                <div id="c-A-${i}" class="cell A">${v}</div>
+            </div>`;
+        });
+        document.getElementById('containerA').innerHTML = htmlA;
+    }
+
+    // --- Logic ---
+    function calcSteps() {
+        steps = [];
+        let simON = [...dataON];
+        let simA = new Array(SIZE).fill("");
+        
+        if (currentSol === 1) { 
+            // Linear Search
+            simA[0] = simON[0];
+            steps.push({ line: 0, type: 'init_copy', i:0, k:0, val: simON[0], msg: 'Αρχική αντιγραφή A[1] <- ON[1]' });
+            
+            let k = 0; 
+            
+            for (let i = 1; i < SIZE; i++) {
+                steps.push({ line: 2, type: 'loop_i', i:i, k:k, msg: `Έλεγχος ΟΝ[${i+1}]: "${simON[i]}"` });
+                let done = false;
+                let j = 0;
+                
+                steps.push({ line: 3, type: 'init_search', i:i, j:j, k:k, done: false, msg: 'done <- ΨΕΥΔΗΣ, j <- 1' });
+
+                while (j <= k && !done) {
+                    steps.push({ line: 6, type: 'cmp', i:i, j:j, k:k, msg: `Σύγκριση A[${j+1}] = ON[${i+1}]?` });
+                    
+                    if (simA[j] === simON[i]) {
+                        done = true;
+                        steps.push({ line: 7, type: 'found', i:i, j:j, k:k, done: true, msg: 'Βρέθηκε! done <- ΑΛΗΘΗΣ' });
+                    } else {
+                        steps.push({ line: 9, type: 'next_j', i:i, j:j, k:k, msg: 'Δεν είναι ίδιο. j <- j + 1' });
+                        j++;
+                    }
+                }
+                
+                steps.push({ line: 12, type: 'check_done', i:i, k:k, done: done, msg: `Αν done = ΨΕΥΔΗΣ... (${!done})` });
+                
+                if (!done) {
+                    k++;
+                    simA[k] = simON[i];
+                    steps.push({ line: 14, type: 'add', i:i, k:k, val: simON[i], msg: `Το όνομα είναι μοναδικό. Προσθήκη στο Α[${k+1}]` });
+                }
+            }
+
+        } else { 
+            // Sort & Unique
+            // 1. Sort Phase
+            for (let i = 1; i < SIZE; i++) { 
+                for (let j = SIZE - 1; j >= i; j--) { 
+                    steps.push({ line: 2, type: 'cmp_sort', idx1: j-1, idx2: j, msg: `Σύγκριση ${simON[j-1]} > ${simON[j]}` });
+                    
+                    if (simON[j-1].localeCompare(simON[j]) > 0) {
+                        let temp = simON[j];
+                        simON[j] = simON[j-1];
+                        simON[j-1] = temp;
+                        steps.push({ line: 3, type: 'swap', idx1: j-1, idx2: j, msg: 'Αντιμετάθεση' });
+                    }
+                }
+            }
+            steps.push({ line: 6, type: 'sorted', msg: 'Ο πίνακας ΟΝ ταξινομήθηκε' });
+
+            // 2. Unique Pass
+            simA[0] = simON[0];
+            let k = 0;
+            steps.push({ line: 7, type: 'init_copy', i:0, k:0, val: simON[0], msg: 'A[1] <- ON[1]' });
+
+            for (let i = 1; i < SIZE; i++) {
+                steps.push({ line: 10, type: 'cmp_uniq', i:i, k:k, msg: `Σύγκριση ΟΝ[${i}] vs ΟΝ[${i+1}]` });
+                
+                if (simON[i-1] !== simON[i]) {
+                    k++;
+                    simA[k] = simON[i];
+                    steps.push({ line: 12, type: 'add', i:i, k:k, val: simON[i], msg: 'Διαφορετικό όνομα. Προσθήκη στο Α' });
+                } else {
+                    steps.push({ line: 10, type: 'skip', i:i, k:k, msg: 'Ίδιο όνομα. Αγνοείται.' });
+                }
+            }
+        }
+    }
+
+    // --- Animation ---
+    function updatePointers(i, j, k) {
+        movePtr('ptr-i', i, 'ON');
+        movePtr('ptr-j', j, 'A');
+        movePtr('ptr-k', k, 'A');
+    }
+
+    function movePtr(id, idx, type) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (idx < 0 || idx === undefined) {
+            el.style.opacity = '0';
+            return;
+        }
+        const wrapper = document.getElementById(`wrap-${type}-${idx}`);
+        if (wrapper) {
+            el.style.top = (wrapper.offsetTop + 5) + 'px';
+            el.style.opacity = '1';
+        }
+    }
+
+    function updateDone(val) {
+        const el = document.getElementById('varDone');
+        if (val === null) {
+            el.style.display = 'none';
+        } else {
+            el.style.display = 'block';
+            el.innerText = val ? "done = ΑΛΗΘΗΣ" : "done = ΨΕΥΔΗΣ";
+            el.className = val ? "var-done true" : "var-done";
+        }
+    }
+
+    async function flyElement(srcArr, srcIdx, destIdx, val) {
+        isAnimating = true;
+        const srcEl = document.getElementById(`c-${srcArr}-${srcIdx}`);
+        const destEl = document.getElementById(`c-A-${destIdx}`);
+
+        if(srcEl) srcEl.classList.add('comparing');
+
+        const flyer = document.createElement('div');
+        flyer.className = 'flying-cell';
+        flyer.innerText = val;
+        
+        const r1 = srcEl ? srcEl.getBoundingClientRect() : {left:0, top:0};
+        const r2 = destEl ? destEl.getBoundingClientRect() : {left:0, top:0};
+
+        flyer.style.left = r1.left + 'px';
+        flyer.style.top = r1.top + 'px';
+        document.body.appendChild(flyer);
+
+        await new Promise(r => setTimeout(r, 20));
+        flyer.style.transition = `all ${speed*0.6}ms ease-in-out`;
+        flyer.style.left = r2.left + 'px';
+        flyer.style.top = r2.top + 'px';
+
+        await new Promise(r => setTimeout(r, speed*0.6));
+
+        if(destEl) {
+            destEl.innerText = val;
+            destEl.classList.add('filled');
+        }
+        if(srcEl) srcEl.classList.remove('comparing');
+        flyer.remove();
+        isAnimating = false;
+    }
+
+    async function swapAnimate(idx1, idx2) {
+        isAnimating = true;
+        const w1 = document.getElementById(`wrap-ON-${idx1}`);
+        const w2 = document.getElementById(`wrap-ON-${idx2}`);
+        
+        if(w1 && w2) {
+            const dist = w2.offsetTop - w1.offsetTop;
+            w1.style.transform = `translateY(${dist}px)`;
+            w2.style.transform = `translateY(-${dist}px)`;
+        }
+
+        await new Promise(r => setTimeout(r, speed * 0.5));
+
+        if(w1 && w2) {
+            w1.style.transition = 'none';
+            w2.style.transition = 'none';
+            w1.style.transform = 'translateY(0)';
+            w2.style.transform = 'translateY(0)';
+
+            const c1 = document.getElementById(`c-ON-${idx1}`);
+            const c2 = document.getElementById(`c-ON-${idx2}`);
+            const temp = c1.innerText;
+            c1.innerText = c2.innerText;
+            c2.innerText = temp;
+        }
+
+        setTimeout(() => {
+            if(w1) w1.style.transition = 'transform 0.3s';
+            if(w2) w2.style.transition = 'transform 0.3s';
+            isAnimating = false;
+        }, 50);
+    }
+
+    // --- Execution ---
+    function step() {
+        if (stepIdx === -1 && steps.length === 0) calcSteps();
+        if (isAnimating) return;
+
+        if (stepIdx >= steps.length - 1) {
+            isPlaying = false;
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+            return;
+        }
+        stepIdx++;
+        runStep(steps[stepIdx]);
+    }
+
+    function runStep(s) {
+        document.querySelectorAll('.code-line').forEach(e => e.classList.remove('active'));
+        if (s.line !== undefined) {
+             const el = document.getElementById(`line-${s.line}`);
+             if(el) {
+                 el.classList.add('active');
+                 el.scrollIntoView({behavior: "smooth", block: "nearest"});
+             }
+        }
+
+        if(s.msg) document.getElementById('narrativeBox').innerText = s.msg;
+        document.querySelectorAll('.comparing').forEach(e => e.classList.remove('comparing'));
+
+        if (currentSol === 1) {
+            updatePointers(s.i, s.j, s.k);
+            if (s.done !== undefined) updateDone(s.done);
+        } else {
+            // Sol 2
+            updateDone(null);
+            if (s.type === 'sorted') {
+                updatePointers(-1, -1, -1);
+            } else if (s.type === 'init_copy' || s.type === 'add' || s.type === 'skip' || s.type === 'cmp_uniq') {
+                updatePointers(s.i, -1, s.k);
+            } else {
+                updatePointers(-1, -1, -1); // Sort phase hidden pointers to avoid clutter
+            }
+        }
+
+        // Apply highlights
+        if (s.type === 'cmp_sort') {
+            document.getElementById(`c-ON-${s.idx1}`).classList.add('comparing');
+            document.getElementById(`c-ON-${s.idx2}`).classList.add('comparing');
+        } else if (s.type === 'cmp_uniq') {
+            // Compare i and i-1
+            document.getElementById(`c-ON-${s.i}`).classList.add('comparing');
+            document.getElementById(`c-ON-${s.i-1}`).classList.add('comparing');
+        } else if (s.type === 'cmp') {
+            document.getElementById(`c-ON-${s.i}`).classList.add('comparing');
+            if(s.j !== undefined) document.getElementById(`c-A-${s.j}`).classList.add('comparing');
+        } 
+        
+        // Actions
+        if (s.type === 'init_copy' || s.type === 'add') {
+            flyElement('ON', (s.type==='init_copy'?0:s.i), s.k, s.val).then(() => {
+                if(isPlaying) timer = setTimeout(step, speed * 0.2);
+            });
+            return;
+        } else if (s.type === 'swap') {
+            swapAnimate(s.idx1, s.idx2).then(() => {
+                if(isPlaying) timer = setTimeout(step, speed * 0.2);
+            });
+            return;
+        }
+
+        if (isPlaying) {
+            timer = setTimeout(step, speed);
+        }
+    }
+
+    function play() {
+        if (!isPlaying) {
+            isPlaying = true;
+            document.getElementById('btnPlay').innerText = "⏸ Παύση";
+            if(stepIdx === -1) calcSteps();
+            step();
+        } else {
+            isPlaying = false;
+            clearTimeout(timer);
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        }
+    }
+
+    function updateSpeed() {
+        speed = 1550 - document.getElementById('speedSlider').value;
+    }
+
+    init();
+    function toggleCode() {
+    const codePanel = document.querySelector('.col-code');
+    codePanel.classList.toggle('hidden');
+    
+    // Προαιρετικό: Αλλάζει το κείμενο του κουμπιού αν θες
+    const btn = document.getElementById('btnCode');
+    if (codePanel.classList.contains('hidden')) {
+        btn.innerText = "👁️ Εμφάνιση Κώδικα";
+    } else {
+        btn.innerText = "👁️ Απόκρυψη Κώδικα";
+    }
+}
+
+</script>
+</body>
+</html>

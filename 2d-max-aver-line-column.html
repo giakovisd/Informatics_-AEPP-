@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Δισδιάστατοι μαχ/μο γραμμή/στήλη</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            
+            --col-arr: #3b82f6; 
+            --col-res: #8b5cf6; /* Purple for Result Arrays */
+            --col-header: #64748b;
+            
+            --text-white: #ffffff;
+            --scan-color: #f59e0b; 
+            --add-color: #10b981; 
+            --max-color: #ef4444; 
+            
+            --border-color: #cbd5e1;
+            --disabled-btn: #94a3b8;
+            
+            --ptr-color: #dc2626; 
+
+            /* Code Syntax */
+            --code-kw: #0000CD; 
+            --code-sym: #FF0000; 
+            --code-var: #000000; 
+            --code-num: #008000;
+            --code-str: #A020F0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        button {
+            padding: 8px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        button.primary { background-color: var(--col-arr); color: white; border: none; }
+        button:hover:not(:disabled) { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { background-color: var(--disabled-btn); color: #ccc; cursor: not-allowed; }
+
+        .slider-container { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin-left: 10px; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 15px;
+            gap: 15px;
+            height: calc(100% - 70px);
+            box-sizing: border-box;
+            overflow: hidden; 
+        }
+
+        /* LEFT: Code Panel */
+        .col-code {
+            flex: 0 0 480px;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .col-code.hidden { display: none; }
+
+        /* VERTICAL TABS */
+        .tabs { 
+            display: flex; 
+            flex-direction: column; /* Vertical Stack */
+            background: #f1f5f9; 
+            border-bottom: 1px solid var(--border-color); 
+        }
+        .tab {
+            text-align: left; 
+            padding: 12px 15px; 
+            font-size: 0.9rem; 
+            cursor: pointer;
+            border-left: 4px solid transparent; 
+            border-bottom: 1px solid #e2e8f0;
+            color: #64748b; 
+            font-weight: bold; 
+        }
+        .tab:hover { background: #e2e8f0; }
+        .tab.active { 
+            background: var(--panel-bg); 
+            border-left-color: var(--col-arr); 
+            color: var(--text-color); 
+        }
+
+        .code-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            white-space: pre; 
+        }
+        .code-line { padding: 2px 6px; border-radius: 3px; }
+        .code-line.active { background-color: var(--highlight-line); font-weight: bold; }
+
+        .kw { color: var(--code-kw); font-weight: bold; } 
+        .sym { color: var(--code-sym); font-weight: bold; }
+        .var { color: var(--code-var); }
+        .num { color: var(--code-num); font-weight: bold; }
+        .str { color: var(--code-str); }
+
+        /* CENTER: Visualization */
+        .col-viz {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            position: relative;
+            overflow: hidden; 
+        }
+
+        .narrative {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: rgba(59, 130, 246, 0.1); 
+            border-left: 4px solid var(--col-arr);
+            font-size: 0.95rem;
+            font-style: italic;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .scene-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: auto;
+        }
+
+        /* --- Layout for 2D + 1D Arrays --- */
+        .viz-layout {
+            display: grid;
+            grid-template-columns: auto auto; /* Main Grid | Row Array */
+            grid-template-rows: auto auto;    /* Main Grid | Col Array */
+            gap: 20px;
+            align-items: start;
+            justify-items: start;
+            padding: 40px;
+        }
+
+        /* 2D Grid */
+        .grid-container {
+            position: relative;
+            display: grid;
+            grid-template-columns: repeat(5, 70px);
+            grid-template-rows: repeat(4, 70px);
+            gap: 8px;
+        }
+
+        /* 1D Row Array (Vertical) */
+        .row-array-container {
+            display: grid;
+            grid-template-rows: repeat(4, 70px);
+            gap: 8px;
+            padding-top: 0; /* Align with top of grid */
+        }
+
+        /* 1D Col Array (Horizontal) */
+        .col-array-container {
+            display: grid;
+            grid-template-columns: repeat(5, 70px);
+            gap: 8px;
+            padding-left: 0; /* Align with left of grid */
+            grid-column: 1; /* Span under the main grid */
+        }
+
+        .grid-label {
+            position: absolute;
+            font-weight: bold;
+            color: var(--col-header);
+            font-size: 0.9rem;
+        }
+        .lbl-col { top: -25px; text-align: center; width: 70px; }
+        .lbl-row { left: -25px; height: 70px; display: flex; align-items: center; justify-content: center; width: 20px;}
+
+        .cell {
+            background-color: var(--col-arr);
+            color: white;
+            border: 2px solid #1e40af;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            position: relative;
+            transition: all 0.2s;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+            width: 70px;
+            height: 70px;
+        }
+
+        /* Result Cell Styling */
+        .cell-res {
+            background-color: #f3f4f6; /* Empty initially */
+            color: var(--text-color);
+            border: 2px dashed var(--col-res);
+        }
+        .cell-res.filled {
+            background-color: var(--col-res);
+            color: white;
+            border-style: solid;
+            border-color: #5b21b6;
+            animation: pop 0.4s ease;
+        }
+        @keyframes pop { 50% { transform: scale(1.15); } }
+
+        /* States */
+        .cell.scanning { background-color: var(--scan-color); border-color: #d97706; transform: scale(1.1); z-index: 10; }
+        .cell.is-max { background-color: var(--max-color); border-color: #991b1b; z-index: 5; box-shadow: 0 0 10px var(--max-color); }
+        .cell.added { background-color: var(--add-color); border-color: #065f46; transform: scale(1.05); }
+
+        .cell-coords {
+            position: absolute;
+            top: 2px;
+            left: 5px;
+            font-size: 0.65rem;
+            color: rgba(255,255,255,0.6);
+            font-family: monospace;
+        }
+        .cell-res .cell-coords { color: rgba(0,0,0,0.4); }
+        .cell-res.filled .cell-coords { color: rgba(255,255,255,0.6); }
+
+        /* Pointer */
+        .pointer-arrow {
+            position: absolute;
+            font-size: 2.5rem; 
+            color: var(--ptr-color);
+            font-weight: bold;
+            z-index: 50;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-shadow: 1px 1px 0px white;
+            opacity: 0;
+            line-height: 1;
+            pointer-events: none;
+        }
+
+        /* Variable Watch Box */
+        .vars-box {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #fff;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            width: 140px;
+            z-index: 50;
+        }
+        .var-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: monospace;
+            font-size: 1rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 3px;
+        }
+        .var-val.changed { font-weight: bold; color: var(--col-res); }
+
+        /* RIGHT: Output */
+        .col-output {
+            flex: 0 0 200px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .output-header { padding: 10px; background: #f1f5f9; font-weight: bold; border-bottom: 1px solid var(--border-color); }
+        .output-log { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 0.9rem; }
+        .log-item { border-bottom: 1px solid #eee; padding: 3px 0; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Μαx/μέσος όρος κάθε γραμμής/στήλης</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button onclick="init()">🔄 Αρχή (Νέοι Αριθμοί)</button>
+        <button onclick="play()" id="btnPlay" class="primary">▶️ Αυτόματη Εκτέλεση</button>
+        <button onclick="step()" id="btnStep">Βήμα ⏩</button>
+        <button onclick="toggleCode()" id="btnCode">👁️ Εμφάνιση Κώδικα</button>
+        
+        <div class="slider-container">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="50" max="1500" value="800" id="speedSlider" oninput="updateSpeed()">
+        </div>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-code hidden">
+        <div class="tabs">
+            <div class="tab active" onclick="setMode(1)">1. Μέσος Όρος Γραμμής</div>
+            <div class="tab" onclick="setMode(2)">2. Μέσος Όρος Στήλης</div>
+            <div class="tab" onclick="setMode(3)">3. Max Γραμμής</div>
+            <div class="tab" onclick="setMode(4)">4. Max Στήλης</div>
+        </div>
+        <div class="code-content" id="codeContainer"></div>
+    </div>
+
+    <div class="col-viz">
+        <div class="narrative" id="narrativeBox">Πατήστε εκτέλεση...</div>
+        
+        <div class="vars-box">
+            <div id="var-1" class="var-item"><span class="var-label" id="lbl-1">αθρ:</span> <span id="val-1" class="var-val">0</span></div>
+        </div>
+
+        <div class="scene-wrapper">
+            <div class="viz-layout">
+                <div class="grid-container" id="gridContainer">
+                    <div id="gridPointer" class="pointer-arrow">➡</div>
+                </div>
+
+                <div class="row-array-container" id="rowArrayContainer" style="display:none;"></div>
+
+                <div class="col-array-container" id="colArrayContainer" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">📺 Οθόνη Εξόδου</div>
+        <div class="output-log" id="outputLog"></div>
+    </div>
+
+</div>
+
+<script>
+    // --- Configuration ---
+    const ROWS = 4;
+    const COLS = 5;
+    
+    // --- State ---
+    let currentMode = 1; 
+    let dataP = [];
+    let steps = [];
+    let stepIdx = -1;
+    let timer = null;
+    let isPlaying = false;
+    let speed = 800;
+
+    // --- Helpers ---
+    function kw(t) { return `<span class="kw">${t}</span>`; }
+    function sym(t) { return `<span class="sym">${t}</span>`; }
+    function v(t) { return `<span class="var">${t}</span>`; }
+    function n(t) { return `<span class="num">${t}</span>`; }
+
+    // Codes
+    function getCodes() {
+        return {
+            1: [ // MO Line -> MO_Line[i]
+                `${kw("Για")} ${v("i")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("4")}`,
+                `  ${v("αθρ")} ${sym("<-")} ${n("0")}`,
+                `  ${kw("Για")} ${v("j")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("5")}`,
+                `    ${v("αθρ")} ${sym("<-")} ${v("αθρ")} ${sym("+")} ${v("Π")}${sym("[")}${v("i")}${sym(",")}${v("j")}${sym("]")}`,
+                `  ${kw("Τέλος_επανάληψης")}`,
+                `  ${v("ΜΟ_Γραμ")}${sym("[")}${v("i")}${sym("]")} ${sym("<-")} ${v("αθρ")} ${sym("/")} ${n("5")}`,
+                `${kw("Τέλος_επανάληψης")}`
+            ],
+            2: [ // MO Col -> MO_Col[j]
+                `${kw("Για")} ${v("j")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("5")}`,
+                `  ${v("αθρ")} ${sym("<-")} ${n("0")}`,
+                `  ${kw("Για")} ${v("i")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("4")}`,
+                `    ${v("αθρ")} ${sym("<-")} ${v("αθρ")} ${sym("+")} ${v("Π")}${sym("[")}${v("i")}${sym(",")}${v("j")}${sym("]")}`,
+                `  ${kw("Τέλος_επανάληψης")}`,
+                `  ${v("ΜΟ_Στηλ")}${sym("[")}${v("j")}${sym("]")} ${sym("<-")} ${v("αθρ")} ${sym("/")} ${n("4")}`,
+                `${kw("Τέλος_επανάληψης")}`
+            ],
+            3: [ // Max Line -> Max_Line[i]
+                `${kw("Για")} ${v("i")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("4")}`,
+                `  ${v("max")} ${sym("<-")} ${v("Π")}${sym("[")}${v("i")}${sym(",")}${n("1")}${sym("]")}`,
+                `  ${kw("Για")} ${v("j")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("5")}`,
+                `    ${kw("Αν")} ${v("Π")}${sym("[")}${v("i")}${sym(",")}${v("j")}${sym("]")} ${sym(">")} ${v("max")} ${kw("τότε")}`,
+                `      ${v("max")} ${sym("<-")} ${v("Π")}${sym("[")}${v("i")}${sym(",")}${v("j")}${sym("]")}`,
+                `    ${kw("Τέλος_αν")}`,
+                `  ${kw("Τέλος_επανάληψης")}`,
+                `  ${v("Max_Γραμ")}${sym("[")}${v("i")}${sym("]")} ${sym("<-")} ${v("max")}`,
+                `${kw("Τέλος_επανάληψης")}`
+            ],
+            4: [ // Max Col -> Max_Col[j]
+                `${kw("Για")} ${v("j")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("5")}`,
+                `  ${v("max")} ${sym("<-")} ${v("Π")}${sym("[")}${n("1")}${sym(",")}${v("j")}${sym("]")}`,
+                `  ${kw("Για")} ${v("i")} ${kw("από")} ${n("1")} ${kw("μέχρι")} ${n("4")}`,
+                `    ${kw("Αν")} ${v("Π")}${sym("[")}${v("i")}${sym(",")}${v("j")}${sym("]")} ${sym(">")} ${v("max")} ${kw("τότε")}`,
+                `      ${v("max")} ${sym("<-")} ${v("Π")}${sym("[")}${v("i")}${sym(",")}${v("j")}${sym("]")}`,
+                `    ${kw("Τέλος_αν")}`,
+                `  ${kw("Τέλος_επανάληψης")}`,
+                `  ${v("Max_Στηλ")}${sym("[")}${v("j")}${sym("]")} ${sym("<-")} ${v("max")}`,
+                `${kw("Τέλος_επανάληψης")}`
+            ]
+        };
+    }
+
+    // --- Init ---
+    function init() {
+        dataP = [];
+        for(let i=0; i<ROWS; i++) {
+            let row = [];
+            for(let j=0; j<COLS; j++) {
+                row.push(Math.floor(Math.random() * 90) + 10);
+            }
+            dataP.push(row);
+        }
+
+        renderCode();
+        renderGrid();
+        renderResultArrays(); // Setup empty result arrays
+        updateUI();
+        
+        isPlaying = false;
+        clearTimeout(timer);
+        stepIdx = -1;
+        document.getElementById('outputLog').innerHTML = '';
+        document.getElementById('narrativeBox').innerText = "Πατήστε εκτέλεση...";
+        document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        updatePointer(null, null);
+    }
+
+    function setMode(m) {
+        currentMode = m;
+        document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i+1 === m));
+        init();
+    }
+
+    function updateUI() {
+        const lbl1 = document.getElementById('lbl-1');
+        const val1 = document.getElementById('val-1');
+        
+        // Hide/Show Side Arrays based on mode
+        const rowArr = document.getElementById('rowArrayContainer');
+        const colArr = document.getElementById('colArrayContainer');
+
+        if (currentMode === 1 || currentMode === 3) {
+            // Rows
+            rowArr.style.display = 'grid';
+            colArr.style.display = 'none';
+        } else {
+            // Cols
+            rowArr.style.display = 'none';
+            colArr.style.display = 'grid';
+        }
+
+        if(currentMode === 1 || currentMode === 2) {
+            lbl1.innerText = 'αθρ:';
+        } else {
+            lbl1.innerText = 'max:';
+        }
+        val1.innerText = '-';
+    }
+
+    function resetSim() { init(); }
+
+    function toggleCode() {
+        const p = document.querySelector('.col-code');
+        p.classList.toggle('hidden');
+        document.getElementById('btnCode').innerText = p.classList.contains('hidden') ? "👁️ Εμφάνιση Κώδικα" : "👁️ Απόκρυψη Κώδικα";
+    }
+
+    function renderCode() {
+        const codes = getCodes();
+        const html = codes[currentMode].map((l, i) => `<div class="code-line" id="line-${i}">${l}</div>`).join('');
+        document.getElementById('codeContainer').innerHTML = html;
+    }
+
+    function renderGrid() {
+        const container = document.getElementById('gridContainer');
+        const ptr = document.getElementById('gridPointer');
+        container.innerHTML = ''; 
+        container.appendChild(ptr);
+
+        // Labels
+        for (let j = 1; j <= COLS; j++) {
+            const lbl = document.createElement('div');
+            lbl.className = 'grid-label lbl-col';
+            lbl.style.left = ((j-1) * 78) + 'px';
+            lbl.innerText = j;
+            container.appendChild(lbl);
+        }
+        for (let i = 1; i <= ROWS; i++) {
+            const lbl = document.createElement('div');
+            lbl.className = 'grid-label lbl-row';
+            lbl.style.top = ((i-1) * 78) + 'px';
+            lbl.innerText = i;
+            container.appendChild(lbl);
+        }
+
+        // Cells
+        for (let i = 1; i <= ROWS; i++) {
+            for (let j = 1; j <= COLS; j++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.id = `cell-${i}-${j}`;
+                cell.innerHTML = `<span class="cell-coords">${i},${j}</span>${dataP[i-1][j-1]}`;
+                container.appendChild(cell);
+            }
+        }
+    }
+
+    function renderResultArrays() {
+        // Row Array (Side)
+        const rowCont = document.getElementById('rowArrayContainer');
+        rowCont.innerHTML = '';
+        for(let i=1; i<=ROWS; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell cell-res';
+            cell.id = `res-row-${i}`;
+            cell.innerHTML = `<span class="cell-coords">M[${i}]</span>`;
+            rowCont.appendChild(cell);
+        }
+
+        // Col Array (Bottom)
+        const colCont = document.getElementById('colArrayContainer');
+        colCont.innerHTML = '';
+        for(let j=1; j<=COLS; j++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell cell-res';
+            cell.id = `res-col-${j}`;
+            cell.innerHTML = `<span class="cell-coords">M[${j}]</span>`;
+            colCont.appendChild(cell);
+        }
+    }
+
+    // --- Logic ---
+    function calcSteps() {
+        steps = [];
+        
+        if (currentMode === 1) { // AVG LINE
+            for (let i = 1; i <= ROWS; i++) {
+                let sum = 0;
+                steps.push({ line: 0, msg: `Για i = ${i} (Γραμμή)` });
+                steps.push({ line: 1, type: 'init', val1: 0, msg: `  αθρ <- 0` });
+                
+                for (let j = 1; j <= COLS; j++) {
+                    let val = dataP[i-1][j-1];
+                    sum += val;
+                    steps.push({ 
+                        line: 3, type: 'add', r: i, c: j, val1: sum,
+                        msg: `    αθρ <- ${sum - val} + ${val}` 
+                    });
+                }
+                
+                let avg = (sum / 5).toFixed(1);
+                steps.push({ 
+                    line: 5, type: 'set_res', r: i, c: null, valResult: avg, 
+                    msg: `  ΜΟ_Γραμ[${i}] <- ${avg}` 
+                });
+            }
+
+        } else if (currentMode === 2) { // AVG COL
+            for (let j = 1; j <= COLS; j++) {
+                let sum = 0;
+                steps.push({ line: 0, msg: `Για j = ${j} (Στήλη)` });
+                steps.push({ line: 1, type: 'init', val1: 0, msg: `  αθρ <- 0` });
+                
+                for (let i = 1; i <= ROWS; i++) {
+                    let val = dataP[i-1][j-1];
+                    sum += val;
+                    steps.push({ 
+                        line: 3, type: 'add', r: i, c: j, val1: sum,
+                        msg: `    αθρ <- ${sum - val} + ${val}` 
+                    });
+                }
+                
+                let avg = (sum / 4).toFixed(1);
+                steps.push({ 
+                    line: 5, type: 'set_res', r: null, c: j, valResult: avg, 
+                    msg: `  ΜΟ_Στηλ[${j}] <- ${avg}` 
+                });
+            }
+
+        } else if (currentMode === 3) { // MAX LINE
+            for (let i = 1; i <= ROWS; i++) {
+                steps.push({ line: 0, msg: `Για i = ${i}` });
+                let max = dataP[i-1][0];
+                steps.push({ line: 1, type: 'init_max', r: i, c: 1, val1: max, msg: `  max <- Π[${i},1] (${max})` });
+                
+                for (let j = 1; j <= COLS; j++) { 
+                    let val = dataP[i-1][j-1];
+                    steps.push({ line: 3, type: 'cmp', r: i, c: j, msg: `    Είναι ${val} > ${max};` });
+                    if(val > max) {
+                        max = val;
+                        steps.push({ line: 4, type: 'new_max', r: i, c: j, val1: max, msg: `      Νέο max: ${max}` });
+                    }
+                }
+                steps.push({ 
+                    line: 7, type: 'set_res', r: i, c: null, valResult: max, 
+                    msg: `  Max_Γραμ[${i}] <- ${max}` 
+                });
+            }
+
+        } else if (currentMode === 4) { // MAX COL
+            for (let j = 1; j <= COLS; j++) {
+                steps.push({ line: 0, msg: `Για j = ${j}` });
+                let max = dataP[0][j-1];
+                steps.push({ line: 1, type: 'init_max', r: 1, c: j, val1: max, msg: `  max <- Π[1,${j}] (${max})` });
+                
+                for (let i = 1; i <= ROWS; i++) {
+                    let val = dataP[i-1][j-1];
+                    steps.push({ line: 3, type: 'cmp', r: i, c: j, msg: `    Είναι ${val} > ${max};` });
+                    if(val > max) {
+                        max = val;
+                        steps.push({ line: 4, type: 'new_max', r: i, c: j, val1: max, msg: `      Νέο max: ${max}` });
+                    }
+                }
+                steps.push({ 
+                    line: 7, type: 'set_res', r: null, c: j, valResult: max, 
+                    msg: `  Max_Στηλ[${j}] <- ${max}` 
+                });
+            }
+        }
+    }
+
+    // --- Visuals ---
+    function updatePointer(r, c) {
+        const ptr = document.getElementById('gridPointer');
+        if (r === null) {
+            ptr.style.opacity = '0';
+            return;
+        }
+        
+        const cellLeft = (c-1)*78;
+        const cellTop = (r-1)*78;
+
+        if (currentMode === 1 || currentMode === 3) { 
+            ptr.innerText = '➡';
+            ptr.style.left = (cellLeft - 25) + 'px'; 
+            ptr.style.top = (cellTop + 10) + 'px';   
+        } else { 
+            ptr.innerText = '⬇';
+            ptr.style.left = (cellLeft + 15) + 'px'; 
+            ptr.style.top = (cellTop - 25) + 'px';   
+        }
+        ptr.style.opacity = '1';
+    }
+
+    function updateVar(id, val) {
+        const el = document.getElementById(id);
+        el.innerText = val;
+        el.classList.remove('changed');
+        void el.offsetWidth; 
+        el.classList.add('changed');
+    }
+
+    function highlightCell(r, c, type) {
+        const cell = document.getElementById(`cell-${r}-${c}`);
+        if(cell) {
+            if (type === 'add') {
+                cell.classList.add('added');
+            } else if (type === 'scan') {
+                cell.classList.add('scanning');
+                setTimeout(() => cell.classList.remove('scanning'), speed * 0.8);
+            } else if (type === 'max') {
+                cell.classList.add('is-max');
+            }
+        }
+    }
+    
+    function fillResultCell(r, c, val) {
+        let id;
+        if (r !== null) id = `res-row-${r}`; // Row Array
+        else id = `res-col-${c}`;            // Col Array
+        
+        const cell = document.getElementById(id);
+        if(cell) {
+            cell.innerHTML = val;
+            cell.classList.add('filled');
+        }
+    }
+
+    function clearHighlights() {
+        document.querySelectorAll('.is-max').forEach(el => el.classList.remove('is-max'));
+        document.querySelectorAll('.added').forEach(el => el.classList.remove('added'));
+    }
+
+    // --- Execution ---
+    function step() {
+        if (stepIdx === -1 && steps.length === 0) calcSteps();
+        if (stepIdx >= steps.length - 1) {
+            isPlaying = false;
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+            return;
+        }
+        stepIdx++;
+        runStep(steps[stepIdx]);
+    }
+
+    function runStep(s) {
+        document.querySelectorAll('.code-line').forEach(e => e.classList.remove('active'));
+        if (s.line !== undefined) {
+             const el = document.getElementById(`line-${s.line}`);
+             if(el) el.classList.add('active');
+        }
+
+        if(s.msg) document.getElementById('narrativeBox').innerText = s.msg;
+
+        if (s.r !== undefined && s.c !== undefined) updatePointer(s.r, s.c);
+
+        // Actions
+        if (s.type === 'init' || s.type === 'init_max') {
+             clearHighlights();
+             if(s.type === 'init_max') highlightCell(s.r, s.c, 'max');
+             updateVar('val-1', s.val1);
+        }
+        
+        else if (s.type === 'add') {
+            highlightCell(s.r, s.c, 'add');
+            updateVar('val-1', s.val1);
+        } 
+        else if (s.type === 'cmp') {
+            highlightCell(s.r, s.c, 'scan');
+        } 
+        else if (s.type === 'new_max') {
+            document.querySelectorAll('.is-max').forEach(el => el.classList.remove('is-max'));
+            highlightCell(s.r, s.c, 'max');
+            updateVar('val-1', s.val1);
+        }
+        else if (s.type === 'set_res') {
+            fillResultCell(s.r, s.c, s.valResult);
+            // Log to console
+            const log = document.getElementById('outputLog');
+            log.innerHTML += `<div class="log-item">${s.msg}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        if (isPlaying) timer = setTimeout(step, speed);
+    }
+
+    function play() {
+        if (!isPlaying) {
+            isPlaying = true;
+            document.getElementById('btnPlay').innerText = "⏸ Παύση";
+            if(stepIdx === -1) calcSteps();
+            step();
+        } else {
+            isPlaying = false;
+            clearTimeout(timer);
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        }
+    }
+
+    function updateSpeed() {
+        speed = 1550 - document.getElementById('speedSlider').value;
+    }
+
+    init();
+
+</script>
+</body>
+</html>

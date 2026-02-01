@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ταξινόμηση με Επιλογή</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fef08a; /* Yellow highlight */
+            --array-item-bg: #3b82f6;
+            --array-item-text: #ffffff;
+            --compare-color: #f59e0b; /* Orange for compare */
+            --swap-color: #ef4444;    /* Red for swap */
+            --theta-color: #dc2626;   /* Red arrow for theta */
+            --j-color: #2563eb;       /* Blue arrow for j */
+            --i-color: #000000;       /* Black arrow for i */
+            --water-line-color: #0ea5e9;
+            --border-color: #cbd5e1;
+            --disabled-btn: #94a3b8;
+            
+            /* Code Colors */
+            --code-keyword: #0000CD; /* Blue keywords */
+            --code-symbol: #FF0000;  /* Red symbols */
+            --code-text: #000000;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --text-color: #f1f5f9;
+            --panel-bg: #1e293b;
+            --highlight-line: #475569;
+            --array-item-bg: #2563eb;
+            --border-color: #334155;
+            --disabled-btn: #475569;
+            --code-keyword: #60a5fa;
+            --code-symbol: #f87171;
+            --code-text: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        button {
+            padding: 8px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        button.primary { background-color: var(--array-item-bg); color: white; border: none; }
+        button:hover:not(:disabled) { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { background-color: var(--disabled-btn); color: #ccc; cursor: not-allowed; }
+
+        #btnOrder { min-width: 130px; }
+
+        .slider-container { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin-left: 10px; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 15px;
+            gap: 15px;
+            height: calc(100% - 70px);
+            box-sizing: border-box;
+        }
+
+        /* LEFT: Code Panel */
+        .col-code {
+            flex: 0 0 550px;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .tabs { display: flex; background: #f1f5f9; border-bottom: 1px solid var(--border-color); }
+        .tab {
+            flex: 1; text-align: center; padding: 12px; font-size: 0.9rem; cursor: pointer;
+            border-bottom: 3px solid transparent; color: #64748b;
+        }
+        .tab:hover { background: #e2e8f0; }
+        .tab.active { background: var(--panel-bg); border-bottom-color: var(--array-item-bg); color: var(--text-color); font-weight: bold; }
+
+        .code-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 1.1rem; /* Μεγαλύτερη γραμματοσειρά όπως στις εικόνες */
+            line-height: 1.5;
+            white-space: pre; 
+        }
+        
+        .code-line { padding: 2px 6px; border-radius: 3px; }
+        .code-line.active { background-color: var(--highlight-line); }
+
+        /* Code Syntax Highlighting Classes */
+        .kw { color: var(--code-keyword); font-weight: bold; } /* Keywords: Για, Αν */
+        .sym { color: var(--code-symbol); font-weight: bold; } /* Symbols: <, >, <- */
+        .txt { color: var(--code-text); }
+
+        .notes-area {
+            padding: 15px;
+            background-color: #f0f9ff;
+            color: #0369a1;
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* CENTER: Visualization */
+        .col-viz {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            position: relative;
+        }
+
+        .narrative {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: rgba(59, 130, 246, 0.1); 
+            border-left: 4px solid var(--array-item-bg);
+            font-size: 0.95rem;
+            font-style: italic;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .arrays-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            overflow-y: auto; 
+            align-items: flex-start;
+            padding-top: 40px; 
+            padding-bottom: 40px;
+            /* ΠΟΛΥ ΣΗΜΑΝΤΙΚΟ: Χώρος αριστερά για τα βελάκια */
+            padding-left: 200px; 
+            position: relative; 
+        }
+
+        .array-col { display: flex; flex-direction: column; align-items: center; position: relative; z-index: 2; }
+        
+        .array-header { 
+            font-weight: bold; 
+            height: 40px; 
+            display: flex; 
+            align-items: center; 
+            font-size: 1rem; 
+            color: var(--text-color); 
+            margin-bottom: 5px;
+        }
+
+        /* Cells */
+        .cell-wrapper {
+            position: relative;
+            height: 60px; /* 50px + 10px margin */
+            width: 120px;
+            margin-bottom: 0px; 
+            transition: transform 0.4s ease-in-out;
+        }
+
+        .cell {
+            width: 100%;
+            height: 50px;
+            margin-bottom: 10px;
+            background-color: var(--array-item-bg);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            box-sizing: border-box;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .cell-idx { position: absolute; left: -30px; font-size: 0.8rem; color: var(--text-color); opacity: 0.7; font-weight: bold; top: 15px; }
+        
+        /* States */
+        .comparing { background-color: var(--compare-color) !important; transform: scale(1.05); z-index: 10; }
+        .highlight-theta { border: 4px solid var(--theta-color); box-sizing: border-box; }
+        .swapping-highlight { background-color: var(--swap-color) !important; }
+
+        /* Pointers */
+        .pointer-track {
+            position: absolute;
+            /* ΕΔΩ ΡΥΘΜΙΖΕΤΑΙ Η ΘΕΣΗ ΤΩΝ ΒΕΛΩΝ */
+            left: -180px; 
+            top: 45px; 
+            width: 150px;
+            height: 100%;
+            pointer-events: none;
+        }
+       /* Ρύθμιση αποκλειστικά για το βελάκι θ */
+        #ptr-theta {
+            right: 60px;
+        }
+        .comp-pointer {
+            position: absolute;
+            right: 0;
+            height: 50px; 
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            transition: top 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            opacity: 0; 
+        }
+        .comp-pointer.visible { opacity: 1; }
+
+        /* Pointer Styles */
+        .ptr-i .ptr-label { color: var(--i-color); }
+        .ptr-i .ptr-symbol { color: var(--i-color); }
+
+        .ptr-j .ptr-label { color: var(--j-color); }
+        .ptr-j .ptr-symbol { color: var(--j-color); }
+
+        .ptr-theta .ptr-label { color: var(--theta-color); font-size: 1.4rem; }
+        .ptr-theta .ptr-symbol { color: var(--theta-color); font-size: 2.2rem; }
+
+        .ptr-symbol { font-size: 2rem; line-height: 0; font-weight: bold; margin-bottom: 5px; }
+        .ptr-label { font-size: 1.1rem; font-weight: bold; font-family: monospace; margin-right: 5px; }
+
+        /* Water Line */
+        .water-line {
+            position: absolute;
+            left: -80px; 
+            width: 280px; 
+            height: 4px;
+            background-color: var(--water-line-color);
+            z-index: 1;
+            transition: top 0.5s ease-in-out;
+            box-shadow: 0 0 8px var(--water-line-color);
+            border-radius: 2px;
+        }
+        
+        /* RIGHT: Output */
+        .col-output {
+            flex: 0 0 200px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .output-header { padding: 10px; background: #f1f5f9; font-weight: bold; border-bottom: 1px solid var(--border-color); }
+        .output-log { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 0.85rem; }
+        .log-item { border-bottom: 1px solid #eee; padding: 3px 0; }
+/* Κλάση για να κρύβει τον κώδικα */
+.col-code.hidden {
+    display: none;
+}
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Ταξινόμηση με Επιλογή</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button onclick="toggleOrder()" id="btnOrder">📈 Αύξουσα</button>
+        <button onclick="resetSim()">🔄 Αρχή</button>
+        <button onclick="play()" id="btnPlay" class="primary">▶️ Αυτόματη Εκτέλεση</button>
+        <button onclick="step()" id="btnStep">Βήμα ⏩</button>
+        <button onclick="toggleCode()" id="btnCode">👁️ Κώδικας</button>
+        
+        <div class="slider-container">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="50" max="1500" value="800" id="speedSlider" oninput="updateSpeed()">
+        </div>
+
+        <button onclick="toggleTheme()" id="btnTheme">🌙</button>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-code">
+        <div class="tabs">
+            <div class="tab active" onclick="setSolution(1)" id="t1">Λύση 1 (Μόνο θέση max/min)</div>
+            <div class="tab" onclick="setSolution(2)" id="t2">Λύση 2 (max/min & θέση)</div>
+        </div>
+        <div class="code-content" id="codeContainer"></div>
+        <div class="notes-area">
+            <strong>Παρατήρηση:</strong>
+            <p id="noteText">Ο αλγόριθμος αυτός είναι μια κατ' επανάληψη εύρεση του min/max.</p>
+        </div>
+    </div>
+
+    <div class="col-viz">
+        <div class="narrative" id="narrativeBox">Πατήστε εκτέλεση...</div>
+        
+        <div class="arrays-wrapper" id="arraysContainer">
+            </div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">📺 Οθόνη Εξόδου</div>
+        <div class="output-log" id="outputLog"></div>
+    </div>
+
+</div>
+
+<script>
+    // --- Data ---
+    const SIZE = 6;
+    let data = [];
+    let isAscending = true; 
+
+    // --- State ---
+    let currentSol = 1;
+    let steps = [];
+    let stepIdx = -1;
+    let timer = null;
+    let isPlaying = false;
+    let isAnimating = false;
+    let speed = 800;
+    
+    const CELL_HEIGHT_FULL = 60; // 50px cell + 10px margin
+    const HEADER_HEIGHT = 45;
+
+    // --- Helpers for HTML Code Generation ---
+    // Αυτό φτιάχνει τον κώδικα να φαίνεται όπως στις εικόνες
+    function kw(text) { return `<span class="kw">${text}</span>`; }
+    function sym(text) { return `<span class="sym">${text}</span>`; }
+    function txt(text) { return `<span class="txt">${text}</span>`; }
+
+    function getCodeLines() {
+        const op = isAscending ? '<' : '>';
+        const limit = SIZE - 1;
+        const limit2 = SIZE;
+        
+        if (currentSol === 1) {
+            return [
+                `${kw("Για")} ${txt("ι")} ${kw("από")} 1 ${kw("μέχρι")} ${limit}`,
+                `  ${txt("θ")} ${sym("←")} ${txt("ι")}`,
+                `  ${kw("Για")} ${txt("j")} ${kw("από")} ${txt("ι")}${sym("+")}1 ${kw("μέχρι")} ${limit2}`,
+                `    ${kw("Αν")} ${txt("Π[j]")} ${sym(op)} ${txt("Π[θ]")} ${kw("τότε")}`,
+                `      ${txt("θ")} ${sym("←")} ${txt("j")}`,
+                `    ${kw("Τέλος_αν")}`,
+                `  ${kw("Τέλος_επανάληψης")}`,
+                `  ${kw("αντιμετάθεσε")} ${txt("Π[ι]")}${sym(",")} ${txt("Π[θ]")}`,
+                `${kw("Τέλος_επανάληψης")}`
+            ];
+        } else {
+            const varName = isAscending ? "min" : "max";
+            return [
+                `${kw("Για")} ${txt("ι")} ${kw("από")} 1 ${kw("μέχρι")} ${limit}`,
+                `  ${txt(varName)} ${sym("←")} ${txt("Π[ι]")}`,
+                `  ${txt("θ")} ${sym("←")} ${txt("ι")}`,
+                `  ${kw("Για")} ${txt("j")} ${kw("από")} ${txt("ι")}${sym("+")}1 ${kw("μέχρι")} ${limit2}`,
+                `    ${kw("Αν")} ${txt("Π[j]")} ${sym(op)} ${txt(varName)} ${kw("τότε")}`,
+                `      ${txt(varName)} ${sym("←")} ${txt("Π[j]")}`,
+                `      ${txt("θ")} ${sym("←")} ${txt("j")}`,
+                `    ${kw("Τέλος_αν")}`,
+                `  ${kw("Τέλος_επανάληψης")}`,
+                `  ${txt("temp")} ${sym("←")} ${txt("Π[ι]")}`,
+                `  ${txt("Π[ι]")} ${sym("←")} ${txt("Π[θ]")}`,
+                `  ${txt("Π[θ]")} ${sym("←")} ${txt("temp")}`,
+                `${kw("Τέλος_επανάληψης")}`
+            ];
+        }
+    }
+
+    // --- Init ---
+    function init() {
+        data = Array.from({length: SIZE}, () => Math.floor(Math.random() * 90) + 10);
+        
+        renderCode();
+        renderArray();
+        
+        updateWaterLine(0, false); 
+        updatePointers({show: false}); 
+        
+        const note = isAscending ? "min" : "max";
+        document.getElementById('noteText').innerHTML = `Ο αλγόριθμος αυτός είναι μια κατ' επανάληψη εύρεση του <strong>${note}</strong>.`;
+    }
+
+    function toggleOrder() {
+        isAscending = !isAscending;
+        document.getElementById('btnOrder').innerText = isAscending ? "📈 Αύξουσα" : "📉 Φθίνουσα";
+        resetSim();
+    }
+
+    function setSolution(n) {
+        currentSol = n;
+        document.querySelectorAll('.tab').forEach((t, i) => {
+            t.classList.toggle('active', i+1 === n);
+        });
+        resetSim();
+    }
+
+    function resetSim() {
+        isPlaying = false;
+        isAnimating = false;
+        clearTimeout(timer);
+        stepIdx = -1;
+        document.getElementById('outputLog').innerHTML = '';
+        document.getElementById('narrativeBox').innerText = "Πατήστε εκτέλεση...";
+        document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        document.querySelectorAll('.active').forEach(e => e.classList.remove('active'));
+        
+        init();
+    }
+
+    // --- Rendering ---
+    function renderCode() {
+        const lines = getCodeLines();
+        const html = lines.map((l, i) => 
+            `<div class="code-line" id="line-${i}">${l}</div>`
+        ).join('');
+        document.getElementById('codeContainer').innerHTML = html;
+    }
+
+    function renderArray() {
+        const con = document.getElementById('arraysContainer');
+        let html = '';
+
+        html += `<div class="array-col">
+                    <div class="array-header">Πίνακας Π</div>
+                    <div id="waterLine" class="water-line" style="display:none;"></div>
+                    <div class="pointer-track">
+                        <div id="ptr-i" class="comp-pointer ptr-i">
+                            <span class="ptr-label">ι</span><span class="ptr-symbol">➡</span>
+                        </div>
+                        <div id="ptr-j" class="comp-pointer ptr-j">
+                            <span class="ptr-label">j</span><span class="ptr-symbol">➡</span>
+                        </div>
+                        <div id="ptr-theta" class="comp-pointer ptr-theta">
+                            <span class="ptr-label">θ</span><span class="ptr-symbol">➡</span>
+                        </div>
+                    </div>
+                `;
+        data.forEach((v, i) => html += createCell(i, v));
+        html += `</div>`;
+
+        con.innerHTML = html;
+    }
+
+    function createCell(idx, val) {
+        return `
+            <div class="cell-wrapper" id="wrap-${idx}" style="transform: translateY(0px);">
+                <div id="c-${idx}" class="cell">
+                    <span class="cell-idx">${idx+1}</span>
+                    <span class="cell-val">${val}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    // --- Logic Helper ---
+    function checkCondition(val, boundaryVal) {
+        if (isAscending) return val < boundaryVal;
+        else return val > boundaryVal;
+    }
+
+    // --- Logic Generation ---
+    function calcSteps() {
+        steps = [];
+        let simData = [...data];
+        const label = isAscending ? 'min' : 'max';
+        const op = isAscending ? '<' : '>';
+
+        if (currentSol === 1) { 
+            // Solution 1: Only Theta
+            for (let i = 0; i < SIZE - 1; i++) {
+                steps.push({ line: 0, type: 'loop_outer', msg: `Πέρασμα ${i+1}: Ψάχνουμε το ${label} από τη θέση ${i+1}`, i: i, water: i });
+                
+                let theta = i;
+                steps.push({ line: 1, type: 'set_theta', msg: `Αρχικά υποθέτουμε θ = ${i+1}`, i: i, theta: theta });
+
+                for (let j = i + 1; j < SIZE; j++) {
+                    steps.push({ line: 2, type: 'loop_inner', msg: `Έλεγχος στοιχείου j=${j+1}`, i: i, j: j, theta: theta });
+                    
+                    steps.push({ line: 3, type: 'cmp', idx1: j, idx2: theta, msg: `Σύγκριση: Π[${j+1}] ${op} Π[${theta+1}];`, i: i, j: j, theta: theta });
+
+                    if (checkCondition(simData[j], simData[theta])) {
+                        theta = j;
+                        steps.push({ line: 4, type: 'new_theta', msg: `Βρέθηκε νέο ${label}! θ ← ${j+1}`, i: i, j: j, theta: theta });
+                    }
+                }
+                
+                // Swap if needed
+                if (theta !== i) {
+                    let temp = simData[i];
+                    simData[i] = simData[theta];
+                    simData[theta] = temp;
+                    steps.push({ line: 7, type: 'swap', idx1: i, idx2: theta, msg: `Αντιμετάθεση Π[${i+1}] με Π[${theta+1}]`, i: i, theta: theta });
+                } else {
+                    steps.push({ line: 7, type: 'info', msg: `Το στοιχείο στη θέση ${i+1} είναι ήδη το ${label}`, i: i, theta: theta });
+                }
+            }
+            steps.push({ line: 8, type: 'water_move', water: 5 }); 
+            steps.push({ line: 8, type: 'finish' });
+
+        } else if (currentSol === 2) { 
+            // Solution 2: With Value Variable
+            for (let i = 0; i < SIZE - 1; i++) {
+                steps.push({ line: 0, type: 'loop_outer', msg: `Πέρασμα ${i+1}: Ψάχνουμε το ${label}`, i: i, water: i });
+                
+                let extremum = simData[i];
+                steps.push({ line: 1, type: 'info', msg: `${label} ← ${extremum}`, i: i });
+                
+                let theta = i;
+                steps.push({ line: 2, type: 'set_theta', msg: `θ ← ${i+1}`, i: i, theta: theta });
+
+                for (let j = i + 1; j < SIZE; j++) {
+                    steps.push({ line: 3, type: 'loop_inner', msg: `Έλεγχος j=${j+1}`, i: i, j: j, theta: theta });
+                    
+                    steps.push({ line: 4, type: 'cmp', idx1: j, idx2: theta, msg: `Σύγκριση: Π[${j+1}] ${op} ${label}(${extremum});`, i: i, j: j, theta: theta });
+
+                    // Check condition against currently known extremum
+                    if (checkCondition(simData[j], extremum)) {
+                        extremum = simData[j];
+                        theta = j;
+                        steps.push({ line: 5, type: 'new_theta', msg: `Νέο ${label}=${extremum}, θ ← ${j+1}`, i: i, j: j, theta: theta });
+                    }
+                }
+                
+                if (theta !== i) {
+                    let temp = simData[i];
+                    simData[i] = simData[theta];
+                    simData[theta] = temp;
+                    steps.push({ line: 9, type: 'swap', idx1: i, idx2: theta, msg: 'Αντιμετάθεση', i: i, theta: theta });
+                }
+            }
+            steps.push({ line: 12, type: 'water_move', water: 5 }); 
+            steps.push({ line: 12, type: 'finish' });
+        }
+    }
+
+    // --- Helpers ---
+    function updateWaterLine(sortedCount, isVisible) {
+        const line = document.getElementById('waterLine');
+        if (!isVisible) {
+            line.style.display = 'none';
+            return;
+        }
+        line.style.display = 'block';
+        const pos = HEADER_HEIGHT + (sortedCount * CELL_HEIGHT_FULL) - 5; 
+        line.style.top = pos + 'px';
+    }
+
+    function updatePointers(p) {
+        const ptrI = document.getElementById('ptr-i');
+        const ptrJ = document.getElementById('ptr-j');
+        const ptrTheta = document.getElementById('ptr-theta');
+
+        if(p.show === false) {
+            ptrI.classList.remove('visible');
+            ptrJ.classList.remove('visible');
+            ptrTheta.classList.remove('visible');
+            return;
+        }
+
+        setPtr(ptrI, p.i);
+        setPtr(ptrJ, p.j);
+        setPtr(ptrTheta, p.theta);
+    }
+
+    function setPtr(el, idx) {
+        if (idx === undefined || idx < 0) {
+            el.classList.remove('visible');
+        } else {
+            // Need to separate pointers slightly if they overlap?
+            // For now, let them overlap (colors distinguish them)
+            el.style.top = (idx * CELL_HEIGHT_FULL) + 'px';
+            el.classList.add('visible');
+        }
+    }
+
+    // --- Animation ---
+    async function swapAnimate(idx1, idx2) {
+        isAnimating = true;
+        const w1 = document.getElementById(`wrap-${idx1}`);
+        const w2 = document.getElementById(`wrap-${idx2}`);
+        
+        w1.querySelector('.cell').classList.add('swapping-highlight');
+        w2.querySelector('.cell').classList.add('swapping-highlight');
+
+        const dist = (idx2 - idx1) * CELL_HEIGHT_FULL;
+
+        w1.style.transform = `translateY(${dist}px)`;
+        w2.style.transform = `translateY(-${dist}px)`;
+
+        await new Promise(r => setTimeout(r, speed * 0.8));
+
+        w1.style.transition = 'none';
+        w2.style.transition = 'none';
+        w1.style.transform = 'translateY(0)';
+        w2.style.transform = 'translateY(0)';
+
+        const v1 = w1.querySelector('.cell-val').innerText;
+        const v2 = w2.querySelector('.cell-val').innerText;
+        w1.querySelector('.cell-val').innerText = v2;
+        w2.querySelector('.cell-val').innerText = v1;
+
+        w1.querySelector('.cell').classList.remove('swapping-highlight');
+        w2.querySelector('.cell').classList.remove('swapping-highlight');
+
+        setTimeout(() => {
+            w1.style.transition = 'transform 0.4s ease-in-out';
+            w2.style.transition = 'transform 0.4s ease-in-out';
+            isAnimating = false;
+        }, 50);
+    }
+
+    // --- Execution ---
+    function step() {
+        if (stepIdx === -1 && steps.length === 0) calcSteps();
+        if (isAnimating) return;
+
+        if (stepIdx >= steps.length - 1) {
+            isPlaying = false;
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+            return;
+        }
+        stepIdx++;
+        runStep(steps[stepIdx]);
+    }
+
+    function runStep(s) {
+        document.querySelectorAll('.code-line').forEach(e => e.classList.remove('active'));
+        if (s.line !== undefined) {
+             const lineEl = document.getElementById(`line-${s.line}`);
+             if(lineEl) lineEl.classList.add('active');
+        }
+
+        if(s.msg) document.getElementById('narrativeBox').innerText = s.msg;
+
+        document.querySelectorAll('.comparing').forEach(e => e.classList.remove('comparing'));
+        document.querySelectorAll('.highlight-theta').forEach(e => e.classList.remove('highlight-theta'));
+
+        if (s.water !== undefined) updateWaterLine(s.water, true);
+        else if (s.type === 'finish') updateWaterLine(5, true);
+
+        // Update Pointers
+        updatePointers(s);
+
+        if (s.type === 'cmp') {
+            document.getElementById(`c-${s.idx1}`).classList.add('comparing');
+            document.getElementById(`c-${s.idx2}`).classList.add('comparing');
+        } else if (s.type === 'new_theta') {
+            const c = document.getElementById(`c-${s.theta}`);
+            c.classList.add('highlight-theta');
+        } else if (s.type === 'swap') {
+            swapAnimate(s.idx1, s.idx2).then(() => {
+                if(isPlaying) timer = setTimeout(step, speed * 0.2);
+            });
+            return; 
+        }
+
+        if (isPlaying) {
+            timer = setTimeout(step, speed);
+        }
+    }
+
+    function play() {
+        if (!isPlaying) {
+            isPlaying = true;
+            document.getElementById('btnPlay').innerText = "⏸ Παύση";
+            if(stepIdx === -1) calcSteps();
+            step();
+        } else {
+            isPlaying = false;
+            clearTimeout(timer);
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        }
+    }
+
+    function updateSpeed() {
+        speed = 1550 - document.getElementById('speedSlider').value;
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle('dark-mode');
+    }
+
+    init();
+function toggleCode() {
+    const codePanel = document.querySelector('.col-code');
+    codePanel.classList.toggle('hidden');
+    
+    // Προαιρετικό: Αλλάζει το κείμενο του κουμπιού αν θες
+    const btn = document.getElementById('btnCode');
+    if (codePanel.classList.contains('hidden')) {
+        btn.innerText = "👁️ Εμφάνιση Κώδικα";
+    } else {
+        btn.innerText = "👁️ Απόκρυψη Κώδικα";
+    }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Κυκλική Μετακίνηση (Compact)</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            
+            --array-bg: #3b82f6; 
+            --x-bg: #ef4444; 
+            --copy-highlight: #facc15; 
+            
+            --text-white: #ffffff;
+            --compare-color: #f59e0b;
+            --border-color: #cbd5e1;
+            --disabled-btn: #94a3b8;
+            
+            --ptr-i: #000000;
+
+            --code-kw: #0000CD; 
+            --code-sym: #FF0000; 
+            --code-var: #000000; 
+            --code-num: #008000;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px; /* Πιο συμπαγές header */
+            box-sizing: border-box;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        button {
+            padding: 6px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        button.primary { background-color: var(--array-bg); color: white; border: none; }
+        button:hover:not(:disabled) { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { background-color: var(--disabled-btn); color: #ccc; cursor: not-allowed; }
+
+        .slider-container { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin-left: 10px; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 10px;
+            gap: 10px;
+            height: calc(100% - 60px);
+            box-sizing: border-box;
+        }
+
+        .col-code {
+            flex: 0 0 420px; /* Λίγο πιο στενό */
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .col-code.hidden { display: none; }
+
+        .tabs { display: flex; background: #f1f5f9; border-bottom: 1px solid var(--border-color); }
+        .tab {
+            flex: 1; text-align: center; padding: 10px; font-size: 0.85rem; cursor: pointer;
+            border-bottom: 3px solid transparent; color: #64748b; font-weight: bold;
+        }
+        .tab:hover { background: #e2e8f0; }
+        .tab.active { background: var(--panel-bg); border-bottom-color: var(--array-bg); color: var(--text-color); }
+
+        .code-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.95rem; /* Μικρότερη γραμματοσειρά κώδικα */
+            line-height: 1.4;
+            white-space: pre; 
+        }
+        .code-line { padding: 2px 6px; border-radius: 3px; }
+        .code-line.active { background-color: var(--highlight-line); font-weight: bold; }
+
+        .kw { color: var(--code-kw); font-weight: bold; } 
+        .sym { color: var(--code-sym); font-weight: bold; }
+        .var { color: var(--code-var); }
+        .num { color: var(--code-num); font-weight: bold; }
+
+        .col-viz {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .narrative {
+            padding: 8px;
+            margin-bottom: 10px;
+            background: rgba(59, 130, 246, 0.1); 
+            border-left: 4px solid var(--array-bg);
+            font-size: 0.9rem;
+            font-style: italic;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        /* --- SCENE WRAPPER --- */
+        .scene-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column; 
+            align-items: center;
+            padding-top: 120px; 
+            position: relative;
+            overflow: auto;
+            gap: 60px; 
+        }
+
+        .array-section { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            position: relative; 
+            transition: all 0.3s;
+        }
+
+        .array-header { 
+            font-weight: bold; 
+            font-size: 1rem; 
+            transition: all 0.3s; 
+            margin-bottom: 70px; /* Χώρος για το βελάκι στην οριζόντια */
+        }
+
+        .array-container {
+            display: flex;
+            gap: 3px;
+            transition: all 0.3s;
+            margin: 0;
+        }
+
+        /* === SMALLER CELLS (COMPACT MODE) === */
+        .cell-wrapper {
+            position: relative;
+            height: 40px; 
+            width: 45px; /* Πιο στενά κελιά */
+            transition: all 0.3s;
+        }
+
+        .cell {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 4px;
+            font-size: 0.95rem; /* Μικρότερη γραμματοσειρά αριθμών */
+            font-weight: bold;
+            box-sizing: border-box;
+            color: white;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            background-color: var(--array-bg);
+            transition: background-color 0.2s; 
+        }
+        
+        .cell-idx { 
+            position: absolute; 
+            font-size: 0.75rem; 
+            color: var(--text-color); 
+            opacity: 0.8; 
+            font-weight: bold; 
+            transition: all 0.3s;
+        }
+
+        /* Horizontal Mode */
+        .horizontal-mode .array-container { flex-direction: row; }
+        .horizontal-mode .cell-idx {
+            left: 0;
+            top: auto;
+            bottom: -20px;
+            width: 100%;
+            text-align: center;
+        }
+
+        /* Vertical Mode */
+        .scene-wrapper.vertical-mode {
+            flex-direction: row; 
+            justify-content: center;
+            align-items: flex-start; 
+            padding-top: 30px; 
+            gap: 100px; 
+        }
+
+        .vertical-mode .array-container { flex-direction: column; gap: 2px; }
+        .vertical-mode .array-header { margin-bottom: 20px; } 
+
+        .vertical-mode .cell-idx {
+            left: -25px; /* Αριστερά */
+            right: auto;
+            top: 10px; /* Κεντράρισμα καθ' ύψος (40px ύψος κελιού) */
+            width: 20px;
+            text-align: right;
+        }
+
+        /* --- POINTERS --- */
+        .ptr-container {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center; 
+            transition: all 0.2s ease-out; 
+            opacity: 0;
+            z-index: 20;
+            pointer-events: none;
+        }
+        
+        .ptr-label { font-size: 1rem; font-weight: bold; font-family: monospace; color: var(--ptr-i); }
+        .ptr-arrow { font-size: 1.4rem; line-height: 1; font-weight: bold; color: var(--ptr-i); }
+
+        .ptr-horizontal {
+            flex-direction: column;
+            width: 45px; height: 40px;
+        }
+        .ptr-horizontal .ptr-arrow { margin-top: -3px; line-height: 1; } 
+
+        .ptr-vertical {
+            flex-direction: row;
+            width: 50px; height: 40px;
+        }
+        .ptr-vertical .ptr-arrow { margin-right: -3px; line-height: 1; } 
+        .ptr-vertical .ptr-label { margin-right: 3px; }
+
+        /* Variable X Box */
+        .var-box-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 5;
+        }
+        .var-label { font-weight: bold; margin-bottom: 5px; font-size: 1rem; }
+        .var-cell {
+            width: 45px; /* Match cell size */
+            height: 40px;
+            border: 2px dashed var(--x-bg);
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1rem;
+            font-weight: bold;
+            color: var(--x-bg);
+            background: #fff;
+            transition: background-color 0.2s;
+        }
+        .var-cell.filled {
+            background-color: var(--x-bg);
+            color: white;
+            border-style: solid;
+        }
+
+        /* Animation Element */
+        .flying-cell {
+            position: fixed;
+            z-index: 1000;
+            width: 45px;
+            height: 40px; 
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: black; 
+            background-color: var(--copy-highlight); 
+            font-weight: bold;
+            font-size: 1rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            pointer-events: none;
+        }
+
+        .highlight-source {
+            background-color: var(--copy-highlight) !important;
+            color: black !important;
+            box-shadow: 0 0 10px var(--copy-highlight);
+            z-index: 10;
+        }
+
+        .col-output {
+            flex: 0 0 180px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .output-header { padding: 8px; background: #f1f5f9; font-weight: bold; border-bottom: 1px solid var(--border-color); font-size: 0.9rem;}
+        .output-log { flex: 1; padding: 8px; overflow-y: auto; font-family: monospace; font-size: 0.85rem; }
+        .log-item { border-bottom: 1px solid #eee; padding: 2px 0; }
+        
+        .col-code.hidden { display: none; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Κυκλική Μετακίνηση Πίνακα</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button onclick="resetSim()">🔄 Αρχή</button>
+        <button onclick="toggleLayout()">🔄 Κάθετα/Οριζόντια</button>
+        <button onclick="play()" id="btnPlay" class="primary">▶️ Αυτόματη Εκτέλεση</button>
+        <button onclick="step()" id="btnStep">Βήμα ⏩</button>
+        <button onclick="toggleCode()" id="btnCode">👁️ Κώδικας</button>
+        
+        <div class="slider-container">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="50" max="1500" value="800" id="speedSlider" oninput="updateSpeed()">
+        </div>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-code">
+        <div class="tabs">
+            <div class="tab active" onclick="setMode(1)" id="t1">1. Μετακίνηση Πάνω (Αριστερά)</div>
+            <div class="tab" onclick="setMode(2)" id="t2">2. Μετακίνηση Κάτω (Δεξιά)</div>
+        </div>
+        <div class="code-content" id="codeContainer"></div>
+    </div>
+
+    <div class="col-viz">
+        <div class="narrative" id="narrativeBox">Πατήστε εκτέλεση...</div>
+        
+        <div class="scene-wrapper horizontal-mode" id="sceneWrapper">
+            <div class="array-section" id="arraySection">
+                <div class="array-header">Πίνακας Π</div>
+                
+                <div class="array-container" id="arrayContainer"></div>
+                
+                <div id="ptr-i" class="ptr-container ptr-horizontal">
+                    <span class="ptr-label">i</span><span class="ptr-symbol ptr-arrow">⬇</span>
+                </div>
+            </div>
+
+            <div class="var-box-container">
+                <div class="var-label">x</div>
+                <div id="var-x" class="var-cell"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">📺 Οθόνη Εξόδου</div>
+        <div class="output-log" id="outputLog"></div>
+    </div>
+
+</div>
+
+<script>
+    // --- Configuration ---
+    const SIZE = 10;
+    let data = [];
+    
+    // --- Helpers ---
+    function kw(t) { return `<span class="kw">${t}</span>`; }
+    function sym(t) { return `<span class="sym">${t}</span>`; }
+    function v(t) { return `<span class="var">${t}</span>`; }
+    function n(t) { return `<span class="num">${t}</span>`; }
+
+    const CODES = {
+        1: [ // Shift Left / Up
+            `${v("x")} ${sym("←")} ${v("Π")}${sym("[")}${n("1")}${sym("]")}`,
+            `${kw("Για")} ${v("i")} ${kw("από")} ${n("2")} ${kw("μέχρι")} ${n("10")}`,
+            `  ${v("Π")}${sym("[")}${v("i")}${sym("-")}${n("1")}${sym("]")} ${sym("←")} ${v("Π")}${sym("[")}${v("i")}${sym("]")}`,
+            `${kw("Τέλος_επανάληψης")}`,
+            `${v("Π")}${sym("[")}${n("10")}${sym("]")} ${sym("←")} ${v("x")}`
+        ],
+        2: [ // Shift Right / Down
+            `${v("x")} ${sym("←")} ${v("Π")}${sym("[")}${n("10")}${sym("]")}`,
+            `${kw("Για")} ${v("i")} ${kw("από")} ${n("10")} ${kw("μέχρι")} ${n("2")} ${kw("με_βήμα")} ${n("-1")}`,
+            `  ${v("Π")}${sym("[")}${v("i")}${sym("]")} ${sym("←")} ${v("Π")}${sym("[")}${v("i")}${sym("-")}${n("1")}${sym("]")}`,
+            `${kw("Τέλος_επανάληψης")}`,
+            `${v("Π")}${sym("[")}${n("1")}${sym("]")} ${sym("←")} ${v("x")}`
+        ]
+    };
+
+    // --- State ---
+    let currentMode = 1;
+    let steps = [];
+    let stepIdx = -1;
+    let timer = null;
+    let isPlaying = false;
+    let isAnimating = false;
+    let speed = 800;
+    let isHorizontal = true; 
+
+    // --- Init ---
+    function init() {
+        data = Array.from({length: SIZE}, () => Math.floor(Math.random() * 90) + 10);
+        renderCode();
+        renderArray();
+        updatePointer(-1);
+        resetX();
+    }
+
+    function setMode(m) {
+        currentMode = m;
+        document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i+1 === m));
+        resetSim();
+    }
+
+    function resetSim() {
+        isPlaying = false;
+        isAnimating = false;
+        clearTimeout(timer);
+        stepIdx = -1;
+        document.getElementById('outputLog').innerHTML = '';
+        document.getElementById('narrativeBox').innerText = "Πατήστε εκτέλεση...";
+        document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        document.querySelectorAll('.active').forEach(e => e.classList.remove('active'));
+        
+        init();
+    }
+
+    function toggleLayout() {
+        if(isAnimating || isPlaying) return; 
+        
+        isHorizontal = !isHorizontal;
+        const wrapper = document.getElementById('sceneWrapper');
+        const ptr = document.getElementById('ptr-i');
+        const arrow = ptr.querySelector('.ptr-arrow');
+
+        if(isHorizontal) {
+            wrapper.classList.remove('vertical-mode');
+            wrapper.classList.add('horizontal-mode');
+            
+            ptr.classList.remove('ptr-vertical');
+            ptr.classList.add('ptr-horizontal');
+            arrow.innerText = '⬇';
+        } else {
+            wrapper.classList.remove('horizontal-mode');
+            wrapper.classList.add('vertical-mode');
+            
+            ptr.classList.remove('ptr-horizontal');
+            ptr.classList.add('ptr-vertical');
+            arrow.innerText = '➡'; 
+        }
+        
+        if(stepIdx !== -1 && steps[stepIdx]) {
+            updatePointer(steps[stepIdx].i);
+        }
+    }
+
+    function renderCode() {
+        const html = CODES[currentMode].map((l, i) => 
+            `<div class="code-line" id="line-${i}">${l}</div>`
+        ).join('');
+        document.getElementById('codeContainer').innerHTML = html;
+    }
+
+    function renderArray() {
+        const con = document.getElementById('arrayContainer');
+        let html = '';
+        data.forEach((v, i) => {
+            html += `
+            <div class="cell-wrapper" id="wrap-${i}">
+                <div class="cell-idx">${i+1}</div>
+                <div id="c-${i}" class="cell">${v}</div>
+            </div>`;
+        });
+        con.innerHTML = html;
+    }
+
+    function resetX() {
+        const x = document.getElementById('var-x');
+        x.innerText = '';
+        x.classList.remove('filled');
+    }
+
+    // --- Logic ---
+    function calcSteps() {
+        steps = [];
+        let simData = [...data];
+        let xVal = null;
+
+        if (currentMode === 1) { // Up / Left
+            xVal = simData[0];
+            steps.push({ line: 0, type: 'to_x', idx: 0, val: xVal, msg: `x ← Π[1] (${xVal})` });
+            
+            for (let i = 1; i < SIZE; i++) { 
+                steps.push({ line: 1, type: 'ptr', i: i, msg: `i = ${i+1}` });
+                steps.push({ line: 2, type: 'shift', from: i, to: i-1, val: simData[i], msg: `Π[${i}] ← Π[${i+1}]`, i: i });
+                simData[i-1] = simData[i];
+            }
+            
+            steps.push({ line: 4, type: 'from_x', idx: SIZE-1, val: xVal, msg: `Π[10] ← x (${xVal})` });
+            simData[SIZE-1] = xVal;
+
+        } else { // Down / Right
+            xVal = simData[SIZE-1];
+            steps.push({ line: 0, type: 'to_x', idx: SIZE-1, val: xVal, msg: `x ← Π[10] (${xVal})` });
+
+            for (let i = SIZE-1; i > 0; i--) { 
+                steps.push({ line: 1, type: 'ptr', i: i, msg: `i = ${i+1}` });
+                steps.push({ line: 2, type: 'shift', from: i-1, to: i, val: simData[i-1], msg: `Π[${i+1}] ← Π[${i}]`, i: i });
+                simData[i] = simData[i-1];
+            }
+
+            steps.push({ line: 4, type: 'from_x', idx: 0, val: xVal, msg: `Π[1] ← x (${xVal})` });
+            simData[0] = xVal;
+        }
+    }
+
+    // --- Animation ---
+    function updatePointer(i) {
+        const ptr = document.getElementById('ptr-i');
+        const section = document.getElementById('arraySection'); // Pointer lives here
+        
+        if (i < 0 || i === undefined) {
+            ptr.style.opacity = '0';
+            return;
+        }
+        
+        ptr.style.opacity = '1';
+        const cellWrap = document.getElementById(`wrap-${i}`);
+        
+        // Χρησιμοποιούμε getBoundingClientRect για ακρίβεια
+        const sectionRect = section.getBoundingClientRect();
+        const cellRect = cellWrap.getBoundingClientRect();
+
+        if(isHorizontal) {
+            // Horizontal: Top calculation to sit above cell, below header
+            // Pointer Height ~40px. 
+            // Place it -45px from top of cell.
+            const relativeTop = cellRect.top - sectionRect.top;
+            const relativeLeft = cellRect.left - sectionRect.left + (cellRect.width/2) - 22; // Center 45px ptr
+            
+            ptr.style.top = (relativeTop - 45) + 'px'; 
+            ptr.style.left = relativeLeft + 'px';
+        } else {
+            // Vertical: Left calculation to sit left of indices
+            // Pointer width 50px.
+            // Move pointer left of cell.
+            const relativeTop = cellRect.top - sectionRect.top;
+            const relativeLeft = cellRect.left - sectionRect.left - 60; // 60px left shift
+            
+            ptr.style.left = relativeLeft + 'px';
+            ptr.style.top = relativeTop + 'px';
+        }
+    }
+
+    async function animToX(idx, val) {
+        isAnimating = true;
+        const cell = document.getElementById(`c-${idx}`);
+        const xBox = document.getElementById('var-x');
+        
+        cell.classList.add('highlight-source');
+
+        const flyer = createFlyer(val); 
+        const r1 = cell.getBoundingClientRect();
+        const r2 = xBox.getBoundingClientRect();
+
+        flyer.style.left = r1.left + 'px';
+        flyer.style.top = r1.top + 'px';
+        document.body.appendChild(flyer);
+
+        await wait(20);
+        flyer.style.transition = `all ${speed*0.6}ms ease-in-out`;
+        flyer.style.left = r2.left + 'px';
+        flyer.style.top = r2.top + 'px';
+        
+        await wait(speed*0.6);
+        
+        xBox.innerText = val;
+        xBox.classList.add('filled');
+        
+        flyer.remove();
+        cell.classList.remove('highlight-source');
+        isAnimating = false;
+    }
+
+    async function animFromX(idx, val) {
+        isAnimating = true;
+        const cell = document.getElementById(`c-${idx}`);
+        const xBox = document.getElementById('var-x');
+
+        xBox.classList.add('highlight-source');
+
+        const flyer = createFlyer(val); 
+        const r1 = xBox.getBoundingClientRect();
+        const r2 = cell.getBoundingClientRect();
+
+        flyer.style.left = r1.left + 'px';
+        flyer.style.top = r1.top + 'px';
+        document.body.appendChild(flyer);
+
+        await wait(20);
+        flyer.style.transition = `all ${speed*0.6}ms ease-in-out`;
+        flyer.style.left = r2.left + 'px';
+        flyer.style.top = r2.top + 'px';
+
+        await wait(speed*0.6);
+
+        cell.innerText = val;
+        cell.style.backgroundColor = 'var(--x-bg)';
+        flyer.remove();
+        xBox.classList.remove('highlight-source');
+        
+        setTimeout(() => { cell.style.backgroundColor = ''; }, 300);
+        isAnimating = false;
+    }
+
+    async function animShift(from, to, val) {
+        isAnimating = true;
+        const cFrom = document.getElementById(`c-${from}`);
+        const cTo = document.getElementById(`c-${to}`);
+
+        cFrom.classList.add('highlight-source');
+
+        const flyer = createFlyer(val); 
+        
+        const r1 = cFrom.getBoundingClientRect();
+        const r2 = cTo.getBoundingClientRect();
+
+        flyer.style.left = r1.left + 'px';
+        flyer.style.top = r1.top + 'px';
+        document.body.appendChild(flyer);
+
+        await wait(20);
+        flyer.style.transition = `all ${speed*0.5}ms ease-in-out`;
+        flyer.style.left = r2.left + 'px';
+        flyer.style.top = r2.top + 'px';
+
+        await wait(speed*0.5);
+
+        cTo.innerText = val;
+        flyer.remove();
+        cFrom.classList.remove('highlight-source');
+        isAnimating = false;
+    }
+
+    function createFlyer(val) {
+        const f = document.createElement('div');
+        f.className = 'flying-cell'; 
+        f.innerText = val;
+        return f;
+    }
+
+    function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    // --- Execution ---
+    function step() {
+        if (stepIdx === -1 && steps.length === 0) calcSteps();
+        if (isAnimating) return;
+
+        if (stepIdx >= steps.length - 1) {
+            isPlaying = false;
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+            return;
+        }
+        stepIdx++;
+        runStep(steps[stepIdx]);
+    }
+
+    function runStep(s) {
+        document.querySelectorAll('.code-line').forEach(e => e.classList.remove('active'));
+        if (s.line !== undefined) {
+             document.getElementById(`line-${s.line}`).classList.add('active');
+        }
+
+        if(s.msg) document.getElementById('narrativeBox').innerText = s.msg;
+
+        if (s.type === 'ptr' || s.type === 'shift') {
+            updatePointer(s.i);
+        } else {
+            updatePointer(-1);
+        }
+
+        if (s.type === 'to_x') {
+            animToX(s.idx, s.val).then(next);
+            return;
+        } else if (s.type === 'from_x') {
+            animFromX(s.idx, s.val).then(next);
+            return;
+        } else if (s.type === 'shift') {
+            animShift(s.from, s.to, s.val).then(next);
+            return;
+        }
+
+        next();
+    }
+
+    function next() {
+        if (isPlaying && !isAnimating) {
+            timer = setTimeout(step, speed);
+        }
+    }
+
+    function play() {
+        if (!isPlaying) {
+            isPlaying = true;
+            document.getElementById('btnPlay').innerText = "⏸ Παύση";
+            if(stepIdx === -1) calcSteps();
+            step();
+        } else {
+            isPlaying = false;
+            clearTimeout(timer);
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        }
+    }
+
+    function updateSpeed() {
+        speed = 1550 - document.getElementById('speedSlider').value;
+    }
+
+    function toggleCode() {
+        const codePanel = document.querySelector('.col-code');
+        codePanel.classList.toggle('hidden');
+        const btn = document.getElementById('btnCode');
+        btn.innerText = codePanel.classList.contains('hidden') ? "👁️ Εμφάνιση Κώδικα" : "👁️ Απόκρυψη Κώδικα";
+    }
+
+    init();
+
+</script>
+</body>
+</html>
