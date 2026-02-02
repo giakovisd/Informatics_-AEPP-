@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Αναζήτηση σε Ταξινομημένο Πίνακα</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            --header-bg: #e2e8f0;
+            --border-color: #cbd5e1;
+            
+            --var-main: #3b82f6; 
+            --array-cell-bg: #fff;
+            --array-cell-active: #facc15;
+            
+            --disabled-btn: #94a3b8;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: #f1f5f9;
+            padding: 4px 10px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        .input-group input { width: 50px; padding: 4px; text-align: center; border: 1px solid #ccc; border-radius: 4px; }
+
+        button {
+            padding: 6px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        button.primary { background-color: var(--var-main); color: white; border: none; }
+        button:hover:not(:disabled) { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { background-color: var(--disabled-btn); color: #ccc; cursor: not-allowed; }
+
+        .slider-container { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin-left: 10px; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 15px;
+            gap: 15px;
+            height: calc(100% - 60px);
+            box-sizing: border-box;
+            overflow: hidden; 
+        }
+
+        /* LEFT: Instructions & Code */
+        .col-left {
+            /* Αυξήθηκε το πλάτος για να χωράει ο κώδικας */
+            flex: 0 0 480px; 
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow: hidden;
+        }
+
+        .instructions-box {
+            background-color: #fffbeb;
+            border: 1px solid #fcd34d;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            color: #92400e;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            flex-shrink: 0;
+        }
+
+        .col-code {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .code-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: 'Consolas', monospace;
+            /* Μειωμένο μέγεθος γραμματοσειράς */
+            font-size: 0.85rem; 
+            line-height: 1.35; 
+            background-color: #fff;
+            white-space: nowrap; /* Αποφυγή αναδίπλωσης αν θέλουμε scroll, ή remove για wrap */
+        }
+        
+        .code-line { 
+            display: flex;
+            align-items: center;
+            padding: 0 4px;
+            margin: 0;
+            border-radius: 2px;
+        }
+        .code-line.active { background-color: var(--highlight-line); color: #000; font-weight: bold; }
+
+        .line-num {
+            color: #94a3b8;
+            width: 25px;
+            text-align: right;
+            margin-right: 10px;
+            padding-right: 5px;
+            border-right: 1px solid #eee;
+            font-size: 0.8rem;
+            user-select: none;
+        }
+
+        /* CENTER: Visualization */
+        .col-viz {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .narrative {
+            padding: 8px;
+            margin-bottom: 8px;
+            background: rgba(59, 130, 246, 0.08);
+            border-left: 4px solid var(--var-main);
+            font-size: 0.9rem;
+            font-style: italic;
+            min-height: 20px;
+            flex-shrink: 0;
+        }
+
+        /* Array Visualization - Large & Centered */
+        .arrays-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .array-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .array-label {
+            font-weight: bold;
+            width: 30px;
+            font-size: 1.1rem;
+            text-align: right;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .array-cells {
+            display: flex;
+            gap: 8px;
+        }
+
+        .array-cell {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #94a3b8;
+            background-color: var(--array-cell-bg);
+            font-weight: bold;
+            font-size: 1.1rem;
+            position: relative;
+            transition: all 0.2s;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .array-cell.active {
+            background-color: var(--array-cell-active);
+            transform: scale(1.15);
+            border-color: #000;
+            z-index: 10;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .cell-index {
+            position: absolute;
+            top: -20px;
+            font-size: 0.75rem;
+            color: #64748b;
+            font-weight: normal;
+        }
+
+        .scene-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            position: relative;
+            overflow: auto;
+        }
+
+        /* Trace Tables */
+        .trace-table {
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            min-width: 100%; 
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s;
+        }
+
+        .table-header {
+            background-color: var(--header-bg);
+            padding: 8px;
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 2px solid var(--border-color);
+            border-radius: 6px 6px 0 0;
+        }
+
+        .columns-container {
+            display: flex;
+            flex-direction: row;
+        }
+
+        .trace-column {
+            flex: 1;
+            border-right: 1px solid var(--border-color);
+            min-width: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .trace-column:last-child { border-right: none; }
+
+        .col-title {
+            font-weight: bold;
+            padding: 5px;
+            border-bottom: 1px solid var(--border-color);
+            width: 100%;
+            text-align: center;
+            background: #f1f5f9;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        .col-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            padding: 5px 0;
+            min-height: 200px;
+        }
+
+        .val-item {
+            font-weight: bold;
+            font-size: 0.95rem;
+            padding: 2px 0;
+            transition: all 0.3s;
+            opacity: 0;
+            animation: fadeIn 0.3s forwards;
+        }
+        @keyframes fadeIn { to { opacity: 1; } }
+        
+        .val-item.old {
+            text-decoration: line-through;
+            color: #94a3b8;
+            font-weight: normal;
+            font-size: 0.85rem;
+        }
+
+        .bool-true { color: #15803d; font-size: 0.85rem; }
+        .bool-false { color: #b91c1c; font-size: 0.85rem; }
+
+        /* RIGHT: Output */
+        .col-output {
+            flex: 0 0 200px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .output-header { padding: 10px; background: #f1f5f9; font-weight: bold; border-bottom: 1px solid var(--border-color); }
+        .output-log { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 0.95rem; background: #ffffff; color: #000; }
+        .log-item { border-bottom: 1px solid #eee; padding: 3px 0; }
+        
+        .col-code.hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Αναζήτηση σε Ταξινομημένο Πίνακα</h1>
+    </div>
+    
+    <div class="controls-area">
+        <div class="input-group">
+            <label for="inputX">X:</label>
+            <input type="number" id="inputX" value="10">
+        </div>
+
+        <button onclick="resetSim()">🔄 Αρχή</button>
+        <button onclick="play()" id="btnPlay" class="primary">▶️ Αυτόματη Εκτέλεση</button>
+        <button onclick="step()" id="btnStep">Βήμα ⏩</button>
+        <button onclick="toggleCode()" id="btnCode">👁️ Απόκρυψη Κώδικα</button>
+        
+        <div class="slider-container">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="100" max="2000" value="1000" id="speedSlider" oninput="updateSpeed()">
+        </div>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-left">
+        <div class="instructions-box">
+            Να συμπληρώσετε τις τιμές που θα έχουν οι μεταβλητές μετά από την εκτέλεση του αλγορίθμου για καθεμιά από τις τιμές εισόδου (10, 40, 70, 100).<br>
+            <em>Αλλάξτε την τιμή του <strong>X</strong> από το πεδίο επάνω.</em>
+        </div>
+
+        <div class="col-code">
+            <div class="code-content" id="codeContainer"></div>
+        </div>
+    </div>
+
+    <div class="col-viz" id="vizContainer">
+        <div class="narrative" id="narrativeBox">Πατήστε εκτέλεση...</div>
+        
+        <div class="arrays-wrapper" id="arraysWrapper">
+            <div class="array-row">
+                <div class="array-label">Π</div>
+                <div class="array-cells" id="arrayCells"></div>
+            </div>
+        </div>
+
+        <div class="scene-wrapper" id="sceneWrapper">
+            <div class="trace-table" id="table-main">
+                <div class="table-header">Πίνακας Τιμών</div>
+                <div class="columns-container">
+                    <div class="trace-column"><div class="col-title">X</div><div class="col-stack" id="stack-X"></div></div>
+                    <div class="trace-column"><div class="col-title">Βρέθηκε</div><div class="col-stack" id="stack-found"></div></div>
+                    <div class="trace-column"><div class="col-title">Υπάρχει</div><div class="col-stack" id="stack-exists"></div></div>
+                    <div class="trace-column"><div class="col-title">i</div><div class="col-stack" id="stack-i"></div></div>
+                    <div class="trace-column"><div class="col-title" style="font-size:0.8rem">Θέση</div><div class="col-stack" id="stack-pos"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">📺 Οθόνη Εξόδου</div>
+        <div class="output-log" id="outputLog"></div>
+    </div>
+
+</div>
+
+<script>
+    const PIN = [18, 29, 40, 51, 62, 73];
+
+    const CODE_LINES = [
+        "Διάβασε Χ",
+        "Θέση ← 0",
+        "Βρέθηκε ← Ψευδής",
+        "Υπάρχει ← Αληθής",
+        "i ← 1",
+        "Αρχή_επανάληψης",
+        "   Αν Π[i] = Χ τότε",
+        "      Βρέθηκε ← Αληθής",
+        "      Θέση ← i",
+        "   Αλλιώς_αν Π[i] > Χ τότε",
+        "      Υπάρχει ← Ψευδής",
+        "   Τέλος_αν",
+        "   i ← i + 1",
+        "Μέχρις_ότου i>6 ή Βρέθηκε=Αληθής ή Υπάρχει=Ψευδής"
+    ];
+
+    let steps = [];
+    let stepIdx = 0;
+    let timer = null;
+    let isPlaying = false;
+    let isAnimating = false;
+    let speed = 1100;
+
+    function init() {
+        renderCode();
+        renderArray();
+        updateSpeed(); 
+        calcSteps();
+        highlightLine(steps[0].line);
+        document.getElementById('narrativeBox').innerText = "Έτοιμο. Επόμενη εντολή: " + steps[0].msg;
+    }
+
+    function renderArray() {
+        const container = document.getElementById('arrayCells');
+        container.innerHTML = '';
+        
+        PIN.forEach((val, idx) => {
+            const cell = document.createElement('div');
+            cell.className = 'array-cell';
+            cell.id = `cell-${idx + 1}`;
+            cell.innerHTML = `<span class="cell-index">${idx + 1}</span>${val}`;
+            container.appendChild(cell);
+        });
+    }
+
+    function highlightCell(idx) {
+        document.querySelectorAll('.array-cell').forEach(c => c.classList.remove('active'));
+        if (idx) {
+            const cell = document.getElementById(`cell-${idx}`);
+            if(cell) cell.classList.add('active');
+        }
+    }
+
+    function resetSim() {
+        isPlaying = false;
+        isAnimating = false;
+        clearTimeout(timer);
+        stepIdx = 0;
+        
+        document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        document.getElementById('outputLog').innerHTML = '';
+        document.querySelectorAll('.col-stack').forEach(el => el.innerHTML = '');
+        
+        highlightCell(null);
+        calcSteps(); // Recalc based on input
+        
+        highlightLine(steps[0].line);
+        document.getElementById('narrativeBox').innerText = "Έτοιμο. Επόμενη εντολή: " + steps[0].msg;
+    }
+
+    function renderCode() {
+        const html = CODE_LINES.map((l, i) => 
+            `<div class="code-line" id="line-${i+1}">
+                <span class="line-num">${i+1}</span>
+                ${l.replace(/ /g, '&nbsp;')}
+             </div>`
+        ).join('');
+        document.getElementById('codeContainer').innerHTML = html;
+    }
+
+    function highlightLine(idx) {
+        document.querySelectorAll('.code-line').forEach(e => e.classList.remove('active'));
+        const el = document.getElementById(`line-${idx}`);
+        if(el) el.classList.add('active');
+    }
+
+    function calcSteps() {
+        steps = [];
+        let X, pos, found, exists, i;
+
+        // Get Input
+        let inputVal = parseInt(document.getElementById('inputX').value);
+        if (isNaN(inputVal)) inputVal = 10;
+        X = inputVal;
+
+        // 1. Read X
+        steps.push({ line: 1, type: 'update', var: 'X', val: X, msg: `Διάβασε Χ = ${X}` });
+
+        // 2. pos <- 0
+        pos = 0;
+        steps.push({ line: 2, type: 'update', var: 'pos', val: pos, msg: "Θέση ← 0" });
+
+        // 3. found <- False
+        found = false;
+        steps.push({ line: 3, type: 'update', var: 'found', val: 'Ψευδής', msg: "Βρέθηκε ← Ψευδής" });
+
+        // 4. exists <- True
+        exists = true;
+        steps.push({ line: 4, type: 'update', var: 'exists', val: 'Αληθής', msg: "Υπάρχει ← Αληθής" });
+
+        // 5. i <- 1
+        i = 1;
+        steps.push({ line: 5, type: 'update', var: 'i', val: i, msg: "i ← 1" });
+
+        // Loop Do-Until
+        do {
+            // 6. Start Loop
+            steps.push({ line: 6, type: 'check', msg: "Αρχή_επανάληψης" });
+
+            // 7. Check IF P[i] = X
+            let val = PIN[i-1];
+            let eq = (val === X);
+            steps.push({ 
+                line: 7, type: 'check', 
+                arrHighlight: i, 
+                msg: `Αν Π[${i}] (${val}) = ${X} (${eq ? 'ΑΛΗΘΗΣ' : 'ΨΕΥΔΗΣ'})` 
+            });
+
+            if (eq) {
+                // 8. found <- True
+                found = true;
+                steps.push({ line: 8, type: 'update', var: 'found', val: 'Αληθής', arrHighlight: i, msg: "Βρέθηκε ← Αληθής" });
+                
+                // 9. pos <- i
+                pos = i;
+                steps.push({ line: 9, type: 'update', var: 'pos', val: pos, arrHighlight: i, msg: `Θέση ← ${i}` });
+            } else {
+                // 10. Else If P[i] > X
+                let gt = (val > X);
+                steps.push({ 
+                    line: 10, type: 'check', 
+                    arrHighlight: i, 
+                    msg: `Αλλιώς_αν Π[${i}] (${val}) > ${X} (${gt ? 'ΑΛΗΘΗΣ' : 'ΨΕΥΔΗΣ'})` 
+                });
+
+                if (gt) {
+                    // 11. exists <- False
+                    exists = false;
+                    steps.push({ line: 11, type: 'update', var: 'exists', val: 'Ψευδής', arrHighlight: i, msg: "Υπάρχει ← Ψευδής" });
+                }
+            }
+
+            // 12. End If
+            steps.push({ line: 12, type: 'check', msg: "Τέλος_αν" });
+
+            // 13. i <- i + 1
+            i = i + 1;
+            steps.push({ line: 13, type: 'update', var: 'i', val: i, msg: `i ← ${i}` });
+
+            // 14. Check Until Condition
+            // Until i>6 OR found=True OR exists=False
+            let cond1 = (i > 6);
+            let cond2 = (found === true);
+            let cond3 = (exists === false);
+            let totalCond = cond1 || cond2 || cond3;
+            let explanation = `(${i}>6: ${cond1}) ή (Βρ=Αλ: ${cond2}) ή (Υπ=Ψ: ${cond3})`;
+            
+            steps.push({ 
+                line: 14, type: 'check', 
+                msg: `Μέχρις_ότου... ${explanation} -> ${totalCond ? 'ΑΛΗΘΗΣ' : 'ΨΕΥΔΗΣ'}` 
+            });
+
+            if (totalCond) break;
+
+        } while (true);
+    }
+
+    function updateStack(colId, val) {
+        const stack = document.getElementById(`stack-${colId}`);
+        Array.from(stack.children).forEach(child => child.classList.add('old'));
+        
+        const item = document.createElement('div');
+        item.className = 'val-item';
+        if(val === 'Αληθής') item.classList.add('bool-true');
+        if(val === 'Ψευδής') item.classList.add('bool-false');
+        item.innerText = val;
+        
+        stack.appendChild(item);
+        stack.scrollTop = stack.scrollHeight;
+    }
+
+    // --- Execution ---
+    function step() {
+        if (isAnimating) return;
+        if (stepIdx >= steps.length) return; 
+
+        const s = steps[stepIdx];
+        isAnimating = true;
+        toggleControls(false);
+
+        const onStepComplete = () => {
+            isAnimating = false;
+            toggleControls(true);
+            
+            stepIdx++;
+            if (stepIdx < steps.length) {
+                highlightLine(steps[stepIdx].line);
+                document.getElementById('narrativeBox').innerText = "Επόμενη εντολή: " + steps[stepIdx].msg;
+                if (isPlaying) {
+                    timer = setTimeout(step, speed * 0.5);
+                }
+            } else {
+                document.getElementById('narrativeBox').innerText = "Τέλος εκτέλεσης.";
+                document.getElementById('btnPlay').innerText = "▶️ Επανεκκίνηση";
+                isPlaying = false;
+                highlightLine(-1);
+                highlightCell(null);
+            }
+        };
+
+        const delay = speed * 0.05; 
+
+        setTimeout(() => {
+            // Highlights
+            if (s.arrHighlight) {
+                highlightCell(s.arrHighlight);
+            } else {
+                if(s.type !== 'check') highlightCell(null);
+            }
+
+            if (s.type === 'update') {
+                updateStack(s.var, s.val);
+                setTimeout(onStepComplete, speed * 0.5);
+            }
+            else {
+                setTimeout(onStepComplete, speed * 0.3);
+            }
+        }, delay);
+    }
+
+    function toggleControls(enable) {
+        document.getElementById('btnStep').disabled = !enable;
+        document.getElementById('inputX').disabled = !enable;
+    }
+
+    function play() {
+        if (isAnimating) return;
+        if (!isPlaying) {
+            if (stepIdx >= steps.length) {
+                resetSim();
+                setTimeout(() => {
+                    isPlaying = true;
+                    document.getElementById('btnPlay').innerText = "⏸ Παύση";
+                    step();
+                }, 100);
+            } else {
+                isPlaying = true;
+                document.getElementById('btnPlay').innerText = "⏸ Παύση";
+                step();
+            }
+        } else {
+            isPlaying = false;
+            clearTimeout(timer);
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        }
+    }
+
+    function updateSpeed() {
+        var sliderVal = parseInt(document.getElementById('speedSlider').value);
+        speed = 2100 - sliderVal;
+    }
+
+    function toggleCode() {
+        const codePanel = document.querySelector('.col-code');
+        codePanel.classList.toggle('hidden');
+        const btn = document.getElementById('btnCode');
+        btn.innerText = codePanel.classList.contains('hidden') ? "👁️ Εμφάνιση Κώδικα" : "👁️ Απόκρυψη Κώδικα";
+    }
+
+    // Listener
+    document.getElementById('inputX').addEventListener('change', resetSim);
+
+    init();
+
+</script>
+</body>
+</html>

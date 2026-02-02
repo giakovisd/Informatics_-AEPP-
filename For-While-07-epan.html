@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Εμφωλευμένες Επαναλήψεις</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            --header-bg: #e2e8f0;
+            --border-color: #cbd5e1;
+            
+            --var-main: #3b82f6; 
+            --cond-true: #15803d;
+            --cond-false: #b91c1c;
+            
+            --disabled-btn: #94a3b8;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        button {
+            padding: 6px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        button.primary { background-color: var(--var-main); color: white; border: none; }
+        button:hover:not(:disabled) { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { background-color: var(--disabled-btn); color: #ccc; cursor: not-allowed; }
+
+        .slider-container { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin-left: 10px; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 15px;
+            gap: 15px;
+            height: calc(100% - 60px);
+            box-sizing: border-box;
+            overflow: hidden; 
+        }
+
+        /* LEFT: Instructions & Code */
+        .col-left {
+            flex: 0 0 400px; 
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow: hidden;
+        }
+
+        .instructions-box {
+            background-color: #fffbeb;
+            border: 1px solid #fcd34d;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            color: #92400e;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            flex-shrink: 0;
+        }
+
+        .col-code {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .code-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.95rem; 
+            line-height: 1.35; 
+            background-color: #fff;
+        }
+        
+        .code-line { 
+            display: flex;
+            align-items: center;
+            padding: 0 4px;
+            margin: 0;
+            border-radius: 2px;
+        }
+        .code-line.active { background-color: var(--highlight-line); color: #000; font-weight: bold; }
+
+        .line-num {
+            color: #94a3b8;
+            width: 25px;
+            text-align: right;
+            margin-right: 10px;
+            padding-right: 5px;
+            border-right: 1px solid #eee;
+            font-size: 0.85rem;
+            user-select: none;
+        }
+
+        /* CENTER: Visualization (Trace Table) */
+        .col-viz {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .narrative {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: rgba(59, 130, 246, 0.08);
+            border-left: 4px solid var(--var-main);
+            font-size: 0.95rem;
+            font-style: italic;
+            min-height: 24px;
+            flex-shrink: 0;
+        }
+
+        .scene-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 10px;
+            position: relative;
+            overflow: auto;
+        }
+
+        /* Trace Tables */
+        .trace-table {
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s;
+        }
+
+        .table-header {
+            background-color: var(--header-bg);
+            padding: 8px;
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 2px solid var(--border-color);
+            border-radius: 6px 6px 0 0;
+        }
+
+        .columns-container {
+            display: flex;
+            flex-direction: row;
+        }
+
+        .trace-column {
+            flex: 1;
+            border-right: 1px solid var(--border-color);
+            min-width: 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .trace-column:last-child { border-right: none; }
+
+        .col-title {
+            font-weight: bold;
+            padding: 5px;
+            border-bottom: 1px solid var(--border-color);
+            width: 100%;
+            text-align: center;
+            background: #f1f5f9;
+            font-family: monospace;
+            font-size: 1rem;
+        }
+
+        .col-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            padding: 5px 0;
+            min-height: 200px;
+        }
+
+        .val-item {
+            font-weight: bold;
+            font-size: 1rem;
+            padding: 2px 0;
+            transition: all 0.3s;
+            opacity: 0;
+            animation: fadeIn 0.3s forwards;
+        }
+        @keyframes fadeIn { to { opacity: 1; } }
+        
+        .val-item.old {
+            text-decoration: line-through;
+            color: #94a3b8;
+            font-weight: normal;
+            font-size: 0.9rem;
+        }
+
+        .bool-true { color: var(--cond-true); font-size: 0.85rem; }
+        .bool-false { color: var(--cond-false); font-size: 0.85rem; }
+
+        /* RIGHT: Output */
+        .col-output {
+            flex: 0 0 220px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .output-header { padding: 10px; background: #f1f5f9; font-weight: bold; border-bottom: 1px solid var(--border-color); }
+        .output-log { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 0.95rem; background: #ffffff; color: #000; }
+        .log-item { border-bottom: 1px solid #eee; padding: 3px 0; }
+        
+        .col-code.hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Εμφωλευμένες Επαναλήψεις</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button onclick="resetSim()">🔄 Αρχή</button>
+        <button onclick="play()" id="btnPlay" class="primary">▶️ Αυτόματη Εκτέλεση</button>
+        <button onclick="step()" id="btnStep">Βήμα ⏩</button>
+        <button onclick="toggleCode()" id="btnCode">👁️ Απόκρυψη Κώδικα</button>
+        
+        <div class="slider-container">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="100" max="2000" value="1000" id="speedSlider" oninput="updateSpeed()">
+        </div>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-left">
+        <div class="instructions-box">
+            Να γράψετε στο τετράδιό σας τις τιμές που εμφανίζονται κατά την εκτέλεση του παρακάτω τμήματος αλγορίθμου.
+        </div>
+
+        <div class="col-code">
+            <div class="code-content" id="codeContainer"></div>
+        </div>
+    </div>
+
+    <div class="col-viz" id="vizContainer">
+        <div class="narrative" id="narrativeBox">Πατήστε εκτέλεση...</div>
+        
+        <div class="scene-wrapper" id="sceneWrapper">
+            <div class="trace-table" id="table-main">
+                <div class="table-header">Πίνακας Τιμών</div>
+                <div class="columns-container">
+                    <div class="trace-column">
+                        <div class="col-title">α</div>
+                        <div class="col-stack" id="stack-a"></div>
+                    </div>
+                    <div class="trace-column">
+                        <div class="col-title">β</div>
+                        <div class="col-stack" id="stack-b"></div>
+                    </div>
+                    <div class="trace-column">
+                        <div class="col-title">Χ</div>
+                        <div class="col-stack" id="stack-X"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">📺 Οθόνη Εξόδου</div>
+        <div class="output-log" id="outputLog"></div>
+    </div>
+
+</div>
+
+<script>
+    const CODE_LINES = [
+        "α ← 5",
+        "β ← 3",
+        "Για Χ από 2 μέχρι 7 με_βήμα 4",
+        "   Όσο α <= 10 επανάλαβε",
+        "      β ← β + α",
+        "      α ← α + 4",
+        "   Τέλος_επανάληψης",
+        "   Εμφάνισε α, β",
+        "   α ← 4",
+        "Τέλος_επανάληψης",
+        "Εμφάνισε α"
+    ];
+
+    let steps = [];
+    let stepIdx = 0;
+    let timer = null;
+    let isPlaying = false;
+    let isAnimating = false;
+    let speed = 1100;
+
+    function init() {
+        renderCode();
+        updateSpeed(); 
+        calcSteps();
+        highlightLine(steps[0].line);
+        document.getElementById('narrativeBox').innerText = "Έτοιμο. Επόμενη εντολή: " + steps[0].msg;
+    }
+
+    function resetSim() {
+        isPlaying = false;
+        isAnimating = false;
+        clearTimeout(timer);
+        stepIdx = 0;
+        
+        document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        document.getElementById('outputLog').innerHTML = '';
+        document.querySelectorAll('.col-stack').forEach(el => el.innerHTML = '');
+        
+        highlightLine(steps[0].line);
+        document.getElementById('narrativeBox').innerText = "Έτοιμο. Επόμενη εντολή: " + steps[0].msg;
+    }
+
+    function renderCode() {
+        const html = CODE_LINES.map((l, i) => 
+            `<div class="code-line" id="line-${i+1}">
+                <span class="line-num">${i+1}</span>
+                ${l.replace(/ /g, '&nbsp;')}
+             </div>`
+        ).join('');
+        document.getElementById('codeContainer').innerHTML = html;
+    }
+
+    function highlightLine(idx) {
+        document.querySelectorAll('.code-line').forEach(e => e.classList.remove('active'));
+        const el = document.getElementById(`line-${idx}`);
+        if(el) el.classList.add('active');
+    }
+
+    function calcSteps() {
+        steps = [];
+        let a = 5, b = 3, X;
+
+        // 1. a <- 5
+        steps.push({ line: 1, type: 'update', var: 'a', val: a, msg: `α ← 5` });
+
+        // 2. b <- 3
+        steps.push({ line: 2, type: 'update', var: 'b', val: b, msg: `β ← 3` });
+
+        // Outer Loop: X from 2 to 7 step 4
+        for (X = 2; X <= 7; X += 4) {
+            // 3. For X
+            steps.push({ line: 3, type: 'update', var: 'X', val: X, msg: `Για Χ = ${X}` });
+
+            // Inner Loop: While a <= 10
+            while (a <= 10) {
+                // 4. Check a <= 10
+                steps.push({ line: 4, type: 'check', msg: `Όσο ${a} <= 10 (ΑΛΗΘΗΣ)` });
+
+                // 5. b <- b + a
+                let prevB = b;
+                b = b + a;
+                steps.push({ line: 5, type: 'update', var: 'b', val: b, msg: `β ← ${prevB} + ${a} = ${b}` });
+
+                // 6. a <- a + 4
+                let prevA = a;
+                a = a + 4;
+                steps.push({ line: 6, type: 'update', var: 'a', val: a, msg: `α ← ${prevA} + 4 = ${a}` });
+
+                // 7. End Inner Loop
+                steps.push({ line: 7, type: 'check', msg: "Τέλος_επανάληψης (Εσωτερική)" });
+            }
+            // Check Inner Loop False
+            steps.push({ line: 4, type: 'check', msg: `Όσο ${a} <= 10 (ΨΕΥΔΗΣ)` });
+
+            // 8. Print a, b
+            steps.push({ line: 8, type: 'print', txt: `${a}, ${b}`, msg: `Εμφάνισε ${a}, ${b}` });
+
+            // 9. a <- 4
+            a = 4;
+            steps.push({ line: 9, type: 'update', var: 'a', val: a, msg: `α ← 4` });
+
+            // 10. End Outer Loop
+            steps.push({ line: 10, type: 'check', msg: "Τέλος_επανάληψης (Εξωτερική)" });
+        }
+        
+        // Loop End (X > 7)
+        steps.push({ line: 3, type: 'check', msg: "Τέλος βρόχου (Χ > 7)" });
+
+        // 11. Print a
+        steps.push({ line: 11, type: 'print', txt: `${a}`, msg: `Εμφάνισε ${a}` });
+    }
+
+    function updateStack(colId, val) {
+        const stack = document.getElementById(`stack-${colId}`);
+        Array.from(stack.children).forEach(child => child.classList.add('old'));
+        
+        const item = document.createElement('div');
+        item.className = 'val-item';
+        item.innerText = val;
+        
+        stack.appendChild(item);
+        stack.scrollTop = stack.scrollHeight;
+    }
+
+    function logOutput(txt) {
+        const log = document.getElementById('outputLog');
+        const item = document.createElement('div');
+        item.className = 'log-item';
+        item.innerText = txt;
+        log.appendChild(item);
+        log.scrollTop = log.scrollHeight;
+    }
+
+    // --- Execution ---
+    function step() {
+        if (isAnimating) return;
+        
+        if (stepIdx >= steps.length) return; 
+
+        const s = steps[stepIdx];
+        
+        isAnimating = true;
+        toggleControls(false);
+
+        const onStepComplete = () => {
+            isAnimating = false;
+            toggleControls(true);
+            
+            stepIdx++;
+            
+            if (stepIdx < steps.length) {
+                highlightLine(steps[stepIdx].line);
+                document.getElementById('narrativeBox').innerText = "Επόμενη εντολή: " + steps[stepIdx].msg;
+                
+                if (isPlaying) {
+                    timer = setTimeout(step, speed * 0.5);
+                }
+            } else {
+                document.getElementById('narrativeBox').innerText = "Τέλος εκτέλεσης.";
+                document.getElementById('btnPlay').innerText = "▶️ Επανεκκίνηση";
+                isPlaying = false;
+                highlightLine(-1);
+            }
+        };
+
+        const delay = speed * 0.05; 
+
+        setTimeout(() => {
+            if (s.type === 'update') {
+                updateStack(s.var, s.val);
+                setTimeout(onStepComplete, speed * 0.5);
+            }
+            else if (s.type === 'print') {
+                logOutput(s.txt);
+                setTimeout(onStepComplete, speed * 0.5);
+            }
+            else {
+                // Check or Control statements
+                setTimeout(onStepComplete, speed * 0.3);
+            }
+        }, delay);
+    }
+
+    function toggleControls(enable) {
+        document.getElementById('btnStep').disabled = !enable;
+    }
+
+    function play() {
+        if (isAnimating) return;
+        if (!isPlaying) {
+            if (stepIdx >= steps.length) {
+                resetSim();
+                setTimeout(() => {
+                    isPlaying = true;
+                    document.getElementById('btnPlay').innerText = "⏸ Παύση";
+                    step();
+                }, 100);
+            } else {
+                isPlaying = true;
+                document.getElementById('btnPlay').innerText = "⏸ Παύση";
+                step();
+            }
+        } else {
+            isPlaying = false;
+            clearTimeout(timer);
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        }
+    }
+
+    function updateSpeed() {
+        var sliderVal = parseInt(document.getElementById('speedSlider').value);
+        speed = 2100 - sliderVal;
+    }
+
+    function toggleCode() {
+        const codePanel = document.querySelector('.col-code');
+        codePanel.classList.toggle('hidden');
+        const btn = document.getElementById('btnCode');
+        btn.innerText = codePanel.classList.contains('hidden') ? "👁️ Εμφάνιση Κώδικα" : "👁️ Απόκρυψη Κώδικα";
+    }
+
+    init();
+
+</script>
+</body>
+</html>

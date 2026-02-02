@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Επαναληπτικές 2006 - Κλήση Υποπρογραμμάτων</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            --header-bg: #e2e8f0;
+            --border-color: #cbd5e1;
+            
+            --var-main: #3b82f6; 
+            --var-proc: #10b981;
+            --var-func: #8b5cf6;
+            
+            --arrow-color: #dc2626; 
+            --flyer-bg: #ea580c;
+            
+            --disabled-btn: #94a3b8;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        button {
+            padding: 8px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        button.primary { background-color: var(--var-main); color: white; border: none; }
+        button:hover:not(:disabled) { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { background-color: var(--disabled-btn); color: #ccc; cursor: not-allowed; }
+
+        .slider-container { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin-left: 10px; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 15px;
+            gap: 15px;
+            height: calc(100% - 70px);
+            box-sizing: border-box;
+        }
+
+        /* LEFT: Code Panel */
+        .col-code {
+            flex: 0 0 450px; 
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .code-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            font-family: 'Consolas', monospace;
+            /* ΔΙΟΡΘΩΣΗ: Μικρή γραμματοσειρά */
+            font-size: 0.85rem; 
+            line-height: 1.5; 
+            white-space: pre; 
+        }
+        
+        .code-line { 
+            padding: 1px 6px; 
+            border-radius: 3px; 
+            min-height: 1.4em; 
+            transition: background-color 0.1s;
+        }
+        .code-line.active { background-color: var(--highlight-line); color: #000; font-weight: bold; }
+
+        /* Code Parameter Tokens */
+        .param-token {
+            display: inline-block;
+            padding: 0 3px;
+            border-radius: 3px;
+            border: 1px solid transparent;
+            font-weight: bold;
+            cursor: default;
+        }
+        .param-token.main { color: var(--var-main); background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3); }
+        .param-token.proc { color: var(--var-proc); background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); }
+        .param-token.func { color: var(--var-func); background: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.3); }
+
+        /* CENTER: Visualization */
+        .col-viz {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .narrative {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: rgba(59, 130, 246, 0.08);
+            border-left: 4px solid var(--var-main);
+            font-size: 0.95rem;
+            font-style: italic;
+            min-height: 24px;
+            flex-shrink: 0;
+        }
+
+        .scene-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            gap: 20px; 
+            align-items: flex-start;
+            padding-top: 20px;
+            position: relative;
+            overflow: auto;
+        }
+
+        /* Trace Tables */
+        .trace-table {
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            min-width: 130px; 
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s;
+        }
+
+        .table-header {
+            background-color: var(--header-bg);
+            padding: 8px;
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 2px solid var(--border-color);
+            border-radius: 6px 6px 0 0;
+            font-size: 0.85rem;
+        }
+
+        .columns-container {
+            display: flex;
+            flex-direction: row;
+        }
+
+        .trace-column {
+            flex: 1;
+            border-right: 1px solid var(--border-color);
+            min-width: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .trace-column:last-child { border-right: none; }
+
+        .col-title {
+            font-weight: bold;
+            padding: 5px;
+            border-bottom: 1px solid var(--border-color);
+            width: 100%;
+            text-align: center;
+            background: #f1f5f9;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        .col-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            padding: 5px 0;
+            min-height: 150px;
+        }
+
+        .val-item {
+            font-weight: bold;
+            font-size: 0.95rem;
+            padding: 2px 0;
+            transition: all 0.3s;
+            opacity: 0;
+            animation: fadeIn 0.3s forwards;
+        }
+        @keyframes fadeIn { to { opacity: 1; } }
+        
+        .val-item.old {
+            text-decoration: line-through;
+            color: #94a3b8;
+            font-weight: normal;
+            font-size: 0.9rem;
+        }
+
+        .proc-table { opacity: 0.4; filter: grayscale(1); transition: opacity 0.5s; }
+        .proc-table.active { opacity: 1; filter: grayscale(0); border-color: var(--var-proc); box-shadow: 0 0 10px rgba(16, 185, 129, 0.3); }
+        .proc-table .table-header { background-color: #d1fae5; color: #065f46; }
+
+        .func-table { opacity: 0.4; filter: grayscale(1); transition: opacity 0.5s; }
+        .func-table.active { opacity: 1; filter: grayscale(0); border-color: var(--var-func); box-shadow: 0 0 10px rgba(139, 92, 246, 0.3); }
+        .func-table .table-header { background-color: #ede9fe; color: #5b21b6; }
+
+        /* Animation Elements */
+        .connection-line {
+            position: fixed; 
+            background-color: var(--arrow-color);
+            height: 2px;
+            transform-origin: 0 50%;
+            z-index: 9990;
+            pointer-events: none;
+        }
+        
+        .arrow-head {
+            position: absolute;
+            width: 0; 
+            height: 0; 
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+            border-left: 8px solid var(--arrow-color); 
+            right: -4px;
+            top: -4px;
+        }
+
+        .flying-value {
+            position: fixed;
+            background-color: var(--flyer-bg);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 1rem;
+            z-index: 9999;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            pointer-events: none;
+        }
+
+        /* RIGHT: Output */
+        .col-output {
+            flex: 0 0 180px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .output-header { padding: 10px; background: #f1f5f9; font-weight: bold; border-bottom: 1px solid var(--border-color); }
+        .output-log { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 0.95rem; }
+        .log-item { border-bottom: 1px solid #eee; padding: 3px 0; }
+        
+        .col-code.hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Επαναληπτικές 2006 - Υποπρογράμματα</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button onclick="resetSim()">🔄 Αρχή</button>
+        <button onclick="play()" id="btnPlay" class="primary">▶️ Αυτόματη Εκτέλεση</button>
+        <button onclick="step()" id="btnStep">Βήμα ⏩</button>
+        <button onclick="toggleCode()" id="btnCode">👁️ Απόκρυψη Κώδικα</button>
+        
+        <div class="slider-container">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="100" max="2000" value="1000" id="speedSlider" oninput="updateSpeed()">
+        </div>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-code">
+        <div class="code-content" id="codeContainer"></div>
+    </div>
+
+    <div class="col-viz" id="vizContainer">
+        <div class="narrative" id="narrativeBox">Πατήστε εκτέλεση...</div>
+        
+        <div class="scene-wrapper" id="sceneWrapper">
+            
+            <div class="trace-table" id="table-main">
+                <div class="table-header">ΠΡΟΓΡΑΜΜΑ</div>
+                <div class="columns-container">
+                    <div class="trace-column">
+                        <div class="col-title">α</div>
+                        <div class="col-stack" id="stack-main-a"></div>
+                    </div>
+                    <div class="trace-column">
+                        <div class="col-title">β</div>
+                        <div class="col-stack" id="stack-main-b"></div>
+                    </div>
+                    <div class="trace-column">
+                        <div class="col-title">χ</div>
+                        <div class="col-stack" id="stack-main-x"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="trace-table proc-table" id="table-proc">
+                <div class="table-header">ΔΙΑΔΙΚΑΣΙΑ Διαδ1</div>
+                <div class="columns-container">
+                    <div class="trace-column">
+                        <div class="col-title">λ</div>
+                        <div class="col-stack" id="stack-proc-l"></div>
+                    </div>
+                    <div class="trace-column">
+                        <div class="col-title">κ</div>
+                        <div class="col-stack" id="stack-proc-k"></div>
+                    </div>
+                    <div class="trace-column">
+                        <div class="col-title">μ</div>
+                        <div class="col-stack" id="stack-proc-m"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="trace-table func-table" id="table-func">
+                <div class="table-header">ΣΥΝΑΡΤΗΣΗ Συν1</div>
+                <div class="columns-container">
+                    <div class="trace-column">
+                        <div class="col-title">ε</div>
+                        <div class="col-stack" id="stack-func-e"></div>
+                    </div>
+                    <div class="trace-column">
+                        <div class="col-title">ζ</div>
+                        <div class="col-stack" id="stack-func-z"></div>
+                    </div>
+                    <div class="trace-column">
+                        <div class="col-title">Συν1</div>
+                        <div class="col-stack" id="stack-func-res"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">📺 Οθόνη Εξόδου</div>
+        <div class="output-log" id="outputLog"></div>
+    </div>
+
+</div>
+
+<script>
+    // ΔΙΟΡΘΩΣΗ: Προστέθηκαν τα IDs για τα βελάκια
+    const CODE_HTML = [
+        `ΠΡΟΓΡΑΜΜΑ Κλήση_Υποπρογραμμάτων`,
+        `  ΜΕΤΑΒΛΗΤΕΣ`,
+        `    ΑΚΕΡΑΙΕΣ: α, β, χ`,
+        `  ΑΡΧΗ`,
+        `    α ← 1`,
+        `    β ← 2`,
+        `    ΑΡΧΗ_ΕΠΑΝΑΛΗΨΗΣ`,
+        `      ΑΝ α <= 4 ΤΟΤΕ`,
+        `        ΚΑΛΕΣΕ Διαδ1(<span id="c-callD-a" class="param-token main">α</span>, <span id="c-callD-b" class="param-token main">β</span>, <span id="c-callD-x" class="param-token main">χ</span>)`,
+        `      ΑΛΛΙΩΣ`,
+        `        <span id="c-assign-x" class="param-token main">χ</span> ← <span id="c-callS-name" class="param-token main">Συν1</span>(<span id="c-callS-a" class="param-token main">α</span>, <span id="c-callS-b" class="param-token main">β</span>)`,
+        `      ΤΕΛΟΣ_ΑΝ`,
+        `      ΓΡΑΨΕ α, β, χ`,
+        `    ΜΕΧΡΙΣ_ΟΤΟΥ χ > 11`,
+        `    ΓΡΑΨΕ χ`,
+        `  ΤΕΛΟΣ_ΠΡΟΓΡΑΜΜΑΤΟΣ`,
+        ``,
+        `  ΔΙΑΔΙΚΑΣΙΑ Διαδ1 (<span id="c-proc-l" class="param-token proc">λ</span>, <span id="c-proc-k" class="param-token proc">κ</span>, <span id="c-proc-m" class="param-token proc">μ</span>)`,
+        `  ΜΕΤΑΒΛΗΤΕΣ`,
+        `    ΑΚΕΡΑΙΕΣ: κ, λ, μ`,
+        `  ΑΡΧΗ`,
+        `    κ ← κ + 1`,
+        `    λ ← λ + 3`,
+        `    μ ← κ + λ`,
+        `  ΤΕΛΟΣ_ΔΙΑΔΙΚΑΣΙΑΣ`,
+        ``,
+        `  ΣΥΝΑΡΤΗΣΗ Συν1(<span id="c-func-e" class="param-token func">ε</span>, <span id="c-func-z" class="param-token func">ζ</span>): ΑΚΕΡΑΙΑ`,
+        `  ΜΕΤΑΒΛΗΤΕΣ`,
+        `    ΑΚΕΡΑΙΕΣ: ε, ζ`,
+        `  ΑΡΧΗ`,
+        `    ζ ← ζ + 2`,
+        `    ε ← ε * 2`,
+        `    <span id="c-func-ret-assign" class="param-token func">Συν1</span> ← ε + ζ`,
+        `  ΤΕΛΟΣ_ΣΥΝΑΡΤΗΣΗΣ`
+    ];
+
+    let steps = [];
+    let stepIdx = 0;
+    let timer = null;
+    let isPlaying = false;
+    let isAnimating = false;
+    let speed = 1100;
+
+    function init() {
+        renderCode();
+        calcSteps();
+        updateSpeed(); 
+        
+        highlightLine(steps[0].line);
+        document.getElementById('narrativeBox').innerText = "Έτοιμο. Επόμενη εντολή: " + steps[0].msg;
+    }
+
+    function resetSim() {
+        isPlaying = false;
+        isAnimating = false;
+        clearTimeout(timer);
+        stepIdx = 0;
+        
+        document.getElementById('outputLog').innerHTML = '';
+        document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        document.getElementById('table-proc').classList.remove('active');
+        document.getElementById('table-func').classList.remove('active');
+        
+        document.querySelectorAll('.col-stack').forEach(el => el.innerHTML = '');
+        clearLines();
+        
+        highlightLine(steps[0].line);
+        document.getElementById('narrativeBox').innerText = "Έτοιμο. Επόμενη εντολή: " + steps[0].msg;
+    }
+
+    function renderCode() {
+        const html = CODE_HTML.map((l, i) => 
+            `<div class="code-line" id="line-${i+1}"><span style="color:#888; margin-right:8px; user-select:none;">${i+1}</span>${l}</div>`
+        ).join('');
+        document.getElementById('codeContainer').innerHTML = html;
+    }
+
+    function highlightLine(idx) {
+        document.querySelectorAll('.code-line').forEach(e => e.classList.remove('active'));
+        const el = document.getElementById(`line-${idx}`);
+        if(el) el.classList.add('active');
+    }
+
+    // --- Logic ---
+    function calcSteps() {
+        steps = [];
+        let a = 1, b = 2, x;
+        let procL, procK, procM;
+        let funcE, funcZ, funcRes;
+
+        // 5. a <- 1
+        steps.push({ line: 5, type: 'init', var: 'main-a', val: 1, msg: "α ← 1" });
+        // 6. b <- 2
+        steps.push({ line: 6, type: 'update', var: 'main-b', val: 2, msg: "β ← 2" });
+
+        // Loop
+        do {
+            // 8. If a <= 4
+            let cond = (a <= 4);
+            steps.push({ line: 8, type: 'check', msg: `ΑΝ ${a} <= 4 (${cond ? 'ΑΛΗΘΗΣ' : 'ΨΕΥΔΗΣ'})` });
+
+            if (cond) {
+                // CALL PROCEDURE
+                steps.push({
+                    line: 9, type: 'call',
+                    targetTable: 'table-proc',
+                    mapping: [
+                        {from: 'c-callD-a', to: 'c-proc-l', val: a, targetStack: 'stack-proc-l'},
+                        {from: 'c-callD-b', to: 'c-proc-k', val: b, targetStack: 'stack-proc-k'},
+                        // x is technically undefined here in first run
+                    ],
+                    msg: "Κλήση Διαδ1: α->λ, β->κ"
+                });
+                procL = a; procK = b; procM = x;
+
+                // 22. k <- k + 1
+                procK = procK + 1;
+                steps.push({ line: 22, type: 'update', var: 'proc-k', val: procK, msg: `κ ← ${procK-1} + 1 = ${procK}` });
+
+                // 23. l <- l + 3
+                procL = procL + 3;
+                steps.push({ line: 23, type: 'update', var: 'proc-l', val: procL, msg: `λ ← ${procL-3} + 3 = ${procL}` });
+
+                // 24. m <- k + l
+                procM = procK + procL;
+                steps.push({ line: 24, type: 'update', var: 'proc-m', val: procM, msg: `μ ← ${procK} + ${procL} = ${procM}` });
+
+                // 25. Return
+                steps.push({
+                    line: 25, type: 'return',
+                    targetTable: 'table-proc',
+                    mapping: [
+                        {from: 'c-proc-l', to: 'c-callD-a', val: procL, targetStack: 'stack-main-a'},
+                        {from: 'c-proc-k', to: 'c-callD-b', val: procK, targetStack: 'stack-main-b'},
+                        {from: 'c-proc-m', to: 'c-callD-x', val: procM, targetStack: 'stack-main-x'}
+                    ],
+                    msg: "Επιστροφή: Ενημέρωση α, β, χ (by reference)"
+                });
+                a = procL; b = procK; x = procM;
+
+            } else {
+                // CALL FUNCTION
+                steps.push({
+                    line: 10, type: 'check', msg: "ΑΛΛΙΩΣ (Κλήση Συνάρτησης)"
+                });
+                
+                steps.push({
+                    line: 11, type: 'call',
+                    targetTable: 'table-func',
+                    mapping: [
+                        {from: 'c-callS-a', to: 'c-func-e', val: a, targetStack: 'stack-func-e'},
+                        {from: 'c-callS-b', to: 'c-func-z', val: b, targetStack: 'stack-func-z'}
+                    ],
+                    msg: "Κλήση Συν1: α->ε, β->ζ"
+                });
+                funcE = a; funcZ = b;
+
+                // 30. z <- z + 2
+                funcZ = funcZ + 2;
+                steps.push({ line: 30, type: 'update', var: 'func-z', val: funcZ, msg: `ζ ← ${funcZ-2} + 2 = ${funcZ}` });
+
+                // 31. e <- e * 2
+                funcE = funcE * 2;
+                steps.push({ line: 31, type: 'update', var: 'func-e', val: funcE, msg: `ε ← ${funcE/2} * 2 = ${funcE}` });
+
+                // 32. res <- e + z
+                funcRes = funcE + funcZ;
+                steps.push({ line: 32, type: 'update', var: 'func-res', val: funcRes, msg: `Συν1 ← ${funcE} + ${funcZ} = ${funcRes}` });
+
+                // 33. Return (Από την εκχώρηση)
+                steps.push({
+                    line: 33, type: 'return',
+                    targetTable: 'table-func',
+                    mapping: [
+                        {from: 'c-func-ret-assign', to: 'c-callS-name', val: funcRes, targetStack: 'stack-main-x'} 
+                    ],
+                    msg: "Επιστροφή τιμής στο χ"
+                });
+                x = funcRes;
+                
+                // Update X in main
+                steps.push({ line: 11, type: 'update', var: 'main-x', val: x, msg: `χ ← ${x}` });
+            }
+
+            // 13. Write
+            steps.push({ line: 13, type: 'print', txt: `${a}, ${b}, ${x}`, msg: `ΓΡΑΨΕ ${a}, ${b}, ${x}` });
+
+            // 14. Until Check
+            let loopEnd = (x > 11);
+            steps.push({ line: 14, type: 'check', msg: `ΜΕΧΡΙΣ_ΟΤΟΥ ${x} > 11 (${loopEnd ? 'ΑΛΗΘΗΣ' : 'ΨΕΥΔΗΣ'})` });
+            
+            if(loopEnd) break;
+
+        } while(true);
+
+        // 15. Final Write
+        steps.push({ line: 15, type: 'print', txt: `${x}`, msg: `ΓΡΑΨΕ ${x}` });
+        steps.push({ line: 16, type: 'check', msg: "Τέλος Προγράμματος" });
+    }
+
+    function updateVar(varId, val) {
+        const stack = document.getElementById(`stack-${varId}`);
+        Array.from(stack.children).forEach(child => child.classList.add('old'));
+        const item = document.createElement('div');
+        item.className = 'val-item';
+        item.innerText = val;
+        stack.appendChild(item);
+        stack.scrollTop = stack.scrollHeight;
+    }
+
+    // --- Animation Logic ---
+    function drawLine(fromId, toId) {
+        const fromEl = document.getElementById(fromId);
+        const toEl = document.getElementById(toId);
+        if(!fromEl || !toEl) return null;
+
+        const r1 = fromEl.getBoundingClientRect();
+        const r2 = toEl.getBoundingClientRect();
+
+        const x1 = r1.left + r1.width/2;
+        const y1 = r1.bottom; 
+        const x2 = r2.left + r2.width/2;
+        const y2 = r2.top;
+
+        const length = Math.sqrt(Math.pow(x2-x1, 2) + Math.pow(y2-y1, 2));
+        const angle = Math.atan2(y2-y1, x2-x1) * 180 / Math.PI;
+
+        const line = document.createElement('div');
+        line.className = 'connection-line';
+        line.style.width = length + 'px';
+        line.style.left = x1 + 'px';
+        line.style.top = y1 + 'px';
+        line.style.transform = `rotate(${angle}deg)`;
+
+        const arrow = document.createElement('div');
+        arrow.className = 'arrow-head';
+        line.appendChild(arrow);
+        
+        document.body.appendChild(line);
+        return {line: line, x1: x1, y1: y1, x2: x2, y2: y2};
+    }
+
+    function clearLines() {
+        document.querySelectorAll('.connection-line').forEach(el => el.remove());
+    }
+
+    function animateTransfer(mapping, callback) {
+        clearLines();
+        let lines = [];
+
+        mapping.forEach(m => {
+            const coords = drawLine(m.from, m.to);
+            if(coords) lines.push({...m, coords: coords});
+        });
+
+        let completed = 0;
+        lines.forEach(obj => {
+            const flyer = document.createElement('div');
+            flyer.className = 'flying-value';
+            flyer.innerText = obj.val;
+            
+            flyer.style.left = obj.coords.x1 + 'px';
+            flyer.style.top = obj.coords.y1 + 'px';
+
+            document.body.appendChild(flyer);
+            flyer.getBoundingClientRect();
+
+            const dur = speed * 2.5; 
+            
+            flyer.style.transition = `all ${dur}ms ease-in-out`;
+            flyer.style.left = obj.coords.x2 + 'px';
+            flyer.style.top = obj.coords.y2 + 'px';
+
+            setTimeout(() => {
+                flyer.remove();
+                if(obj.targetStack) {
+                    const varId = obj.targetStack.replace('stack-', '');
+                    updateVar(varId, obj.val);
+                }
+                
+                completed++;
+                if (completed === lines.length) {
+                    setTimeout(() => {
+                        clearLines();
+                        callback();
+                    }, 500);
+                }
+            }, dur);
+        });
+    }
+
+    // --- Execution ---
+    function step() {
+        if (isAnimating) return;
+        if (stepIdx >= steps.length) return; 
+
+        const s = steps[stepIdx];
+        
+        isAnimating = true;
+        toggleControls(false);
+
+        const onStepComplete = () => {
+            isAnimating = false;
+            toggleControls(true);
+            
+            stepIdx++;
+            
+            if (stepIdx < steps.length) {
+                highlightLine(steps[stepIdx].line);
+                document.getElementById('narrativeBox').innerText = "Επόμενη εντολή: " + steps[stepIdx].msg;
+                
+                if (isPlaying) {
+                    timer = setTimeout(step, speed * 0.5);
+                }
+            } else {
+                document.getElementById('narrativeBox').innerText = "Τέλος εκτέλεσης.";
+                document.getElementById('btnPlay').innerText = "▶️ Επανεκκίνηση";
+                isPlaying = false;
+                highlightLine(-1);
+            }
+        };
+
+        const delay = speed * 0.05; 
+
+        setTimeout(() => {
+            if (s.type === 'init' || s.type === 'update') {
+                updateVar(s.var, s.val);
+                setTimeout(onStepComplete, speed * 0.6);
+            }
+            else if (s.type === 'call') {
+                document.getElementById(s.targetTable).classList.add('active');
+                animateTransfer(s.mapping, onStepComplete);
+            }
+            else if (s.type === 'return') {
+                animateTransfer(s.mapping, () => {
+                    document.getElementById(s.targetTable).classList.remove('active');
+                    onStepComplete();
+                });
+            }
+            else if (s.type === 'check') {
+                setTimeout(onStepComplete, speed * 0.6);
+            }
+            else if (s.type === 'print') {
+                const log = document.getElementById('outputLog');
+                log.innerHTML += `<div class="log-item">${s.txt}</div>`;
+                log.scrollTop = log.scrollHeight;
+                setTimeout(onStepComplete, speed * 0.5);
+            }
+        }, delay);
+    }
+
+    function toggleControls(enable) {
+        document.getElementById('btnStep').disabled = !enable;
+    }
+
+    function play() {
+        if (isAnimating) return;
+        if (!isPlaying) {
+            if (stepIdx >= steps.length) {
+                resetSim();
+                setTimeout(() => {
+                    isPlaying = true;
+                    document.getElementById('btnPlay').innerText = "⏸ Παύση";
+                    step();
+                }, 100);
+            } else {
+                isPlaying = true;
+                document.getElementById('btnPlay').innerText = "⏸ Παύση";
+                step();
+            }
+        } else {
+            isPlaying = false;
+            clearTimeout(timer);
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        }
+    }
+
+    function updateSpeed() {
+        var sliderVal = parseInt(document.getElementById('speedSlider').value);
+        speed = 2100 - sliderVal;
+    }
+
+    function toggleCode() {
+        const codePanel = document.querySelector('.col-code');
+        codePanel.classList.toggle('hidden');
+        const btn = document.getElementById('btnCode');
+        btn.innerText = codePanel.classList.contains('hidden') ? "👁️ Εμφάνιση Κώδικα" : "👁️ Απόκρυψη Κώδικα";
+    }
+
+    init();
+
+</script>
+</body>
+</html>

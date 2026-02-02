@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Επαναληπτικές 2009 - Collatz (Compact)</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            --header-bg: #e2e8f0;
+            --border-color: #cbd5e1;
+            
+            --var-main: #3b82f6; 
+            --cond-true: #15803d;
+            --cond-false: #b91c1c;
+            
+            --disabled-btn: #94a3b8;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+            background: #f1f5f9;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+        .input-group input {
+            width: 50px;
+            padding: 4px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        button {
+            padding: 6px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        button.primary { background-color: var(--var-main); color: white; border: none; }
+        button:hover:not(:disabled) { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { background-color: var(--disabled-btn); color: #ccc; cursor: not-allowed; }
+
+        .slider-container { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 10px;
+            gap: 15px;
+            height: calc(100% - 60px);
+            box-sizing: border-box;
+            overflow: hidden; /* Prevent global scroll */
+        }
+
+        /* LEFT COLUMN */
+        .col-left {
+            flex: 0 0 450px; 
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow: hidden;
+        }
+
+        .instructions-box {
+            background-color: #fffbeb;
+            border: 1px solid #fcd34d;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 0.85rem;
+            line-height: 1.3;
+            color: #92400e;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            flex-shrink: 0; /* Μην συρρικνώνεσαι */
+        }
+        .instructions-box ol { margin: 5px 0 0 20px; padding: 0; }
+        .instructions-box li { margin-bottom: 4px; }
+
+        /* CODE SECTION - FIXED COMPACTNESS */
+        .col-code {
+            flex: 1; /* Take remaining height */
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .code-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: 'Consolas', monospace;
+            background-color: #fff;
+        }
+        
+        /* Strict styling for lines to be compact */
+        .code-line { 
+            display: flex;
+            align-items: center;
+            padding: 0 4px;
+            margin: 0;
+            line-height: 1.4; /* Σφιχτό ύψος γραμμής */
+            font-size: 0.95rem;
+            border-radius: 2px;
+        }
+        
+        .line-num {
+            color: #94a3b8;
+            width: 25px;
+            text-align: right;
+            margin-right: 10px;
+            padding-right: 5px;
+            border-right: 1px solid #eee;
+            font-size: 0.85rem;
+            user-select: none;
+        }
+        
+        .code-line.active { 
+            background-color: var(--highlight-line); 
+            color: #000; 
+            font-weight: bold; 
+        }
+
+        /* RIGHT COLUMN: Visualization */
+        .col-viz {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .narrative {
+            padding: 8px;
+            margin-bottom: 8px;
+            background: rgba(59, 130, 246, 0.08);
+            border-left: 4px solid var(--var-main);
+            font-size: 0.9rem;
+            font-style: italic;
+            min-height: 20px;
+            flex-shrink: 0;
+        }
+
+        .trace-container {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: #fff;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Consolas', monospace;
+            font-size: 0.9rem;
+        }
+
+        thead th {
+            position: sticky;
+            top: 0;
+            background: #f1f5f9;
+            padding: 8px;
+            text-align: center;
+            border-bottom: 2px solid var(--border-color);
+            z-index: 10;
+        }
+
+        tbody td {
+            padding: 4px 6px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+
+        tbody tr.new-row {
+            animation: flashRow 0.8s ease-out;
+            background-color: #fffff0;
+        }
+
+        @keyframes flashRow {
+            0% { background-color: #fde047; } 
+            100% { background-color: #fff; }
+        }
+
+        .bool-true { color: var(--cond-true); background: #dcfce7; border-radius: 4px; padding: 1px 6px; font-weight:bold; font-size:0.85rem;}
+        .bool-false { color: var(--cond-false); background: #fee2e2; border-radius: 4px; padding: 1px 6px; font-weight:bold; font-size:0.85rem;}
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Επαναληπτικές 2009 - Collatz</h1>
+    </div>
+    
+    <div class="controls-area">
+        <div class="input-group">
+            <label for="inputX">Χ:</label>
+            <input type="number" id="inputX" value="5" min="1">
+        </div>
+
+        <button onclick="resetSim()">🔄 Αρχή</button>
+        <button onclick="play()" id="btnPlay" class="primary">▶️ Αυτόματη Εκτέλεση</button>
+        <button onclick="step()" id="btnStep">Βήμα ⏩</button>
+        
+        <div class="slider-container">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="100" max="2000" value="1000" id="speedSlider" oninput="updateSpeed()">
+        </div>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-left">
+        <div class="instructions-box">
+            <strong>Α. Για κάθε εντολή που εκτελείται να γράψετε σε νέα γραμμή του πίνακα τα εξής:</strong>
+            <ol>
+                <li>Τον αριθμό της εντολής που εκτελείται (στην πρώτη στήλη).</li>
+                <li>Αν η γραμμή περιέχει εντολή εκχώρησης, τη νέα τιμή της μεταβλητής στην αντίστοιχη στήλη. Αν η γραμμή περιέχει έλεγχο συνθήκης, την τιμή της συνθήκης (Αληθής, Ψευδής) στην αντίστοιχη στήλη.</li>
+            </ol>
+        </div>
+
+        <div class="col-code">
+            <div class="code-content" id="codeContainer"></div>
+        </div>
+    </div>
+
+    <div class="col-viz">
+        <div class="narrative" id="narrativeBox">Πατήστε εκτέλεση...</div>
+        
+        <div class="trace-container">
+            <table id="traceTable">
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">Αριθμός Εντολής</th>
+                        <th style="width: 25%;">Χ</th>
+                        <th style="width: 25%;">Χ > 1</th>
+                        <th style="width: 25%;">Χ mod 2 = 0</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // Κώδικας χωρίς περιττά κενά
+    const CODE_LINES = [
+        "Διάβασε Χ",
+        "Όσο Χ > 1 επανάλαβε",
+        "   Αν Χ mod 2 = 0 τότε",
+        "      Χ ← Χ div 2",
+        "   αλλιώς",
+        "      Χ ← 3 * Χ + 1",
+        "   Τέλος_αν",
+        "Τέλος_επανάληψης"
+    ];
+
+    let steps = [];
+    let stepIdx = 0;
+    let timer = null;
+    let isPlaying = false;
+    let isAnimating = false;
+    let speed = 1100;
+
+    function init() {
+        renderCode();
+        updateSpeed(); 
+        document.getElementById('narrativeBox').innerText = "Εισάγετε τιμή για το Χ και πατήστε εκτέλεση.";
+    }
+
+    function resetSim() {
+        isPlaying = false;
+        isAnimating = false;
+        clearTimeout(timer);
+        stepIdx = 0;
+        
+        document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        document.querySelector('#traceTable tbody').innerHTML = '';
+        
+        calcSteps();
+        
+        highlightLine(steps[0].line);
+        document.getElementById('narrativeBox').innerText = "Έτοιμο. Επόμενη εντολή: " + steps[0].msg;
+    }
+
+    function renderCode() {
+        const html = CODE_LINES.map((l, i) => 
+            `<div class="code-line" id="line-${i+1}">
+                <span class="line-num">${i+1}</span>
+                ${l.replace(/ /g, '&nbsp;')}
+             </div>`
+        ).join('');
+        document.getElementById('codeContainer').innerHTML = html;
+    }
+
+    function highlightLine(idx) {
+        document.querySelectorAll('.code-line').forEach(e => e.classList.remove('active'));
+        const el = document.getElementById(`line-${idx}`);
+        if(el) el.classList.add('active');
+    }
+
+    function calcSteps() {
+        steps = [];
+        let inputVal = parseInt(document.getElementById('inputX').value);
+        if (isNaN(inputVal)) inputVal = 5;
+        
+        let X = inputVal;
+
+        // 1. Read X
+        steps.push({ line: 1, type: 'exec', vals: [1, X, '', ''], msg: `Διάβασε Χ = ${X}` });
+
+        while (X > 1) {
+            // 2. Loop Check
+            let condLoop = (X > 1);
+            let txtLoop = condLoop ? 'Αληθής' : 'Ψευδής';
+            steps.push({ 
+                line: 2, type: 'exec', 
+                vals: [2, '', txtLoop, ''], 
+                msg: `Όσο ${X} > 1 (${txtLoop})` 
+            });
+
+            // 3. If Check
+            let condIf = (X % 2 === 0);
+            let txtIf = condIf ? 'Αληθής' : 'Ψευδής';
+            steps.push({ 
+                line: 3, type: 'exec', 
+                vals: [3, '', '', txtIf], 
+                msg: `Αν ${X} mod 2 = 0 (${txtIf})` 
+            });
+
+            if (condIf) {
+                // 4. X div 2
+                let oldX = X;
+                X = Math.floor(X / 2);
+                steps.push({ 
+                    line: 4, type: 'exec', 
+                    vals: [4, X, '', ''], 
+                    msg: `Χ ← ${oldX} div 2 = ${X}` 
+                });
+            } else {
+                // 5. Else (Highlight only)
+                steps.push({ line: 5, type: 'highlight', msg: "αλλιώς" });
+                
+                // 6. X * 3 + 1
+                let oldX = X;
+                X = 3 * X + 1;
+                steps.push({ 
+                    line: 6, type: 'exec', 
+                    vals: [6, X, '', ''], 
+                    msg: `Χ ← 3 * ${oldX} + 1 = ${X}` 
+                });
+            }
+            
+            // 8. End Loop (Highlight only)
+            steps.push({ line: 8, type: 'highlight', msg: "Τέλος_επανάληψης" });
+        }
+
+        // Loop End Check (False)
+        steps.push({ 
+            line: 2, type: 'exec', 
+            vals: [2, '', 'Ψευδής', ''], 
+            msg: `Όσο ${X} > 1 (Ψευδής)` 
+        });
+    }
+
+    function addRow(vals) {
+        const tbody = document.querySelector('#traceTable tbody');
+        const tr = document.createElement('tr');
+        tr.className = 'new-row';
+        
+        vals.forEach(val => {
+            const td = document.createElement('td');
+            if (val === 'Αληθής') {
+                td.innerHTML = '<span class="bool-true">Αληθής</span>';
+            } else if (val === 'Ψευδής') {
+                td.innerHTML = '<span class="bool-false">Ψευδής</span>';
+            } else {
+                td.innerText = val;
+            }
+            tr.appendChild(td);
+        });
+        
+        tbody.appendChild(tr);
+        const container = document.querySelector('.trace-container');
+        container.scrollTop = container.scrollHeight;
+    }
+
+    // --- Execution ---
+    function step() {
+        if (isAnimating) return;
+        
+        if (steps.length === 0) calcSteps();
+        
+        if (stepIdx >= steps.length) return; 
+
+        const s = steps[stepIdx];
+        
+        isAnimating = true;
+        toggleControls(false);
+
+        const onStepComplete = () => {
+            isAnimating = false;
+            toggleControls(true);
+            
+            stepIdx++;
+            
+            if (stepIdx < steps.length) {
+                highlightLine(steps[stepIdx].line);
+                document.getElementById('narrativeBox').innerText = "Επόμενη εντολή: " + steps[stepIdx].msg;
+                
+                if (isPlaying) {
+                    timer = setTimeout(step, speed * 0.5);
+                }
+            } else {
+                document.getElementById('narrativeBox').innerText = "Τέλος εκτέλεσης.";
+                document.getElementById('btnPlay').innerText = "▶️ Επανεκκίνηση";
+                isPlaying = false;
+                highlightLine(-1);
+            }
+        };
+
+        const delay = speed * 0.05; 
+
+        setTimeout(() => {
+            if (s.type === 'exec') {
+                addRow(s.vals);
+                setTimeout(onStepComplete, speed * 0.5);
+            }
+            else {
+                setTimeout(onStepComplete, speed * 0.3);
+            }
+        }, delay);
+    }
+
+    function toggleControls(enable) {
+        document.getElementById('btnStep').disabled = !enable;
+        document.getElementById('inputX').disabled = !enable;
+    }
+
+    function play() {
+        if (isAnimating) return;
+        if (!isPlaying) {
+            if (steps.length === 0) calcSteps();
+            
+            if (stepIdx >= steps.length) {
+                resetSim();
+                setTimeout(() => {
+                    isPlaying = true;
+                    document.getElementById('btnPlay').innerText = "⏸ Παύση";
+                    step();
+                }, 100);
+            } else {
+                isPlaying = true;
+                document.getElementById('btnPlay').innerText = "⏸ Παύση";
+                step();
+            }
+        } else {
+            isPlaying = false;
+            clearTimeout(timer);
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        }
+    }
+
+    function updateSpeed() {
+        var sliderVal = parseInt(document.getElementById('speedSlider').value);
+        speed = 2100 - sliderVal;
+    }
+
+    document.getElementById('inputX').addEventListener('change', function() {
+        resetSim();
+    });
+
+    init();
+
+</script>
+</body>
+</html>
