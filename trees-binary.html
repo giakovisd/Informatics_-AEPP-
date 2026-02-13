@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Δυαδικό Δένδρο (Final)</title>
+    <style>
+        :root {
+            /* UI Colors */
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            --border-color: #cbd5e1;
+            --disabled-btn: #94a3b8;
+            
+            --col-main: #15803d; /* Forest Green Theme */
+            
+            /* Tree Colors (Light Mode) */
+            --node-bg: #faeab1; 
+            --node-border: #15803d; 
+            --node-text: #000;
+            --edge-color: #15803d; 
+            
+            --anim-ball: #dc2626; /* Red ball */
+            --narrative-bg: #dcfce7;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --text-color: #f1f5f9;
+            --panel-bg: #1e293b;
+            --highlight-line: #ca8a04; /* Darker yellow/gold */
+            --border-color: #334155;
+            
+            /* Keep Tree Colors readable but slightly adjusted for contrast if needed */
+            --node-bg: #fde68a; /* Slightly brighter beige for contrast against dark */
+            --node-border: #22c55e; /* Brighter green border */
+            --edge-color: #22c55e;
+            
+            --narrative-bg: #064e3b;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            height: 70px; flex-shrink: 0; z-index: 100;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        button {
+            padding: 8px 14px; border: 1px solid var(--border-color); border-radius: 4px;
+            cursor: pointer; font-weight: 600; font-size: 0.9rem;
+            background-color: var(--panel-bg); color: var(--text-color);
+            transition: all 0.2s; white-space: nowrap;
+            display: flex; align-items: center; gap: 5px;
+        }
+        button.action-btn { background-color: #fff; border: 2px solid var(--col-main); color: var(--col-main); }
+        button.action-btn:hover { background-color: var(--col-main); color: white; }
+        button:disabled { background-color: var(--disabled-btn); border-color: var(--disabled-btn); color: #fff; cursor: not-allowed; }
+
+        .icon-btn { font-size: 1.1rem; padding: 6px 10px; }
+
+        .input-group {
+            display: flex; align-items: center; gap: 5px;
+            background: rgba(21, 128, 61, 0.1); padding: 5px 10px; border-radius: 6px; border: 1px solid var(--col-main);
+        }
+        .input-group input { width: 80px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; text-align:center;}
+
+        .slider-container { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin-left: 10px; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex; flex: 1; padding: 15px; gap: 15px;
+            height: calc(100% - 70px); box-sizing: border-box; overflow: hidden; 
+        }
+
+        /* LEFT: Logic Panel */
+        .col-code {
+            flex: 0 0 350px; display: flex; flex-direction: column;
+            background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            overflow: hidden; transition: all 0.3s ease;
+        }
+        .col-code.hidden { display: none; }
+
+        .tabs { display: flex; background: rgba(0,0,0,0.03); border-bottom: 1px solid var(--border-color); }
+        .tab {
+            flex: 1; text-align: center; padding: 12px; font-size: 0.9rem; cursor: pointer;
+            border-bottom: 3px solid transparent; color: var(--text-color); opacity: 0.7; font-weight: bold;
+        }
+        .tab.active { background: var(--panel-bg); border-bottom-color: var(--col-main); opacity: 1; color: var(--col-main); }
+
+        .code-content {
+            flex: 1; overflow-y: auto; padding: 20px;
+            font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 0.95rem; line-height: 1.6; 
+        }
+        .code-line { padding: 8px 10px; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid transparent; background: rgba(0,0,0,0.03); }
+        .code-line.active { background-color: var(--highlight-line); border-left-color: var(--col-main); font-weight: bold; color:#000; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        /* CENTER: Visualization */
+        .col-viz {
+            flex: 1; background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; padding: 15px; position: relative; overflow: hidden; 
+        }
+
+        .narrative {
+            padding: 10px; margin-bottom: 10px;
+            background: var(--narrative-bg); border-left: 4px solid var(--col-main);
+            font-size: 0.95rem; font-style: italic; min-height: 24px;
+            display: flex; align-items: center; flex-shrink: 0;
+            color: var(--text-color);
+        }
+
+        .vars-box {
+            position: absolute; top: 10px; right: 10px;
+            background: var(--panel-bg); border: 2px solid var(--border-color); border-radius: 6px;
+            padding: 8px; display: flex; flex-direction: column; gap: 2px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); width: 120px; z-index: 50;
+        }
+        .var-item {
+            display: flex; justify-content: space-between; align-items: center;
+            font-family: monospace; font-size: 0.9rem; border-bottom: 1px solid var(--border-color); padding-bottom: 2px;
+        }
+        .var-val { font-weight: bold; color: var(--col-main); }
+
+        .scene-wrapper {
+            flex: 1; position: relative; overflow: auto; background-color: rgba(0,0,0,0.02);
+            display: flex; justify-content: center; 
+        }
+        
+        .tree-area {
+            position: relative; width: 100%; height: 100%; min-width: 800px; min-height: 600px; 
+        }
+
+        /* NODES */
+        .node {
+            position: absolute; width: 46px; height: 46px;
+            border-radius: 50%; background: var(--node-bg);
+            border: 2px solid var(--node-border); color: var(--node-text);
+            display: flex; justify-content: center; align-items: center;
+            font-weight: bold; font-family: monospace; font-size: 1rem;
+            z-index: 10; transition: all 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+        .node.found { background: #86efac; border-color: #166534; transform: scale(1.1); color: #000; }
+        
+        /* SVG EDGES */
+        svg.edges-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none;
+        }
+        line { stroke: var(--edge-color); stroke-width: 2; }
+
+        /* Animation Ball */
+        .anim-ball {
+            position: absolute; width: 26px; height: 26px;
+            border-radius: 50%; background: var(--anim-ball); color: white;
+            display: flex; justify-content: center; align-items: center;
+            font-weight: bold; font-size: 0.8rem; z-index: 20;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            transition: top 0.5s linear, left 0.5s linear;
+        }
+
+        /* RIGHT: Output */
+        .col-output {
+            flex: 0 0 220px; background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .output-header { padding: 10px; background: rgba(0,0,0,0.03); font-weight: bold; border-bottom: 1px solid var(--border-color); }
+        .output-log { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 0.9rem; }
+        .log-item { border-bottom: 1px solid rgba(0,0,0,0.05); padding: 3px 0; }
+        .log-success { color: #15803d; font-weight: bold; }
+        .log-err { color: #dc2626; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Δυαδικό Δένδρο Αναζήτησης</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button onclick="resetTree()">🔄 Αρχή</button>
+        
+        <div class="input-group">
+            <input type="text" id="valInput" placeholder="Τιμή" maxlength="4">
+            <button class="action-btn" onclick="runOp('insert')">Εισαγωγή</button>
+            <button class="action-btn" onclick="runOp('search')">Αναζήτηση</button>
+        </div>
+
+        <button onclick="toggleCode()" id="btnCode">👁️ Λογική</button>
+
+        <div class="slider-container">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="500" max="3000" value="1500" id="speedSlider" oninput="updateSpeed()">
+        </div>
+
+        <div style="border-left:1px solid var(--border-color); height:30px; margin:0 5px;"></div>
+
+        <button class="icon-btn" onclick="toggleSpeech()" id="btnSpeech" title="Ήχος">🔊</button>
+        <button class="icon-btn" onclick="toggleTheme()" title="Θέμα">🌙</button>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-code hidden">
+        <div class="tabs">
+            <div class="tab active" onclick="setMode('insert')">Βήματα Εισαγωγής</div>
+            <div class="tab" onclick="setMode('search')">Βήματα Αναζήτησης</div>
+        </div>
+        <div class="code-content" id="codeContainer"></div>
+    </div>
+
+    <div class="col-viz">
+        <div class="narrative" id="narrativeBox">Εισάγετε αριθμό για εισαγωγή ή αναζήτηση...</div>
+        
+        <div class="vars-box">
+            <div class="var-item"><span>Κόμβοι:</span> <span class="var-val" id="nodeCount">0</span></div>
+        </div>
+
+        <div class="scene-wrapper" id="sceneWrapper">
+            <div class="tree-area" id="treeArea">
+                <svg class="edges-layer" id="edgesLayer">
+                    <defs>
+                        <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#15803d" class="arrow-fill"/>
+                        </marker>
+                    </defs>
+                </svg>
+                </div>
+        </div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">📺 Ιστορικό</div>
+        <div class="output-log" id="outputLog"></div>
+    </div>
+
+</div>
+
+<script>
+    // --- Data ---
+    class Node {
+        constructor(val) {
+            this.val = parseInt(val);
+            this.left = null;
+            this.right = null;
+            this.x = 0;
+            this.y = 0;
+            this.id = 'node-' + Math.random().toString(36).substr(2,9);
+        }
+    }
+
+    // --- State ---
+    let root = null;
+    let nodeCount = 0;
+    let isBusy = false;
+    let speed = 1500;
+    let currentMode = 'insert';
+    let speechEnabled = true;
+
+    // --- Helpers ---
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    function toggleCode() {
+        const p = document.querySelector('.col-code');
+        p.classList.toggle('hidden');
+        document.getElementById('btnCode').innerText = p.classList.contains('hidden') ? "👁️ Λογική" : "👁️ Απόκρυψη";
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle('dark-mode');
+        // Update arrow color based on theme
+        const arrow = document.querySelector('.arrow-fill');
+        if(document.body.classList.contains('dark-mode')) {
+            arrow.setAttribute('fill', '#22c55e');
+        } else {
+            arrow.setAttribute('fill', '#15803d');
+        }
+    }
+
+    function toggleSpeech() {
+        speechEnabled = !speechEnabled;
+        const btn = document.getElementById('btnSpeech');
+        if(speechEnabled) {
+            btn.innerText = '🔊';
+            narrate("Ο ήχος ενεργοποιήθηκε.");
+        } else {
+            btn.innerText = '🔇';
+            window.speechSynthesis.cancel();
+        }
+    }
+
+    function updateSpeed() {
+        speed = 3500 - document.getElementById('speedSlider').value;
+    }
+
+    function log(msg, type) {
+        const d = document.createElement('div');
+        d.className = 'log-item ' + (type === 'success' ? 'log-success' : (type==='err'?'log-err':''));
+        d.innerText = msg;
+        const c = document.getElementById('outputLog');
+        c.prepend(d);
+    }
+
+    function narrate(msg) {
+        const el = document.getElementById('narrativeBox');
+        el.innerText = msg;
+        
+        if (speechEnabled) {
+            window.speechSynthesis.cancel(); // Stop previous
+            const u = new SpeechSynthesisUtterance(msg);
+            u.lang = 'el-GR';
+            u.rate = 1.1; // Slightly faster for flow
+            window.speechSynthesis.speak(u);
+        }
+    }
+
+    function setMode(m) {
+        currentMode = m;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        if(m==='insert') document.querySelectorAll('.tab')[0].classList.add('active');
+        else document.querySelectorAll('.tab')[1].classList.add('active');
+        renderSteps(m);
+    }
+
+    // --- LOGIC STEPS ---
+    function renderSteps(op) {
+        const insertSteps = [
+            "1. Ξεκινάμε από τη Ρίζα του Δένδρου.",
+            "2. Έλεγχος: Είναι το δένδρο κενό; Αν ναι, βάλε τον κόμβο εδώ.",
+            "3. Σύγκριση: Είναι η νέα τιμή ΜΙΚΡΟΤΕΡΗ;",
+            "   -> Αν ΝΑΙ: Πήγαινε στο Αριστερό Υπόδεντρο.",
+            "4. Σύγκριση: Είναι η νέα τιμή ΜΕΓΑΛΥΤΕΡΗ;",
+            "   -> Αν ΝΑΙ: Πήγαινε στο Δεξί Υπόδεντρο.",
+            "5. Βρέθηκε κενή θέση; Τοποθέτησε τον κόμβο!"
+        ];
+
+        const searchSteps = [
+            "1. Ξεκινάμε από τη Ρίζα του Δένδρου.",
+            "2. Είναι η τιμή ΙΣΗ με τον κόμβο; -> ΒΡΕΘΗΚΕ!",
+            "3. Είναι η τιμή ΜΙΚΡΟΤΕΡΗ; -> Ψάξε στο Αριστερό Υπόδεντρο.",
+            "4. Είναι η τιμή ΜΕΓΑΛΥΤΕΡΗ; -> Ψάξε στο Δεξί Υπόδεντρο.",
+            "5. Αν φτάσουμε σε κενό και δεν βρέθηκε -> ΔΕΝ ΥΠΑΡΧΕΙ."
+        ];
+        
+        const lines = (op==='insert') ? insertSteps : searchSteps;
+        document.getElementById('codeContainer').innerHTML = lines.map((l,i) => 
+            `<div class="code-line" id="line-${i}">${l}</div>`
+        ).join('');
+    }
+
+    function highlightLine(idx) {
+        document.querySelectorAll('.code-line').forEach(l => l.classList.remove('active'));
+        if(idx >= 0) {
+            const el = document.getElementById(`line-${idx}`);
+            if(el) el.classList.add('active');
+        }
+    }
+
+    // --- Visualization ---
+    function updatePositions(node, x, y, level) {
+        if(!node) return;
+        node.x = x;
+        node.y = y;
+        
+        const offset = 120 / Math.pow(2, level);
+        const verticalGap = 85; 
+        
+        updatePositions(node.left, x - offset, y + verticalGap, level+1);
+        updatePositions(node.right, x + offset, y + verticalGap, level+1);
+    }
+
+    function renderTree() {
+        const area = document.getElementById('treeArea');
+        const svg = document.getElementById('edgesLayer');
+        
+        document.querySelectorAll('.node').forEach(n => n.remove());
+        const defs = svg.querySelector('defs');
+        svg.innerHTML = ''; svg.appendChild(defs);
+
+        if(!root) return;
+
+        const startX = area.offsetWidth / 2;
+        updatePositions(root, startX, 50, 0);
+        drawNode(root, area, svg);
+    }
+
+    function drawNode(node, container, svg) {
+        if(!node) return;
+
+        const el = document.createElement('div');
+        el.className = 'node';
+        el.id = node.id;
+        el.innerText = node.val;
+        el.style.left = (node.x - 23) + 'px';
+        el.style.top = (node.y - 23) + 'px';
+        container.appendChild(el);
+
+        if(node.left) {
+            drawLine(svg, node.x, node.y, node.left.x, node.left.y);
+            drawNode(node.left, container, svg);
+        }
+        if(node.right) {
+            drawLine(svg, node.x, node.y, node.right.x, node.right.y);
+            drawNode(node.right, container, svg);
+        }
+    }
+
+    function drawLine(svg, x1, y1, x2, y2) {
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        const r = 23; 
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1 + r);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2 - r - 3);
+        line.setAttribute('marker-end', 'url(#arrow)');
+        svg.appendChild(line);
+    }
+
+    // --- Animation Helpers ---
+    function createBall(val) {
+        const b = document.createElement('div');
+        b.className = 'anim-ball';
+        b.innerText = val;
+        const area = document.getElementById('treeArea');
+        const startX = area.offsetWidth / 2;
+        b.style.left = (startX - 13) + 'px';
+        b.style.top = '-30px';
+        area.appendChild(b);
+        return b;
+    }
+
+    async function moveBall(ball, node) {
+        ball.style.left = (node.x - 13) + 'px';
+        ball.style.top = (node.y - 45) + 'px'; 
+        await sleep(speed);
+    }
+
+    // --- Logic Execution ---
+    async function runOp(op) {
+        if(isBusy) return;
+        const inp = document.getElementById('valInput');
+        const val = parseInt(inp.value);
+        if(isNaN(val)) return;
+        inp.value = '';
+
+        setMode(op);
+        isBusy = true;
+        
+        if(op === 'insert') await execInsert(val);
+        else await execSearch(val);
+
+        isBusy = false;
+        highlightLine(-1); 
+    }
+
+    async function execInsert(val) {
+        highlightLine(0);
+        log(`Εισαγωγή: ${val}`);
+        narrate(`Εισαγωγή του ${val}...`);
+        await sleep(speed*0.5);
+
+        if(!root) {
+            highlightLine(1);
+            narrate("Το δένδρο είναι κενό. Δημιουργία Ρίζας.");
+            await sleep(speed*0.5);
+            
+            root = new Node(val);
+            nodeCount++;
+            document.getElementById('nodeCount').innerText = nodeCount;
+            renderTree();
+            log("Ρίζα δημιουργήθηκε", 'success');
+            await sleep(speed);
+        } else {
+            const ball = createBall(val);
+            let curr = root;
+            await moveBall(ball, curr);
+
+            while(true) {
+                document.getElementById(curr.id).style.borderColor = '#dc2626'; 
+                
+                if(val === curr.val) {
+                    narrate(`Η τιμή ${val} υπάρχει ήδη.`);
+                    log("Υπάρχει ήδη", 'err');
+                    ball.remove();
+                    document.getElementById(curr.id).style.borderColor = '';
+                    return;
+                }
+
+                if(val < curr.val) {
+                    highlightLine(2); 
+                    narrate(`${val} μικρότερο του ${curr.val}. Πάμε Αριστερά.`);
+                    await sleep(speed*0.8);
+                    
+                    highlightLine(3); 
+                    document.getElementById(curr.id).style.borderColor = '';
+                    
+                    if(!curr.left) {
+                        highlightLine(6); 
+                        narrate("Βρέθηκε κενή θέση αριστερά.");
+                        curr.left = new Node(val);
+                        nodeCount++;
+                        document.getElementById('nodeCount').innerText = nodeCount;
+                        renderTree(); 
+                        ball.remove();
+                        log(`Τοποθετήθηκε αριστερά του ${curr.val}`, 'success');
+                        break;
+                    }
+                    curr = curr.left;
+                    await moveBall(ball, curr);
+                } else {
+                    highlightLine(4); 
+                    narrate(`${val} μεγαλύτερο του ${curr.val}. Πάμε Δεξιά.`);
+                    await sleep(speed*0.8);
+                    
+                    highlightLine(5); 
+                    document.getElementById(curr.id).style.borderColor = '';
+
+                    if(!curr.right) {
+                        highlightLine(6); 
+                        narrate("Βρέθηκε κενή θέση δεξιά.");
+                        curr.right = new Node(val);
+                        nodeCount++;
+                        document.getElementById('nodeCount').innerText = nodeCount;
+                        renderTree();
+                        ball.remove();
+                        log(`Τοποθετήθηκε δεξιά του ${curr.val}`, 'success');
+                        break;
+                    }
+                    curr = curr.right;
+                    await moveBall(ball, curr);
+                }
+            }
+        }
+    }
+
+    async function execSearch(val) {
+        document.querySelectorAll('.node').forEach(n => {
+            n.classList.remove('found');
+            // reset border logic handled in CSS/render
+            n.style.borderColor = ''; 
+        });
+
+        highlightLine(0);
+        log(`Αναζήτηση: ${val}`);
+        narrate(`Ψάχνω το ${val}...`);
+        await sleep(speed*0.5);
+
+        if(!root) {
+            highlightLine(4); 
+            narrate("Το δένδρο είναι κενό.");
+            log("Κενό δένδρο", 'err');
+            return;
+        }
+
+        const ball = createBall("?");
+        ball.style.backgroundColor = "#f97316";
+        let curr = root;
+        await moveBall(ball, curr);
+
+        while(curr) {
+            document.getElementById(curr.id).style.borderColor = '#f97316';
+
+            if(val === curr.val) {
+                highlightLine(1); 
+                narrate(`Βρέθηκε! ${val} ίσον ${curr.val}`);
+                document.getElementById(curr.id).classList.add('found');
+                log("Βρέθηκε", 'success');
+                ball.remove();
+                return;
+            } else if(val < curr.val) {
+                highlightLine(2); 
+                narrate(`${val} μικρότερο του ${curr.val}. Πάμε Αριστερά.`);
+                await sleep(speed);
+                document.getElementById(curr.id).style.borderColor = '';
+                curr = curr.left;
+            } else {
+                highlightLine(3); 
+                narrate(`${val} μεγαλύτερο του ${curr.val}. Πάμε Δεξιά.`);
+                await sleep(speed);
+                document.getElementById(curr.id).style.borderColor = '';
+                curr = curr.right;
+            }
+
+            if(curr) await moveBall(ball, curr);
+        }
+
+        highlightLine(4); 
+        narrate("Δεν βρέθηκε (φτάσαμε σε κενό).");
+        log("Δεν βρέθηκε", 'err');
+        ball.remove();
+    }
+
+    function resetTree() {
+        if(isBusy) return;
+        root = null;
+        nodeCount = 0;
+        document.getElementById('nodeCount').innerText = 0;
+        renderTree();
+        log("Εκκαθάριση");
+        narrate("Το δένδρο άδειασε.");
+    }
+
+    window.onload = () => {
+        setMode('insert');
+        updateSpeed();
+        window.addEventListener('resize', renderTree);
+    };
+
+</script>
+</body>
+</html>
