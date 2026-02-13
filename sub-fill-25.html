@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Συμπλήρωση Κώδικα</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --panel-bg: #ffffff;
+            --text-color: #1e293b;
+            --border-color: #cbd5e1;
+            
+            --col-main: #2563eb; 
+            --col-var: #0f172a; 
+            --col-num: #d97706;  
+            --col-comment: #10b981;
+            
+            --input-bg: #f1f5f9;
+            --input-border: #94a3b8;
+            --input-text: #000;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-color: #f1f5f9;
+            --border-color: #334155;
+            --col-main: #60a5fa;
+            --col-var: #e2e8f0;
+            --col-num: #fbbf24;
+           
+--input-bg: #334155;      /* Σκούρο μπλε-γκρι φόντο για το κουτί */
+    --input-text: #ffffff;    /* Άσπρα γράμματα */
+    --input-border: #64748b;  /* Πιο απαλό περίγραμμα */
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        /* HEADER */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            height: 60px; flex-shrink: 0;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
+        .controls-area { display: flex; gap: 8px; align-items: center; }
+
+        button {
+            padding: 6px 14px; border: 1px solid var(--border-color); border-radius: 6px;
+            cursor: pointer; font-weight: 600; font-size: 0.9rem;
+            background-color: var(--panel-bg); color: var(--text-color);
+            transition: all 0.2s; display: flex; align-items: center; gap: 5px;
+        }
+        button:hover { background-color: #f1f5f9; transform: translateY(-1px); }
+        
+        .btn-check { background-color: #10b981; color: white; border-color: #059669; }
+        .btn-check:hover { background-color: #059669; }
+        
+        .btn-solve { background-color: #ef4444; color: white; border-color: #dc2626; }
+        .btn-solve:hover { background-color: #dc2626; }
+
+        /* MAIN LAYOUT */
+        .main-container {
+            display: flex; flex: 1; height: calc(100% - 60px); overflow: hidden; 
+        }
+
+        /* LEFT: Description (Exact Text) */
+        .col-info {
+            flex: 0 0 400px; display: flex; flex-direction: column;
+            background: var(--panel-bg); border-right: 1px solid var(--border-color);
+            overflow-y: auto; padding: 25px; font-size: 0.95rem; line-height: 1.5;
+        }
+
+        .matrix-table {
+            border-collapse: collapse; margin: 20px auto; font-family: monospace; font-size: 1.1rem;
+            background: var(--panel-bg);
+        }
+        .matrix-table td {
+            border: 1px solid var(--text-color); padding: 5px 12px; text-align: center;
+        }
+
+        /* RIGHT: Code Editor */
+        .col-code {
+            flex: 1; display: flex; flex-direction: column;
+            background: var(--bg-color); 
+            overflow: hidden; padding: 20px; position: relative;
+        }
+
+        .code-paper {
+            background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            padding: 30px; overflow-y: auto; height: 100%; width: 100%; max-width: 900px; margin: 0 auto;
+            font-family: 'Consolas', 'Monaco', monospace; 
+            font-size: 1rem; /* Standard code size */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        /* Code Lines & Syntax */
+        .line { 
+            margin-bottom: 4px; line-height: 1.6; white-space: pre-wrap; 
+        }
+        
+        .indent-1 { padding-left: 30px; border-left: 1px solid rgba(0,0,0,0.05); }
+        .indent-2 { padding-left: 60px; border-left: 1px solid rgba(0,0,0,0.05); }
+        .indent-3 { padding-left: 90px; border-left: 1px solid rgba(0,0,0,0.05); }
+        .indent-4 { padding-left: 120px; border-left: 1px solid rgba(0,0,0,0.05); }
+        .indent-5 { padding-left: 150px; border-left: 1px solid rgba(0,0,0,0.05); }
+
+        .kw { color: var(--col-main); font-weight: bold; } 
+        .var { color: var(--col-var); }   
+        .num { color: var(--col-num); font-weight: bold; } 
+        .op { color: var(--text-color); } 
+
+        /* Inputs */
+        .fill-input {
+            background: var(--input-bg); border: 1px solid var(--input-border);
+            color: var(--input-text); padding: 3px 8px; border-radius: 4px;
+            font-family: inherit; font-size: 0.95rem; font-weight: bold;
+            width: 100px; text-align: center; margin: 0 5px;
+            display: inline-block;
+        }
+        .fill-input:focus { outline: 2px solid var(--col-main); background: #fff; }
+        
+        .fill-input.correct { border-color: #10b981; background-color: #dcfce7; color: #166534; }
+        .fill-input.wrong { border-color: #ef4444; background-color: #fee2e2; color: #991b1b; }
+
+        /* Width adjustments */
+        #in1 { width: 140px; }
+        #in3 { width: 60px; }
+        #in4 { width: 100px; }
+        #in5 { width: 60px; }
+
+        .narrative {
+            padding: 12px; border-radius: 6px; font-weight: 500;
+            text-align: center; margin-top: 20px; font-size: 0.95rem;
+            border: 1px solid var(--border-color); background: #f1f5f9; display: none;
+        }
+        .narrative.success { background: #dcfce7; color: #166534; border-color: #bbf7d0; display: block; }
+        .narrative.error { background: #fee2e2; color: #991b1b; border-color: #fecaca; display: block; }
+/* Πρόσθεσε αυτό στο τέλος του style για να διορθωθεί το Night Mode */
+input.fill-input {
+    background-color: var(--input-bg) !important;
+    color: var(--input-text) !important;
+    border-color: var(--input-border) !important;
+}
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>🧩 Άσκηση: Πίνακες & Συναρτήσεις</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button onclick="resetApp()">🔄 Επαναφορά</button>
+        <button class="btn-check" onclick="checkAnswers()">✅ Έλεγχος</button>
+        <button class="btn-solve" onclick="showSolution()">💡 Λύση</button>
+        <div style="border-left:1px solid var(--border-color); height:20px; margin:0 5px;"></div>
+        <button onclick="toggleTheme()">🌙</button>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-info">
+        <p>Η συνάρτηση <b>CHECK</b> ελέγχει αν ένας τετραγωνικός πίνακας ακεραίων 5x5 έχει την παρακάτω μορφή:</p>
+        
+        <table class="matrix-table">
+            <tr><td>1</td><td>0</td><td>0</td><td>0</td><td>1</td></tr>
+            <tr><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td></tr>
+            <tr><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td></tr>
+            <tr><td>1</td><td>0</td><td>0</td><td>0</td><td>1</td></tr>
+        </table>
+
+        <p>Δίνεται ο κώδικας της συνάρτησης με 7 κενά.</p>
+        <p>Να γράψετε στα κενά (1) έως (7) ό,τι πρέπει να συμπληρωθεί, έτσι ώστε η συνάρτηση να επιτελεί τη λειτουργία που περιγράφηκε.</p>
+        
+        <div id="feedbackBox" class="narrative"></div>
+    </div>
+
+    <div class="col-code">
+        <div class="code-paper">
+            <div class="line"><span class="kw">ΣΥΝΑΡΤΗΣΗ</span> <span class="var">CHECK</span>(<span class="var">A</span>) : <input type="text" id="in1" class="fill-input" placeholder="(1)"></div>
+            <div class="line"><span class="kw">ΜΕΤΑΒΛΗΤΕΣ</span></div>
+            <div class="line indent-1"><span class="kw">ΑΚΕΡΑΙΕΣ</span> : <span class="var">i</span>, <span class="var">j</span>, <span class="var">A</span>[<span class="num">5</span>,<span class="num">5</span>]</div>
+            <div class="line indent-1"><span class="kw">ΛΟΓΙΚΕΣ</span> : <span class="var">f</span></div>
+            <div class="line"><span class="kw">ΑΡΧΗ</span></div>
+            
+            <div class="line indent-1"><span class="var">f</span> <span class="op">←</span> <input type="text" id="in2" class="fill-input" placeholder="(2)"></div>
+            
+            <div class="line indent-1"><span class="kw">ΓΙΑ</span> <span class="var">i</span> <span class="kw">ΑΠΟ</span> <span class="num">1</span> <span class="kw">ΜΕΧΡΙ</span> <span class="num">5</span></div>
+            <div class="line indent-2"><span class="kw">ΓΙΑ</span> <span class="var">j</span> <span class="kw">ΑΠΟ</span> <span class="num">1</span> <span class="kw">ΜΕΧΡΙ</span> <span class="num">5</span></div>
+            
+            <div class="line indent-3"><span class="kw">ΑΝ</span> <span class="var">i</span> <span class="op">=</span> <input type="text" id="in3" class="fill-input" placeholder="(3)"> <span class="kw">Ή</span> <input type="text" id="in4" class="fill-input" placeholder="(4)"> <span class="op">=</span> <span class="num">6</span> <span class="kw">ΤΟΤΕ</span></div>
+            
+            <div class="line indent-4"><span class="kw">ΑΝ</span> <span class="var">A</span>[<span class="var">i</span>,<span class="var">j</span>] <span class="op">&lt;&gt;</span> <span class="num">1</span> <span class="kw">ΤΟΤΕ</span></div>
+            <div class="line indent-5"><span class="var">f</span> <span class="op">←</span> <span class="kw">ΨΕΥΔΗΣ</span></div>
+            <div class="line indent-4"><span class="kw">ΤΕΛΟΣ_ΑΝ</span></div>
+            
+            <div class="line indent-3"><span class="kw">ΑΛΛΙΩΣ</span></div>
+            
+            <div class="line indent-4"><span class="kw">ΑΝ</span> <span class="var">A</span>[<span class="var">i</span>,<span class="var">j</span>] <span class="op">&lt;&gt;</span> <input type="text" id="in5" class="fill-input" placeholder="(5)"> <span class="kw">ΤΟΤΕ</span></div>
+            <div class="line indent-5"><span class="var">f</span> <span class="op">←</span> <input type="text" id="in6" class="fill-input" placeholder="(6)"></div>
+            <div class="line indent-4"><span class="kw">ΤΕΛΟΣ_ΑΝ</span></div>
+            
+            <div class="line indent-3"><span class="kw">ΤΕΛΟΣ_ΑΝ</span></div>
+            <div class="line indent-2"><span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span></div>
+            <div class="line indent-1"><span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span></div>
+            
+            <div class="line indent-1"><span class="var">CHECK</span> <span class="op">←</span> <input type="text" id="in7" class="fill-input" placeholder="(7)"></div>
+            <div class="line"><span class="kw">ΤΕΛΟΣ_ΣΥΝΑΡΤΗΣΗΣ</span></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // Logic
+    const solutions = {
+        1: ["λογικη", "λογική"],
+        2: ["αληθης", "αληθής", "true"],
+        3: ["j"],
+        4: ["i+j", "j+i"],
+        5: ["0"],
+        6: ["ψευδης", "ψευδής", "false"],
+        7: ["f"]
+    };
+
+    const displaySolutions = {
+        1: "ΛΟΓΙΚΗ",
+        2: "ΑΛΗΘΗΣ",
+        3: "j",
+        4: "i + j",
+        5: "0",
+        6: "ΨΕΥΔΗΣ",
+        7: "f"
+    };
+
+    function checkAnswers() {
+        let correctCount = 0;
+        let total = 7;
+        let feedback = document.getElementById('feedbackBox');
+
+        for (let i = 1; i <= total; i++) {
+            let input = document.getElementById(`in${i}`);
+            let val = normalize(input.value);
+            let isValid = false;
+
+            for (let sol of solutions[i]) {
+                if (val === normalize(sol)) {
+                    isValid = true;
+                    break;
+                }
+            }
+
+            input.classList.remove('correct', 'wrong');
+            if (isValid) {
+                input.classList.add('correct');
+                correctCount++;
+            } else {
+                input.classList.add('wrong');
+            }
+        }
+
+        if (correctCount === total) {
+            feedback.innerHTML = "🎉 <b>Άριστα!</b> Η συμπλήρωση είναι σωστή.";
+            feedback.className = "narrative success";
+        } else {
+            feedback.innerHTML = `⚠️ Βρέθηκαν <b>${total - correctCount}</b> λάθη.`;
+            feedback.className = "narrative error";
+        }
+    }
+
+    function showSolution() {
+        for (let i = 1; i <= 7; i++) {
+            let input = document.getElementById(`in${i}`);
+            input.value = displaySolutions[i];
+            input.classList.remove('wrong');
+            input.classList.add('correct');
+        }
+        let feedback = document.getElementById('feedbackBox');
+        feedback.innerHTML = "💡 Λύση: Εμφανίστηκαν οι σωστές απαντήσεις.";
+        feedback.className = "narrative success";
+    }
+
+    function normalize(str) {
+        // Remove spaces and lowercase
+        return str.toLowerCase().replace(/\s+/g, '');
+    }
+
+    function resetApp() {
+        for (let i = 1; i <= 7; i++) {
+            let input = document.getElementById(`in${i}`);
+            input.value = "";
+            input.classList.remove('correct', 'wrong');
+        }
+        let feedback = document.getElementById('feedbackBox');
+        feedback.style.display = 'none';
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle('dark-mode');
+    }
+
+</script>
+</body>
+</html>
