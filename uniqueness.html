@@ -686,7 +686,7 @@
         isAnimating = false;
     }
 
-    async function swapAnimate(idx1, idx2) {
+   async function swapAnimate(idx1, idx2) {
         isAnimating = true;
         const w1 = document.getElementById(`wrap-ON-${idx1}`);
         const w2 = document.getElementById(`wrap-ON-${idx2}`);
@@ -712,11 +712,15 @@
             c2.innerText = temp;
         }
 
-        setTimeout(() => {
-            if(w1) w1.style.transition = 'transform 0.3s';
-            if(w2) w2.style.transition = 'transform 0.3s';
-            isAnimating = false;
-        }, 50);
+        // --- Η ΔΙΟΡΘΩΣΗ ΕΙΝΑΙ ΕΔΩ ---
+        // Αντί για απλό setTimeout, χρησιμοποιούμε await Promise
+        // ώστε η συνάρτηση να ΜΗΝ τελειώσει πριν γίνει το reset.
+        await new Promise(r => setTimeout(r, 50));
+
+        if(w1) w1.style.transition = 'transform 0.3s';
+        if(w2) w2.style.transition = 'transform 0.3s';
+        
+        isAnimating = false; // Τώρα αυτό γίνεται σίγουρα πριν προχωρήσει το επόμενο βήμα
     }
 
     // --- Execution ---
