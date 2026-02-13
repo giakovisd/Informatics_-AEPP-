@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Εργαστήριο Γράφων</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            
+            --col-main: #4f46e5; 
+            --col-node-fill: #ffffff;
+            --col-edge: #64748b;
+            --col-visited: #10b981; /* Green */
+            --col-current: #f59e0b; /* Orange */
+            --col-solution: #ef4444; /* Red */
+            
+            --border-color: #cbd5e1;
+            --disabled-btn: #94a3b8;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --text-color: #f1f5f9;
+            --panel-bg: #1e293b;
+            --col-node-fill: #334155;
+            --col-edge: #94a3b8;
+            --border-color: #334155;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
+            user-select: none;
+        }
+
+        /* HEADER */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            height: 70px; flex-shrink: 0; z-index: 100;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; }
+        .controls-area { display: flex; gap: 8px; align-items: center; }
+
+        button {
+            padding: 8px 14px; border: 1px solid var(--border-color); border-radius: 6px;
+            cursor: pointer; font-weight: 600; font-size: 0.9rem;
+            background-color: var(--panel-bg); color: var(--text-color);
+            transition: all 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 5px;
+        }
+        button:hover:not(:disabled) { background-color: #f1f5f9; transform: translateY(-1px); }
+        
+        .mode-btn {
+            width: 100%; text-align: left; padding: 15px; border: none; border-bottom: 1px solid var(--border-color);
+            background: transparent; font-weight: bold; color: var(--text-color); cursor: pointer;
+            transition: 0.2s; display: flex; align-items: center; gap: 10px; font-size: 0.95rem;
+        }
+        .mode-btn:hover { background: rgba(0,0,0,0.03); }
+        .mode-btn.active { background: rgba(79, 70, 229, 0.1); color: var(--col-main); border-left: 5px solid var(--col-main); }
+
+        .canvas-actions button.active-tool { background-color: var(--col-main); color: white; border-color: var(--col-main); }
+        
+        .draw-tools { display: flex; gap: 5px; }
+        .game-tools { display: none; gap: 5px; }
+
+        /* Buttons */
+        .btn-restart { background-color: #3b82f6 !important; color: white !important; border-color: #2563eb !important; }
+        .btn-solve { background-color: #ef4444 !important; color: white !important; border-color: #dc2626 !important; }
+        .btn-challenge { background-color: #8b5cf6 !important; color: white !important; border-color: #7c3aed !important; }
+        .btn-next { background-color: #a855f7 !important; color: white !important; border-color: #9333ea !important; }
+        
+        .play-btn { background-color: #10b981 !important; color: white !important; border-color: #059669 !important; font-size: 1rem !important; padding: 6px 16px !important;}
+        .edit-btn { background-color: #f59e0b !important; color: white !important; border-color: #d97706 !important; }
+
+        .input-group { display: flex; align-items: center; gap: 5px; background: #f0fdf4; padding: 5px 10px; border-radius: 6px; border: 1px solid #bbf7d0; }
+
+        /* MAIN LAYOUT */
+        .main-container { display: flex; flex: 1; padding: 15px; gap: 15px; height: calc(100% - 70px); box-sizing: border-box; overflow: hidden; }
+
+        .col-info {
+            flex: 0 0 350px; display: flex; flex-direction: column;
+            background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+        
+        .mode-tabs { display: flex; flex-direction: column; background: rgba(0,0,0,0.02); }
+        .info-content { flex: 1; padding: 20px; overflow-y: auto; font-size: 0.95rem; line-height: 1.6; }
+        
+        .stat-box {
+            background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 15px; 
+            margin-top: 15px; text-align: center;
+        }
+        body.dark-mode .stat-box { background: #1e3a8a; border-color: #1d4ed8; }
+        
+        .stat-val { font-size: 1.8rem; font-weight: bold; color: var(--col-main); display: block; }
+        .stat-label { font-size: 0.8rem; text-transform: uppercase; color: #64748b; font-weight:bold; }
+
+        .col-viz { flex: 1; display: flex; flex-direction: column; gap: 10px; position: relative; }
+
+        .canvas-container {
+            flex: 1; background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            position: relative; overflow: hidden; cursor: crosshair;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.02);
+        }
+        canvas { display: block; width: 100%; height: 100%; }
+
+        .narrative {
+            padding: 15px; background: #fffbeb; border-left: 5px solid #f59e0b;
+            border-radius: 4px; font-size: 1rem; font-weight: 500; min-height: 60px; 
+            display: flex; align-items: center; color: #451a03;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        body.dark-mode .narrative { background: #451a03; color: #fffbeb; }
+
+        .canvas-actions {
+            position: absolute; top: 10px; right: 10px; display: flex; gap: 5px;
+            padding: 8px; background: rgba(255,255,255,0.95); border-radius: 8px; border: 1px solid #ccc;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .canvas-actions button { font-size: 0.85rem; padding: 6px 12px; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Εργαστήριο Γράφων</h1>
+    </div>
+    <div class="controls-area">
+        <button onclick="resetCurrentMode()">🔄 Αρχή</button>
+        <button onclick="toggleSpeech()" id="btnSpeech">🔇</button>
+        <button onclick="toggleTheme()">🌙 Θέμα</button>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-info">
+        <div class="mode-tabs">
+            <button class="mode-btn active" onclick="switchApp('EULER_DRAW')">
+                <span>✏️</span> 1. Σχεδίαση & Euler
+            </button>
+            <button class="mode-btn" onclick="switchApp('KONIGSBERG')">
+                <span>🌉</span> 2. Γέφυρες Königsberg
+            </button>
+            <button class="mode-btn" onclick="switchApp('POSTMAN')">
+                <span>📮</span> 3. Πρόβλημα Ταχυδρόμου
+            </button>
+        </div>
+
+        <div class="info-content" id="infoText"></div>
+    </div>
+
+    <div class="col-viz">
+        <div class="narrative" id="narrativeBox">Καλώς ήρθατε.</div>
+        
+        <div class="canvas-container" id="canvasWrapper">
+            
+            <div class="canvas-actions" id="overlayControls">
+                
+                <div id="drawTools" class="draw-tools">
+                    <button onclick="setDrawMode('NODE')" id="btnToolNode" class="active-tool">Κόμβος</button>
+                    <button onclick="setDrawMode('EDGE')" id="btnToolEdge">Ακμή</button>
+                    <button onclick="toggleDirected()" id="btnToolDir">↔️ Μη Κατευθ.</button>
+                    <div style="width:1px; background:#ccc; margin:0 5px;"></div>
+                    <button id="btnChallenge" class="btn-challenge" onclick="loadRandomChallenge()">🎲 Άσκηση</button>
+                </div>
+
+                <div id="gameTools" class="game-tools">
+                    <button onclick="restartGame()" class="btn-restart">🔄 Ξανά</button>
+                    <button onclick="loadRandomChallenge()" class="btn-next" id="btnNextEx" style="display:none;">🎲 Επόμενη Άσκηση</button>
+                    <button onclick="solveEuler()" class="btn-solve">💡 Λύση</button>
+                </div>
+
+                <div style="width:1px; background:#ccc; margin:0 5px;"></div>
+                <button id="btnPlayToggle" class="play-btn" onclick="toggleEulerPlay()">▶️ ΠΑΙΞΕ</button>
+            </div>
+
+            <canvas id="graphCanvas"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- State ---
+    let currentApp = 'EULER_DRAW'; 
+    let nodes = []; 
+    let edges = []; 
+    let nextLabelCode = 65; 
+    let drawTool = 'NODE';
+    let isDragging = false;
+    let dragStartNode = null;
+    let mouseX = 0, mouseY = 0;
+    let isDirected = false;
+    let speechEnabled = false;
+    let currentNode = null;
+    let totalDistance = 0;
+    let pathHistory = [];
+    let isGameActive = false;
+    let isSolving = false;
+    
+    // Logic for Random Challenges
+    let availableChallenges = [];
+    let totalChallenges = 25;
+
+    const canvas = document.getElementById('graphCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // --- Texts ---
+    const TEXTS = {
+        EULER_DRAW: `
+            <h3>1. Γράφοι & Μονοπάτια Euler</h3>
+            <p><b>Λειτουργία Σχεδίασης:</b> Φτιάξτε γράφο ή πατήστε <b>"🎲 Άσκηση"</b> για να φορτώσετε έναν από τους 22 γρίφους.</p>
+            <p><b>Λειτουργία Παιχνιδιού:</b> Πατήστε <b>"▶️ ΠΑΙΞΕ"</b>. Μετά κάντε κλικ σε έναν κόμβο για να ξεκινήσετε.</p>
+            <p><b>Στόχος:</b> Περάστε από όλες τις γραμμές <u>ακριβώς μία φορά</u> (θα γίνουν πράσινες). Κάθε φορά που φτάνω σε έναν κόμβο από μια ακμή, πρέπει να φύγω από μια άλλη· άρα οι ακμές σε κάθε κόμβο πρέπει να έρχονται σε ζευγάρια (άρτιες ακμές) ή το πολύ δύο να είναι περιττοί αν δεν θέλω να επιστρέψω στο αρχικό σημείο</p>
+        `,
+        KONIGSBERG: `
+            <h3>2. Οι Γέφυρες του Königsberg</h3>
+            <p>Το κλασικό πρόβλημα του Euler. Προσπαθήστε να διασχίσετε και τις 7 γέφυρες ακριβώς μία φορά (το θαλασσί χρώμα εκφράζει το νερό του ποταμού Πρέγκελ (σημερινή Ρωσία)) </p>
+            <p>Πατήστε <b>"💡 Λύση"</b> για να δείτε τη λύση, ή γιατί δεν υπάρχει λύση.</p>
+        `,
+        POSTMAN: `
+            <h3>3. Το Πρόβλημα του Ταχυδρόμου</h3>
+            <p>Ξεκινήστε από το <b>Χωριό 1</b>, μοιράστε γράμματα στα 2, 3, 4 και επιστρέψτε στο 1.</p>
+            <div class="stat-box"><span class="stat-label">Απόσταση</span><span class="stat-val" id="distVal">0 km</span></div>
+            <p>Στόχος:<br><b> Βέλτιστη 30km</b>, βρίσκω όλες τις δυνατές διαδρομές, υπολογίζω το συνολικό μήκος για καθεμία (με επιστροφή στο 1) και κρατάω αυτή με τη μικρότερη απόσταση.<br><br> <b>Άπληστη μέθοδος 36km</b>, ξεκινώ από το χωριό 1 και κάθε φορά πάω στο πιο κοντινό χωριό που δεν έχω επισκεφθεί ακόμη, μέχρι να τα περάσω όλα και να επιστρέψω στο 1.</p>
+        `
+    };
+
+    // --- Core Functions ---
+    function init() {
+        resetChallengePool();
+        resizeCanvas();
+        switchApp('EULER_DRAW');
+        window.addEventListener('resize', resizeCanvas);
+    }
+
+    function switchApp(app) {
+        currentApp = app;
+        isGameActive = false;
+        
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        if(app==='EULER_DRAW') document.querySelectorAll('.mode-btn')[0].classList.add('active');
+        if(app==='KONIGSBERG') document.querySelectorAll('.mode-btn')[1].classList.add('active');
+        if(app==='POSTMAN') document.querySelectorAll('.mode-btn')[2].classList.add('active');
+
+        document.getElementById('infoText').innerHTML = TEXTS[app];
+        
+        const drawToolsDiv = document.getElementById('drawTools');
+        const playBtn = document.getElementById('btnPlayToggle');
+        const gameTools = document.getElementById('gameTools');
+        const btnNextEx = document.getElementById('btnNextEx');
+
+        drawToolsDiv.style.display = 'none';
+        playBtn.style.display = 'none';
+        gameTools.style.display = 'none';
+        btnNextEx.style.display = 'none';
+
+        if (app === 'EULER_DRAW') {
+            drawToolsDiv.style.display = 'flex';
+            playBtn.style.display = 'block';
+            playBtn.innerText = "▶️ ΠΑΙΞΕ";
+            playBtn.className = "play-btn";
+            btnNextEx.style.display = 'inline-block';
+        } else if (app === 'KONIGSBERG') {
+            gameTools.style.display = 'flex'; 
+            btnNextEx.style.display = 'none';
+        }
+
+        resetCurrentMode();
+    }
+
+    function resetCurrentMode() {
+        nodes = []; edges = []; currentNode = null; pathHistory = []; totalDistance = 0;
+        isGameActive = false; isSolving = false;
+        if(document.getElementById('distVal')) document.getElementById('distVal').innerText = "0 km";
+
+        if (currentApp === 'EULER_DRAW') {
+            nextLabelCode = 65; isDirected = false;
+            document.getElementById('btnPlayToggle').innerText = "▶️ ΠΑΙΞΕ";
+            document.getElementById('btnPlayToggle').className = "play-btn";
+            document.getElementById('drawTools').style.display = 'flex';
+            document.getElementById('gameTools').style.display = 'none';
+            narrate("Λειτουργία Σχεδίασης: Φτιάξτε γράφο ή πατήστε 'Άσκηση'.");
+        } else if (currentApp === 'KONIGSBERG') {
+            loadKonigsberg(); isGameActive = true;
+            narrate("Κάντε κλικ σε μια περιοχή (A, B, C, D) για εκκίνηση.");
+        } else if (currentApp === 'POSTMAN') {
+            loadPostman(); currentNode = nodes.find(n => n.label === '1'); isGameActive = true;
+            narrate("Ξεκινάτε από το Χωριό 1.");
+            document.getElementById('gameTools').style.display = 'flex';
+            document.querySelector('.btn-solve').style.display = 'none';
+        }
+        draw();
+    }
+
+    function toggleEulerPlay() {
+        if (currentApp !== 'EULER_DRAW') return;
+        isGameActive = !isGameActive;
+        const btn = document.getElementById('btnPlayToggle');
+        const tools = document.getElementById('drawTools');
+        const gameTools = document.getElementById('gameTools');
+
+        if (isGameActive) {
+            tools.style.display = 'none'; gameTools.style.display = 'flex';
+            btn.innerText = "✏️ Σχεδίαση"; btn.className = "edit-btn"; 
+            restartGame(); 
+            narrate("Λειτουργία Παιχνιδιού: Κάντε κλικ σε έναν κόμβο για να ξεκινήσετε!");
+        } else {
+            tools.style.display = 'flex'; gameTools.style.display = 'none';
+            btn.innerText = "▶️ ΠΑΙΞΕ"; btn.className = "play-btn"; 
+            restartGame(); 
+            narrate("Λειτουργία Σχεδίασης.");
+        }
+        draw();
+    }
+
+    function restartGame() {
+        edges.forEach(e => { e.visited = false; e.isSolution = false; });
+        nodes.forEach(n => n.highlight = false);
+        currentNode = null; pathHistory = []; totalDistance = 0; isSolving = false;
+        
+        if (currentApp === 'POSTMAN') {
+            currentNode = nodes.find(n => n.label === '1');
+            narrate("Επανεκκίνηση. Ξεκινάτε από το 1.");
+        } else if (currentApp === 'EULER_DRAW') {
+            // Do not reset graph, just state
+            narrate("Επανεκκίνηση. Επιλέξτε κόμβο αφετηρίας.");
+        }
+        draw();
+    }
+
+    // --- 25 SOLVABLE CHALLENGES ---
+    function resetChallengePool() {
+        availableChallenges = [];
+        for (let i = 0; i < totalChallenges; i++) availableChallenges.push(i);
+    }
+
+    function loadRandomChallenge() {
+        if (isGameActive) toggleEulerPlay(); // Back to design to load
+
+        nodes = []; edges = []; nextLabelCode = 65;
+        const cx = 400, cy = 300;
+        const addN = (x, y) => { nodes.push({id:nodes.length, x:cx+x, y:cy+y, label:String.fromCharCode(nextLabelCode++), highlight:false}); return nodes.length-1; };
+        const addE = (i, j) => edges.push({from:nodes[i], to:nodes[j], visited:false, curve:0});
+
+        const challenges = [
+            () => { addN(-100,-100); addN(100,-100); addN(100,100); addN(-100,100); addE(0,1); addE(1,2); addE(2,3); addE(3,0); addE(0,2); },
+            () => { addN(-80,100); addN(80,100); addN(-80,-50); addN(80,-50); addN(0,-130); addE(0,1); addE(0,2); addE(1,3); addE(2,3); addE(2,4); addE(3,4); addE(0,3); addE(1,2); },
+            () => { addN(0,0); addN(-100,-80); addN(-100,80); addN(100,-80); addN(100,80); addE(0,1); addE(1,2); addE(2,0); addE(0,3); addE(3,4); addE(4,0); },
+            () => { addN(-100,100); addN(100,100); addN(-100,-50); addN(100,-50); addN(0,20); addE(0,1); addE(0,2); addE(1,3); addE(2,3); addE(2,4); addE(3,4); },
+            () => { for(let i=0;i<5;i++) { let a=(i*72-18)*Math.PI/180; addN(120*Math.cos(a), 120*Math.sin(a)); } addE(0,2); addE(2,4); addE(4,1); addE(1,3); addE(3,0); },
+            () => { addN(-150,0); addN(-80,-60); addN(-80,60); addN(150,0); addN(80,-60); addN(80,60); addE(0,1); addE(1,2); addE(2,0); addE(0,3); addE(3,4); addE(4,5); addE(5,3); },
+            // --- FIXED: FUNNEL / HOURGLASS (Exercise 7) ---
+            () => { 
+                addN(250-400, 100-300); // Adjusting relative to cx,cy (cx=400, cy=300)
+                // Actually easier to just overwrite with hard coords relative to canvas center
+                // Re-writing the function cleanly for clarity:
+                nodes = []; edges = []; nextLabelCode = 65;
+                addN(-150, -120); addN(150, -120); addN(0, 0); addN(-150, 120); addN(150, 120);
+                addE(0,1); addE(1,2); addE(2,0); addE(2,3); addE(3,4); addE(4,2); 
+            },
+            () => { addN(0,-100); addN(100,0); addN(0,100); addN(-100,0); addE(0,1); addE(1,2); addE(2,3); addE(3,0); addE(0,2); }, 
+            () => { addN(-120,0); addN(-40, -60); addN(-40, 60); addN(40,0); addN(120, -60); addN(120, 60); addE(0,1); addE(0,2); addE(1,2); addE(1,3); addE(2,3); addE(3,4); addE(3,5); addE(4,5); },
+            () => { addN(-100,100); addN(100,100); addN(0,-100); addN(0,20); addE(0,1); addE(1,2); addE(2,0); addE(2,3); }, 
+            () => { addN(-100,50); addN(0,50); addN(-100,-50); addN(0,-50); addN(-50,-100); addN(100,50); addN(100,-50); addE(0,1); addE(1,3); addE(3,2); addE(2,0); addE(0,4); addE(1,4); addE(1,5); addE(5,6); addE(6,3); },
+            () => { addN(0,-100); addN(-50,0); addN(50,0); addN(-100,100); addN(0,100); addN(100,100); addE(0,1); addE(1,2); addE(2,0); addE(1,3); addE(3,4); addE(4,1); addE(2,4); addE(4,5); addE(5,2); },
+            () => { addN(-150,0); addN(-50,0); addN(50,0); addN(150,0); addE(0,1); addE(1,2); addE(2,3); },
+            () => { addN(-100,0); addN(100,0); addN(-180,0); addN(180,0); addE(2,0); addE(0,1); addE(1,3); addN(-140,-60); addE(2,4); addE(4,0); addN(140,-60); addE(1,5); addE(5,3); },
+            () => { addN(-150,0); addN(-50,-80); addN(-50,80); addN(50,0); addN(150,-80); addN(150,80); addE(0,1); addE(1,3); addE(3,2); addE(2,0); addE(1,2); addE(3,4); addE(4,5); addE(5,3); },
+            () => { addN(-80,-80); addN(80,-80); addN(-80,20); addN(80,20); addN(0,100); addE(0,1); addE(1,3); addE(3,4); addE(4,2); addE(2,0); addE(2,3); },
+            () => { addN(-100,100); addN(-100,-100); addN(0,0); addN(100,-100); addN(100,100); addE(0,1); addE(1,2); addE(2,3); addE(3,4); addE(0,4); },
+            () => { addN(-80,-50); addN(80,-50); addN(80,50); addN(0,100); addN(-80,50); addE(0,1); addE(1,2); addE(2,3); addE(3,4); addE(4,0); addE(0,2); addE(1,4); },
+            () => { addN(-50,100); addN(50,100); addN(-50,-50); addN(50,-50); addN(0,-120); addN(-100,100); addN(100,100); addE(0,1); addE(1,3); addE(3,4); addE(4,2); addE(2,0); addE(2,3); addE(0,5); addE(5,2); addE(1,6); addE(6,3); },
+            () => { for(let i=0;i<6;i++) { let a=i*60*Math.PI/180; addN(100*Math.cos(a), 100*Math.sin(a)); } for(let i=0;i<6;i++) addE(i,(i+1)%6); addE(0,3); addE(1,4); addE(2,5); },
+            () => { addN(0,0); addN(-100,-100); addN(-100,100); addN(100,-100); addN(100,100); addE(0,1); addE(0,2); addE(0,3); addE(0,4); addN(-150,-50); addE(1,5); addE(5,2); addN(50,-150); addE(1,6); addE(6,3); },
+            () => { addN(-100,-50); addN(0,-50); addN(100,-50); addN(-100,50); addN(0,50); addN(100,50); addE(0,1); addE(1,2); addE(3,4); addE(4,5); addE(0,3); addE(1,4); addE(2,5); addE(0,4); addE(1,3); addE(1,5); addE(2,4); }
+        ];
+
+        if (availableChallenges.length === 0) resetChallengePool();
+        const randIndex = Math.floor(Math.random() * availableChallenges.length);
+        const challengeID = availableChallenges[randIndex];
+        availableChallenges.splice(randIndex, 1);
+
+        challenges[challengeID]();
+        
+        narrate(`Φορτώθηκε Άσκηση ${challengeID+1} από 22. Πατήστε 'ΠΑΙΞΕ'!`);
+        draw();
+    }
+
+    // --- Solver ---
+    async function solveEuler() {
+        if (isSolving) return;
+        
+        const degrees = new Array(nodes.length).fill(0);
+        edges.forEach(e => { degrees[nodes.indexOf(e.from)]++; degrees[nodes.indexOf(e.to)]++; });
+        const oddNodes = nodes.filter((n, i) => degrees[i] % 2 !== 0);
+        
+        if (oddNodes.length !== 0 && oddNodes.length !== 2) {
+            narrate("❌ ΑΔΥΝΑΤΟΝ! Οι κόκκινοι κόμβοι έχουν μονό αριθμό δρόμων.");
+            oddNodes.forEach(n => n.highlight = true);
+            draw();
+            return;
+        }
+
+        restartGame();
+        isSolving = true;
+        narrate("🤖 Ο Υπολογιστής λύνει τον γρίφο...");
+        
+        let tempEdges = edges.map(e => ({ ...e, used: false }));
+        let path = [];
+        let startNode = oddNodes.length > 0 ? oddNodes[0] : nodes[0];
+
+        function findPath(u) {
+            for (let i = 0; i < tempEdges.length; i++) {
+                let e = tempEdges[i];
+                if (!e.used && (e.from === u || e.to === u)) {
+                    e.used = true;
+                    findPath((e.from === u) ? e.to : e.from);
+                    path.push(e);
+                }
+            }
+        }
+        findPath(startNode);
+
+        currentNode = startNode;
+        draw();
+        await new Promise(r => setTimeout(r, 500));
+
+        for (let i = path.length - 1; i >= 0; i--) {
+            let realEdge = edges.find(e => e.from === path[i].from && e.to === path[i].to && e.id === path[i].id) || edges.find(e => e.from === path[i].from && e.to === path[i].to);
+            if(realEdge) {
+                let nextNode = (realEdge.from === currentNode) ? realEdge.to : realEdge.from;
+                realEdge.visited = true; realEdge.isSolution = true; 
+                currentNode = nextNode;
+                draw();
+                await new Promise(r => setTimeout(r, 600));
+            }
+        }
+        
+        // --- FIXED: Check if all edges were actually visited ---
+        if (edges.some(e => !e.visited)) {
+            narrate("⚠️ Ο αλγόριθμος κόλλησε. Δεν καλύφθηκαν όλες οι γραμμές.");
+        } else {
+            narrate("✅ Η λύση ολοκληρώθηκε!");
+        }
+        
+        isSolving = false;
+    }
+
+    // --- Helpers ---
+    function addNode(x, y) { nodes.push({ id: nodes.length, x, y, label: String.fromCharCode(nextLabelCode++), highlight: false }); }
+    function addEdge(n1, n2) { if(!edges.some(e => (e.from === n1 && e.to === n2) || (e.from === n2 && e.to === n1))) edges.push({from: n1, to: n2, visited: false, curve: 0}); }
+
+    function loadKonigsberg() {
+        nodes = []; edges = []; nextLabelCode = 65;
+        addNode(300, 250); addNode(300, 100); addNode(300, 400); addNode(500, 250); 
+        nodes[0].label='C'; nodes[1].label='A'; nodes[2].label='B'; nodes[3].label='D';
+        edges.push({from: nodes[0], to: nodes[1], visited: false, id:1, curve: -40}); 
+        edges.push({from: nodes[0], to: nodes[1], visited: false, id:2, curve: 40});  
+        edges.push({from: nodes[0], to: nodes[2], visited: false, id:3, curve: -40}); 
+        edges.push({from: nodes[0], to: nodes[2], visited: false, id:4, curve: 40});  
+        edges.push({from: nodes[0], to: nodes[3], visited: false, id:5, curve: 0});   
+        edges.push({from: nodes[1], to: nodes[3], visited: false, id:6, curve: 0});   
+        edges.push({from: nodes[2], to: nodes[3], visited: false, id:7, curve: 0});   
+    }
+
+    function loadPostman() {
+        nodes = []; edges = []; nextLabelCode = 49; // '1'
+        addNode(300, 100); addNode(150, 350); addNode(450, 350); addNode(300, 250); 
+        const ae = (i1, i2, w) => edges.push({from: nodes[i1], to: nodes[i2], weight: w, visited: false, curve: 0});
+        ae(0, 1, 5); ae(0, 3, 6); ae(0, 2, 13); ae(1, 3, 8); ae(1, 2, 9); ae(2, 3, 10);
+    }
+
+    // --- Drawing ---
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (currentApp === 'KONIGSBERG') {
+            ctx.fillStyle = document.body.classList.contains('dark-mode') ? "#1e293b" : "#e0f2fe";
+            ctx.fillRect(0, 180, canvas.width, 140);
+            ctx.beginPath(); ctx.ellipse(300, 250, 90, 50, 0, 0, Math.PI*2);
+            ctx.fillStyle = document.body.classList.contains('dark-mode') ? "#0f172a" : "#f0fdf4"; ctx.fill(); ctx.stroke();
+        }
+        edges.forEach(e => {
+            ctx.strokeStyle = e.isSolution ? '#ef4444' : (e.visited ? '#10b981' : '#64748b');
+            ctx.lineWidth = (e.visited || e.isSolution) ? 4 : 2;
+            if (currentApp === 'KONIGSBERG') ctx.lineWidth = 10;
+            const mx = (e.from.x + e.to.x) / 2; const my = (e.from.y + e.to.y) / 2;
+            ctx.beginPath();
+            if (e.curve) {
+                const dx = e.to.x - e.from.x; const dy = e.to.y - e.from.y;
+                const len = Math.sqrt(dx*dx + dy*dy);
+                const nx = -dy/len; const ny = dx/len;
+                ctx.moveTo(e.from.x, e.from.y); ctx.quadraticCurveTo(mx + nx*e.curve, my + ny*e.curve, e.to.x, e.to.y);
+            } else { ctx.moveTo(e.from.x, e.from.y); ctx.lineTo(e.to.x, e.to.y); }
+            ctx.stroke();
+            if (e.weight) {
+                ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(mx, my, 12, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#000'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(e.weight, mx, my);
+            }
+        });
+        if (isDragging && dragStartNode) {
+            ctx.beginPath(); ctx.moveTo(dragStartNode.x, dragStartNode.y); ctx.lineTo(mouseX, mouseY);
+            ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1; ctx.setLineDash([5,5]); ctx.stroke(); ctx.setLineDash([]);
+        }
+        nodes.forEach(n => {
+            ctx.beginPath(); ctx.arc(n.x, n.y, 20, 0, Math.PI*2);
+            ctx.fillStyle = (n === currentNode) ? '#f59e0b' : getComputedStyle(document.body).getPropertyValue('--col-node-fill');
+            ctx.fill();
+            ctx.strokeStyle = n.highlight ? '#ef4444' : '#334155'; ctx.lineWidth = n.highlight ? 4 : 2; ctx.stroke();
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-color');
+            ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(n.label, n.x, n.y);
+        });
+    }
+
+    // --- Interaction ---
+    canvas.addEventListener('mousedown', e => {
+        if(isSolving) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+        const clickedNode = nodes.find(n => Math.hypot(n.x - x, n.y - y) < 25);
+
+        if (currentApp === 'EULER_DRAW') {
+            if (isGameActive) {
+                if (clickedNode) {
+                    if(!currentNode) {
+                        currentNode = clickedNode;
+                        narrate(`Επιλέξατε αφετηρία: ${currentNode.label}. Τώρα πατήστε σε γειτονικό κόμβο.`);
+                        draw();
+                    } else if(clickedNode !== currentNode) {
+                        attemptMove(clickedNode);
+                    }
+                }
+            } else {
+                if (clickedNode) {
+                    if (drawTool === 'EDGE') { isDragging = true; dragStartNode = clickedNode; }
+                } else if (drawTool === 'NODE') { addNode(x, y); draw(); }
+            }
+        } else if (currentApp === 'KONIGSBERG') {
+            if (!currentNode && clickedNode) { currentNode = clickedNode; draw(); }
+            else if (clickedNode) attemptMove(clickedNode);
+        } else if (currentApp === 'POSTMAN') {
+            if (clickedNode && clickedNode !== currentNode) attemptWeightedMove(clickedNode);
+        }
+    });
+
+    canvas.addEventListener('mousemove', e => {
+        if (isDragging) { const rect = canvas.getBoundingClientRect(); mouseX = e.clientX - rect.left; mouseY = e.clientY - rect.top; draw(); }
+    });
+
+    canvas.addEventListener('mouseup', e => {
+        if (isDragging && currentApp === 'EULER_DRAW') {
+            const rect = canvas.getBoundingClientRect(); const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+            const target = nodes.find(n => Math.hypot(n.x - x, n.y - y) < 25);
+            if (target && target !== dragStartNode) addEdge(dragStartNode, target);
+            isDragging = false; dragStartNode = null; draw();
+        }
+    });
+
+    function attemptMove(target) {
+        let candidates = edges.filter(e => ((e.from === currentNode && e.to === target) || (e.from === target && e.to === currentNode)));
+        if (candidates.length === 0) return narrate("⛔ Δεν υπάρχει δρόμος!");
+        let edge = candidates.find(e => !e.visited);
+        if (!edge) return narrate("⚠️ Έχετε ήδη περάσει από εδώ!");
+        edge.visited = true; currentNode = target; draw();
+        if (edges.filter(e => !e.visited).length === 0) narrate("🎉 ΜΠΡΑΒΟ! Τα καταφέρατε!");
+    }
+
+    function attemptWeightedMove(target) {
+        let edge = edges.find(e => (e.from === currentNode && e.to === target) || (e.from === target && e.to === currentNode));
+        if(!edge) return;
+        totalDistance += edge.weight; document.getElementById('distVal').innerText = totalDistance + " km";
+        currentNode = target; draw();
+        if (currentNode.label === '1' && totalDistance > 0) {
+            if (totalDistance === 30) narrate("🏆 Βέλτιστη λύση!");
+            else if (totalDistance === 36) narrate("👍 Άπληστη λύση.");
+            else narrate("🏁 Τερματισμός.");
+        }
+    }
+
+    // --- UI Helpers ---
+    function resizeCanvas() { canvas.width = document.getElementById('canvasWrapper').offsetWidth; canvas.height = document.getElementById('canvasWrapper').offsetHeight; draw(); }
+    function setDrawMode(m) { drawTool = m; document.getElementById('btnToolNode').classList.toggle('active-tool', m==='NODE'); document.getElementById('btnToolEdge').classList.toggle('active-tool', m==='EDGE'); }
+    function toggleDirected() { isDirected = !isDirected; document.getElementById('btnToolDir').innerText = isDirected ? "➡️ Κατευθ." : "↔️ Μη Κατευθ."; }
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); draw(); }
+    function toggleSpeech() { speechEnabled = !speechEnabled; document.getElementById('btnSpeech').innerText = speechEnabled ? "🔊" : "🔇"; }
+    function narrate(msg) { document.getElementById('narrativeBox').innerText = msg; if(speechEnabled) { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(msg); u.lang = 'el-GR'; window.speechSynthesis.speak(u); } }
+
+    init();
+</script>
+</body>
+</html>
