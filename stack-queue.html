@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Στοίβα και Ουρά</title>
+    <title>Στοίβα & Ουρά</title>
     <style>
         :root {
             --bg-color: #f8fafc;
@@ -29,7 +29,7 @@
             --code-sym: #FF0000; 
             --code-var: #000000; 
             --code-num: #008000;
-            --code-str: #A020F0;
+            --code-str: #800080;
         }
 
         * { box-sizing: border-box; }
@@ -38,84 +38,52 @@
             font-family: 'Segoe UI', Tahoma, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+            margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
         }
 
-        /* --- Header --- */
+        /* HEADER */
         header {
             background-color: var(--panel-bg);
             border-bottom: 1px solid var(--border-color);
             padding: 10px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 70px;
-            box-sizing: border-box;
-            flex-shrink: 0;
-            z-index: 100;
+            display: flex; justify-content: space-between; align-items: center;
+            height: 70px; flex-shrink: 0; z-index: 100;
         }
 
         .header-title h1 { margin: 0; font-size: 1.1rem; }
         .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
         button {
-            padding: 8px 14px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.9rem;
-            background-color: var(--panel-bg);
-            color: var(--text-color);
-            transition: all 0.2s;
-            white-space: nowrap;
+            padding: 8px 14px; border: 1px solid var(--border-color); border-radius: 4px;
+            cursor: pointer; font-weight: 600; font-size: 0.9rem;
+            background-color: var(--panel-bg); color: var(--text-color);
+            transition: all 0.2s; white-space: nowrap;
         }
         button.action-btn { background-color: #fff; border: 2px solid var(--col-stack); color: var(--col-stack); }
         button.action-btn:hover { background-color: var(--col-stack); color: white; }
-        button:hover:not(:disabled) { filter: brightness(0.95); transform: translateY(-1px); }
-        button:disabled { background-color: var(--disabled-btn); border-color: var(--disabled-btn); color: #fff; cursor: not-allowed; transform: none; }
+        button:disabled { background-color: var(--disabled-btn); border-color: var(--disabled-btn); color: #fff; cursor: not-allowed; }
 
         .input-group {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            background: #eff6ff;
-            padding: 5px 10px;
-            border-radius: 6px;
-            border: 1px solid #bfdbfe;
+            display: flex; align-items: center; gap: 5px;
+            background: #eff6ff; padding: 5px 10px; border-radius: 6px; border: 1px solid #bfdbfe;
         }
         .input-group input { width: 80px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; text-align:center;}
 
         .slider-container { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin-left: 10px; }
 
-        /* --- Main Layout --- */
+        /* MAIN LAYOUT */
         .main-container {
-            display: flex;
-            flex: 1;
-            padding: 15px;
-            gap: 15px;
-            height: calc(100% - 70px);
-            box-sizing: border-box;
-            overflow: hidden; 
+            display: flex; flex: 1; padding: 15px; gap: 15px;
+            height: calc(100% - 70px); box-sizing: border-box; overflow: hidden; 
         }
 
         /* LEFT: Code Panel */
         .col-code {
-            flex: 0 0 450px;
-            display: flex;
-            flex-direction: column;
-            background: var(--panel-bg);
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            overflow: hidden;
-            transition: all 0.3s ease;
+            flex: 0 0 450px; display: flex; flex-direction: column;
+            background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            overflow: hidden; transition: all 0.3s ease;
         }
-        /* Hidden by default */
         .col-code.hidden { display: none; }
 
         .tabs { display: flex; background: #f1f5f9; border-bottom: 1px solid var(--border-color); }
@@ -127,13 +95,8 @@
         .tab.active { background: var(--panel-bg); border-bottom-color: var(--col-stack); color: var(--text-color); }
 
         .code-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 15px;
-            font-family: 'Consolas', monospace;
-            font-size: 0.95rem;
-            line-height: 1.5;
-            white-space: pre; 
+            flex: 1; overflow-y: auto; padding: 15px;
+            font-family: 'Consolas', monospace; font-size: 0.95rem; line-height: 1.5; white-space: pre; 
         }
         .code-line { padding: 2px 6px; border-radius: 3px; }
         .code-line.active { background-color: var(--highlight-line); font-weight: bold; }
@@ -146,186 +109,101 @@
 
         /* CENTER: Visualization */
         .col-viz {
-            flex: 1;
-            background: var(--panel-bg);
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            padding: 15px;
-            position: relative;
-            overflow: hidden; 
+            flex: 1; background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; padding: 15px; position: relative; overflow: hidden; 
         }
 
         .narrative {
-            padding: 10px;
-            margin-bottom: 10px;
-            background: rgba(59, 130, 246, 0.1); 
-            border-left: 4px solid var(--col-stack);
-            font-size: 0.95rem;
-            font-style: italic;
-            min-height: 24px;
-            display: flex;
-            align-items: center;
-            flex-shrink: 0;
+            padding: 10px; margin-bottom: 10px;
+            background: rgba(59, 130, 246, 0.1); border-left: 4px solid var(--col-stack);
+            font-size: 0.95rem; font-style: italic; min-height: 24px;
+            display: flex; align-items: center; flex-shrink: 0;
         }
 
         .vars-box {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: #fff;
-            border: 2px solid var(--border-color);
-            border-radius: 6px;
-            padding: 8px;
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            width: 120px;
-            z-index: 50;
+            position: absolute; top: 10px; right: 10px;
+            background: #fff; border: 2px solid var(--border-color); border-radius: 6px;
+            padding: 8px; display: flex; flex-direction: column; gap: 2px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); width: 120px; z-index: 50;
         }
         .var-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-family: monospace;
-            font-size: 0.9rem;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 2px;
+            display: flex; justify-content: space-between; align-items: center;
+            font-family: monospace; font-size: 0.9rem; border-bottom: 1px solid #eee; padding-bottom: 2px;
         }
         .var-val { font-weight: bold; color: var(--col-stack); }
 
         .scene-wrapper {
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-            overflow: auto;
-            background-color: #f8fafc;
+            flex: 1; display: flex; justify-content: center; align-items: center;
+            position: relative; overflow: auto; background-color: #f8fafc;
         }
 
         /* STACK (Vertical) */
         .stack-container {
-            display: flex;
-            flex-direction: column-reverse; 
-            gap: 2px;
-            position: relative;
-            padding-left: 60px; 
-            margin-top: 50px; 
+            display: flex; flex-direction: column-reverse; 
+            gap: 2px; position: relative; padding-left: 60px; margin-top: 50px; 
         }
 
         /* QUEUE (Horizontal) */
         .queue-container {
-            display: grid;
-            grid-template-columns: repeat(10, 60px);
-            gap: 2px;
-            position: relative;
-            padding-top: 60px; 
-            padding-bottom: 60px;
-            margin-left: 60px;
-            margin-right: 60px;
+            display: grid; grid-template-columns: repeat(7, 60px); 
+            gap: 2px; position: relative; padding-top: 60px; padding-bottom: 60px;
+            margin-left: 60px; margin-right: 60px;
         }
 
         /* Array Cell */
         .cell {
-            width: 60px;
-            height: 44px; 
+            width: 60px; height: 44px; 
             background-color: var(--cell-bg);
-            border: 2px solid #94a3b8;
-            border-radius: 4px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-            transition: all 0.3s;
+            border: 2px solid #94a3b8; border-radius: 4px;
+            display: flex; justify-content: center; align-items: center;
+            position: relative; transition: all 0.3s;
         }
         .cell.filled { background-color: var(--cell-filled); border-color: var(--col-stack); }
         
         .cell-content {
-            font-weight: bold;
-            font-size: 1.1rem;
-            z-index: 2;
+            font-weight: bold; font-size: 1.1rem; z-index: 2; color: #000;
+        }
+        
+        /* Ghost Data Style */
+        .cell-ghost .cell-content {
+            color: #94a3b8; /* Faint gray */
+            opacity: 0.4;
         }
 
         .idx-lbl {
-            position: absolute;
-            font-size: 0.75rem;
-            color: #64748b;
-            font-family: monospace;
-            z-index: 5; 
+            position: absolute; font-size: 0.75rem; color: #64748b; font-family: monospace; z-index: 5; 
         }
         .stack-container .idx-lbl { right: 2px; top: 2px; }
         .queue-container .idx-lbl { right: 2px; bottom: 2px; }
 
         /* POINTERS */
         .pointer {
-            position: absolute;
-            font-weight: bold;
-            font-size: 1rem;
-            display: flex;
-            align-items: center;
-            transition: all 0.3s ease-out;
-            white-space: nowrap;
-            z-index: 10;
+            position: absolute; font-weight: bold; font-size: 1rem;
+            display: flex; align-items: center; transition: all 0.3s ease-out;
+            white-space: nowrap; z-index: 10;
         }
         
-        /* Stack Top Pointer */
-        .ptr-top {
-            color: var(--ptr-top);
-            left: -15px; 
-            height: 44px; 
-            line-height: 44px;
-            display: flex;
-            align-items: center;
-        }
+        .ptr-top { color: var(--ptr-top); left: -15px; height: 44px; line-height: 44px; display: flex; align-items: center; }
         .ptr-top::after { content: '➡'; font-size: 1.8rem; margin-left: 5px; line-height: 1;}
 
-        /* Queue Front Pointer */
-        .ptr-front {
-            color: var(--ptr-front);
-            top: -5px; 
-            flex-direction: column;
-            width: 60px; justify-content: center;
-        }
+        .ptr-front { color: var(--ptr-front); top: -5px; flex-direction: column; width: 60px; justify-content: center; }
         .ptr-front::after { content: '⬇'; font-size: 1.5rem; margin-top: -5px; }
 
-        /* Queue Rear Pointer */
-        .ptr-rear {
-            color: var(--ptr-rear);
-            bottom: -5px; 
-            flex-direction: column-reverse;
-            width: 60px; justify-content: center;
-        }
+        .ptr-rear { color: var(--ptr-rear); bottom: -5px; flex-direction: column-reverse; width: 60px; justify-content: center; }
         .ptr-rear::after { content: '⬆'; font-size: 1.5rem; margin-bottom: -5px; }
 
-        /* --- ANIMATING VALUE --- */
+        /* ANIMATING VALUE */
         .animating-val {
-            position: fixed; 
-            width: 56px; 
-            height: 40px; 
-            background-color: var(--anim-val-bg);
-            color: white;
-            font-weight: bold;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-radius: 4px;
-            z-index: 9999; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            pointer-events: none;
+            position: fixed; width: 56px; height: 40px; 
+            background-color: var(--anim-val-bg); color: white; font-weight: bold;
+            display: flex; justify-content: center; align-items: center; border-radius: 4px;
+            z-index: 9999; box-shadow: 0 4px 10px rgba(0,0,0,0.3); pointer-events: none;
         }
 
         /* RIGHT: Output */
         .col-output {
-            flex: 0 0 200px;
-            background: var(--panel-bg);
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+            flex: 0 0 200px; background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; overflow: hidden;
         }
         .output-header { padding: 10px; background: #f1f5f9; font-weight: bold; border-bottom: 1px solid var(--border-color); }
         .output-log { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 0.9rem; }
@@ -356,18 +234,18 @@
             <button class="action-btn" onclick="runOp('dequeue')">Εξαγωγή</button>
         </div>
 
-        <button onclick="toggleCode()" id="btnCode">👁️ Εμφάνιση Κώδικα</button>
+        <button onclick="toggleCode()" id="btnCode">👁️ Απόκρυψη Κώδικα</button>
 
         <div class="slider-container">
             <span>Ταχύτητα:</span>
-            <input type="range" min="500" max="5000" value="2000" id="speedSlider" oninput="updateSpeed()">
+            <input type="range" min="200" max="3000" value="1500" id="speedSlider" oninput="updateSpeed()">
         </div>
     </div>
 </header>
 
 <div class="main-container">
     
-    <div class="col-code hidden">
+    <div class="col-code">
         <div class="tabs">
             <div class="tab active" onclick="setMode(1)">Στοίβα (Stack)</div>
             <div class="tab" onclick="setMode(2)">Ουρά (Queue)</div>
@@ -392,16 +270,19 @@
 
 <script>
     // --- State ---
+    const STACK_SIZE = 6;
+    const QUEUE_SIZE = 7;
+    
     let currentMode = 1; 
-    const SIZE = 10;
-    let arr = new Array(SIZE).fill(null);
+    let currentSize = STACK_SIZE;
+    let arr = []; // Logical Array
     
     let topPtr = 0;
     let frontPtr = 0;
     let rearPtr = 0;
 
     let isBusy = false;
-    let speed = 3000;
+    let speed = 1500; // Faster default speed
 
     // --- Helpers ---
     function kw(t) { return `<span class="kw">${t}</span>`; }
@@ -421,10 +302,11 @@
 
     // --- Codes ---
     function getCodes(op) {
+        // Stack Limit: 6
         const stackPush = [
             `${kw("ΓΡΑΨΕ")} ${str("'Δώσε στοιχείο για εισαγωγή:'")}`,
             `${kw("ΔΙΑΒΑΣΕ")} ${v("στοιχείο")}`,
-            `${kw("ΑΝ")} ${v("top")} ${sym("<")} ${n("10")} ${kw("ΤΟΤΕ")}`,
+            `${kw("ΑΝ")} ${v("top")} ${sym("<")} ${n("6")} ${kw("ΤΟΤΕ")}`,
             `  ${v("top")} ${sym("<-")} ${v("top")} ${sym("+")} ${n("1")}`,
             `  ${v("A")}${sym("[")}${v("top")}${sym("]")} ${sym("<-")} ${v("στοιχείο")}`,
             `${kw("ΑΛΛΙΩΣ")}`,
@@ -439,10 +321,11 @@
             `  ${kw("ΓΡΑΨΕ")} ${str("'Υποχείλιση στοίβας'")}`,
             `${kw("ΤΕΛΟΣ_ΑΝ")}`
         ];
+        // Queue Limit: 7
         const queueEnq = [
             `${kw("ΓΡΑΨΕ")} ${str("'Δώσε στοιχείο:'")}`,
             `${kw("ΔΙΑΒΑΣΕ")} ${v("στοιχείο")}`,
-            `${kw("ΑΝ")} ${v("rear")} ${sym("=")} ${n("10")} ${kw("ΤΟΤΕ")}`,
+            `${kw("ΑΝ")} ${v("rear")} ${sym("=")} ${n("7")} ${kw("ΤΟΤΕ")}`,
             `  ${kw("ΓΡΑΨΕ")} ${str("'Γεμάτη ουρά'")}`,
             `${kw("ΑΛΛΙΩΣ_ΑΝ")} (${v("front")} ${sym("=")} ${n("0")} ${kw("ΚΑΙ")} ${v("rear")} ${sym("=")} ${n("0")}) ${kw("ΤΟΤΕ")}`,
             `  ${v("front")} ${sym("<-")} ${n("1")}`,
@@ -475,7 +358,8 @@
 
     // --- Init ---
     function init() {
-        arr = new Array(SIZE).fill(null);
+        currentSize = (currentMode === 1) ? STACK_SIZE : QUEUE_SIZE;
+        arr = new Array(currentSize).fill(null);
         topPtr = 0;
         frontPtr = 0;
         rearPtr = 0;
@@ -535,7 +419,7 @@
             const container = document.createElement('div');
             container.className = 'stack-container';
             
-            for(let i=1; i<=SIZE; i++) {
+            for(let i=1; i<=STACK_SIZE; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'cell';
                 cell.id = `cell-${i}`;
@@ -554,11 +438,12 @@
             container.appendChild(ptr);
             wrapper.appendChild(container);
 
-        } else { // QUEUE
+       } else { // QUEUE
             const container = document.createElement('div');
             container.className = 'queue-container';
 
-            for(let i=1; i<=SIZE; i++) {
+            // 1. Δημιουργία των κελιών της ουράς
+            for(let i=1; i<=QUEUE_SIZE; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'cell';
                 cell.id = `cell-${i}`;
@@ -566,21 +451,53 @@
                 container.appendChild(cell);
             }
 
+            // 2. Δημιουργία Pointers (front/rear)
             const fPtr = document.createElement('div');
-            fPtr.className = 'pointer ptr-front'; fPtr.id = 'ptr-front'; fPtr.innerText = 'F';
+            fPtr.className = 'pointer ptr-front'; 
+            fPtr.id = 'ptr-front'; 
+            fPtr.innerText = 'front';
+            fPtr.style.fontSize = '0.8rem'; 
             
             const rPtr = document.createElement('div');
-            rPtr.className = 'pointer ptr-rear'; rPtr.id = 'ptr-rear'; rPtr.innerText = 'R';
+            rPtr.className = 'pointer ptr-rear'; 
+            rPtr.id = 'ptr-rear'; 
+            rPtr.innerText = 'rear';  
+            rPtr.style.fontSize = '0.8rem';
 
+            // 3. Δημιουργία Ετικετών (Labels)
+            // Ετικέτα "Εμπρός άκρο ουράς" (Αριστερά)
+            const lblFront = document.createElement('div');
+            lblFront.innerText = "Εμπρός άκρο ουράς";
+            lblFront.style.position = "absolute";
+            lblFront.style.left = "-125px";    
+            lblFront.style.top = "0px";    
+            lblFront.style.fontSize = "0.75rem";
+            lblFront.style.fontWeight = "bold";
+            lblFront.style.color = "#4b5563";
+            
+            // Ετικέτα "Πίσω άκρο ουράς" (Δεξιά)
+            const lblRear = document.createElement('div');
+            lblRear.innerText = "Πίσω άκρο ουράς";
+            lblRear.style.position = "absolute";
+            lblRear.style.right = "-100px";    
+            lblRear.style.top = "-0px";     
+            lblRear.style.fontSize = "0.75rem";
+            lblRear.style.fontWeight = "bold";
+            lblRear.style.color = "#4b5563";
+
+            // 4. Αρχικοποίηση θέσεων δεικτών
             setQueuePointerPos(fPtr, frontPtr);
             setQueuePointerPos(rPtr, rearPtr);
 
-            container.appendChild(fPtr);
-            container.appendChild(rPtr);
+            // 5. ΠΡΟΣΘΗΚΗ ΟΛΩΝ ΣΤΟ CONTAINER
+            container.appendChild(lblFront); // Βάζουμε την ταμπέλα
+            container.appendChild(lblRear);  // Βάζουμε την ταμπέλα
+            container.appendChild(fPtr);     // Βάζουμε τον δείκτη
+            container.appendChild(rPtr);     // Βάζουμε τον δείκτη
+
             wrapper.appendChild(container);
         }
-    }
-
+}
     function setQueuePointerPos(el, idx) {
         if (idx === 0) {
             el.style.opacity = '0';
@@ -593,7 +510,6 @@
     function updatePointersAnim() {
         if(currentMode === 1) {
             const ptr = document.getElementById('ptr-top');
-            // Exact centering logic: 44px height + 2px gap = 46px stride
             ptr.style.bottom = ((topPtr > 0 ? (topPtr - 1) * 46 : -46)) + 'px';
             ptr.style.opacity = topPtr === 0 ? '0' : '1';
         } else {
@@ -629,8 +545,8 @@
     async function animatePush(targetCellId, value) {
         const targetCell = document.getElementById(targetCellId);
         const rect = targetCell.getBoundingClientRect();
-        
-        const topCell = document.getElementById('cell-10');
+        const topCellId = 'cell-' + STACK_SIZE;
+        const topCell = document.getElementById(topCellId);
         const topRect = topCell.getBoundingClientRect();
 
         const animEl = document.createElement('div');
@@ -638,14 +554,14 @@
         animEl.innerText = value;
         document.body.appendChild(animEl); 
 
-        // Start Above Cell 10
+        // Start Above Top
         const startTop = topRect.top - 60; 
         animEl.style.left = `${rect.left + 2}px`;
         animEl.style.top = `${startTop}px`;
         
         void animEl.offsetWidth; 
 
-        // Drop with BRAKING
+        // Drop
         animEl.style.transition = `top ${speed*0.9}ms cubic-bezier(0.25, 1, 0.5, 1)`;
         animEl.style.top = `${rect.top + 2}px`;
 
@@ -653,6 +569,8 @@
 
         animEl.remove();
         targetCell.classList.add('filled');
+        // Clear ghost style if re-filling a popped cell
+        targetCell.classList.remove('cell-ghost');
         targetCell.querySelector('.cell-content').innerText = value;
     }
 
@@ -660,8 +578,8 @@
         const sourceCell = document.getElementById(sourceCellId);
         const valStr = sourceCell.querySelector('.cell-content').innerText;
         const rect = sourceCell.getBoundingClientRect();
-        
-        const topCell = document.getElementById('cell-10');
+        const topCellId = 'cell-' + STACK_SIZE;
+        const topCell = document.getElementById(topCellId);
         const topRect = topCell.getBoundingClientRect();
 
         const animEl = document.createElement('div');
@@ -672,8 +590,10 @@
         animEl.style.left = `${rect.left + 2}px`;
         animEl.style.top = `${rect.top + 2}px`;
 
+        // Make cell ghost instead of empty
         sourceCell.classList.remove('filled');
-        sourceCell.querySelector('.cell-content').innerText = '';
+        sourceCell.classList.add('cell-ghost');
+        // Value stays inside but looks ghosty
 
         void animEl.offsetWidth;
 
@@ -690,7 +610,9 @@
         const targetCell = document.getElementById(targetCellId);
         const rect = targetCell.getBoundingClientRect();
         
-        const rightCell = document.getElementById('cell-10');
+        // Find right most cell
+        const rightCellId = 'cell-' + QUEUE_SIZE;
+        const rightCell = document.getElementById(rightCellId);
         const rightRect = rightCell.getBoundingClientRect();
 
         const animEl = document.createElement('div');
@@ -698,13 +620,13 @@
         animEl.innerText = value;
         document.body.appendChild(animEl);
 
-        // Start Right of Cell 10
+        // Start Right
         animEl.style.left = `${rightRect.right + 20}px`; 
         animEl.style.top = `${rect.top + 2}px`;
 
         void animEl.offsetWidth;
 
-        // Slide Left with BRAKING
+        // Slide Left
         animEl.style.transition = `left ${speed*0.9}ms cubic-bezier(0.25, 1, 0.5, 1)`;
         animEl.style.left = `${rect.left + 2}px`;
 
@@ -712,6 +634,7 @@
 
         animEl.remove();
         targetCell.classList.add('filled');
+        targetCell.classList.remove('cell-ghost');
         targetCell.querySelector('.cell-content').innerText = value;
     }
 
@@ -728,8 +651,9 @@
         animEl.style.left = `${rect.left + 2}px`;
         animEl.style.top = `${rect.top + 2}px`;
 
+        // Make cell ghost
         sourceCell.classList.remove('filled');
-        sourceCell.querySelector('.cell-content').innerText = '';
+        sourceCell.classList.add('cell-ghost');
 
         void animEl.offsetWidth;
 
@@ -772,8 +696,8 @@
         highlightLine(0); narrate("ΓΡΑΨΕ 'Δώσε στοιχείο...'"); await sleep(speed*0.5);
         highlightLine(1); narrate(`ΔΙΑΒΑΣΕ ${val}`); await sleep(speed*0.5);
         
-        highlightLine(2); narrate(`Έλεγχος: top(${topPtr}) < 10`); await sleep(speed*0.5);
-        if(topPtr < 10) {
+        highlightLine(2); narrate(`Έλεγχος: top(${topPtr}) < ${STACK_SIZE}`); await sleep(speed*0.5);
+        if(topPtr < STACK_SIZE) {
             highlightLine(3); 
             topPtr++; 
             updatePointersAnim(); 
@@ -828,8 +752,8 @@
         highlightLine(0); narrate("ΓΡΑΨΕ 'Δώσε στοιχείο...'"); await sleep(speed*0.5);
         highlightLine(1); narrate(`ΔΙΑΒΑΣΕ ${val}`); await sleep(speed*0.5);
 
-        highlightLine(2); narrate(`Έλεγχος: rear(${rearPtr}) = 10`); await sleep(speed*0.5);
-        if(rearPtr === 10) {
+        highlightLine(2); narrate(`Έλεγχος: rear(${rearPtr}) = ${QUEUE_SIZE}`); await sleep(speed*0.5);
+        if(rearPtr === QUEUE_SIZE) {
             highlightLine(3);
             log("Γεμάτη ουρά", true);
             narrate("Η ουρά είναι γεμάτη.");
@@ -911,9 +835,23 @@
     }
 
     function updateSpeed() {
-        // Slider Left (500) = Very Slow (Delay 5500ms)
-        // Slider Right (5000) = Fast (Delay 1000ms)
-        speed = 6000 - document.getElementById('speedSlider').value;
+        // Double Speed Logic:
+        // Slider value represents delay. Lower value = Faster.
+        // Input range: 200 (fastest) to 3000 (slowest).
+        // Default was ~3000. Now let's map input to delay.
+        // We want default to be fast (~1000ms delay for major steps).
+        const val = document.getElementById('speedSlider').value;
+        // Invert logic for intuitive slider (Right = Fast) is common, but here
+        // let's stick to standard: Left=Fast(Low Delay), Right=Slow(High Delay)?
+        // Or user said "increase speed (double it)".
+        // Let's assume Slider Value is the DELAY in ms.
+        // So smaller value = faster.
+        // Let's reverse the slider visual behavior for UX: Right = Fast.
+        // Slider: min=200, max=3000. Value.
+        // Delay = 3200 - value.
+        // If slider is at max (3000), delay = 200ms.
+        // If slider is at min (200), delay = 3000ms.
+        speed = 3200 - val; 
     }
 
     init();
