@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Πίνακες: Β-2024</title>
+    <style>
+        :root {
+            --bg-color: #f1f5f9;
+            --panel-bg: #ffffff;
+            --text-color: #1e293b;
+            --border-color: #cbd5e1;
+            
+            --col-keyword: #2563eb; 
+            --col-var: #0f172a; 
+            --col-num: #d97706;  
+            
+            --highlight-line: #fef08a; 
+            --highlight-error: #fee2e2;
+            --text-error: #dc2626;
+            
+            --cell-active: #f97316;
+            --cell-filled: #dbeafe;
+            
+            --input-bg: #e2e8f0;
+            --input-border: #94a3b8;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-color: #f1f5f9;
+            --border-color: #334155;
+            --col-keyword: #60a5fa;
+            --col-var: #e2e8f0;
+            --col-num: #fbbf24;
+            --highlight-line: #422006;
+            --highlight-error: #450a0a;
+            --text-error: #fca5a5;
+            --input-bg: #334155;
+            --input-border: #64748b;
+        }
+
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', monospace; margin: 0; display: flex; flex-direction: column; height: 100vh; background: var(--bg-color); color: var(--text-color); overflow: hidden; font-size: 0.95rem; }
+
+        /* HEADER */
+        header {
+            height: 60px; background: var(--panel-bg); border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;
+        }
+        h1 { font-size: 1.2rem; margin: 0; display:flex; align-items:center; gap:10px; }
+        
+        .controls { display: flex; gap: 8px; align-items: center; }
+        
+        button {
+            padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 4px;
+            cursor: pointer; font-weight: 600; font-size: 0.85rem;
+            background: var(--panel-bg); color: var(--text-color); display: flex; align-items: center; gap: 5px; white-space: nowrap;
+        }
+        button:hover { filter: brightness(0.95); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+        
+        .btn-run { background: #10b981; color: white; border-color: #059669; }
+        .btn-step { background: #3b82f6; color: white; border-color: #2563eb; }
+        .btn-auto { background: #8b5cf6; color: white; border-color: #7c3aed; }
+        .btn-reset { background: #ef4444; color: white; border-color: #dc2626; }
+
+        /* Speed Control: Turtle left, Rabbit right */
+        .speed-control { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin: 0 10px; background: var(--panel-bg); padding: 4px; border-radius: 6px; border: 1px solid var(--border-color); }
+        input[type=range] { width: 100px; cursor: pointer; }
+
+        /* MAIN LAYOUT */
+        .container { display: flex; flex: 1; overflow: hidden; }
+
+        /* LEFT */
+        .col-left {
+            width: 420px; padding: 20px; border-right: 1px solid var(--border-color); 
+            background: var(--panel-bg); overflow-y: auto; line-height: 1.5;
+        }
+        .matrix-static { border-collapse: collapse; margin: 15px auto; font-family: monospace; font-size: 1.1rem; }
+        .matrix-static td { border: 1px solid var(--text-color); padding: 5px 12px; text-align: center; }
+
+        /* CENTER */
+        .col-center {
+            flex: 1; padding: 20px; background: var(--bg-color); overflow-y: auto; display: flex; justify-content: center;
+        }
+        .code-editor {
+            background: var(--panel-bg); padding: 25px; border-radius: 6px; border: 1px solid var(--border-color);
+            width: 100%; max-width: 800px; font-family: 'Consolas', monospace; font-size: 1.05rem; line-height: 1.6;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .line { 
+            padding: 2px 6px; border-radius: 2px; border-left: 4px solid transparent; 
+            display: flex; flex-wrap: wrap; align-items: center; 
+        }
+        .line.active { background-color: var(--highlight-line); border-left-color: #f59e0b; transition: background 0.1s; }
+        .line.error { background-color: var(--highlight-error); border-left-color: #dc2626; }
+        
+        .kw { color: var(--col-keyword); font-weight: bold; margin-right: 6px; }
+        .var { color: var(--col-var); margin-right: 2px; }
+        .num { color: var(--col-num); font-weight: bold; margin: 0 4px; }
+        .op { margin: 0 6px; color: var(--text-color); }
+        
+        /* Code Input Style */
+        .code-input {
+            border: 1px solid var(--input-border); background: var(--input-bg); border-radius: 3px; padding: 2px 5px;
+            font-family: inherit; font-weight: bold; width: 100px; text-align: center; color: inherit; font-size: 1rem;
+        }
+        .code-input:focus { outline: 2px solid var(--col-keyword); background: #fff; color: #000; }
+
+        /* RIGHT */
+        .col-right {
+            width: 350px; background: var(--panel-bg); border-left: 1px solid var(--border-color);
+            display: flex; flex-direction: column; padding: 15px;
+        }
+
+        .monitor {
+            background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-bottom: 15px;
+        }
+        .var-row { display: flex; justify-content: space-between; font-family: monospace; font-size: 1rem; border-bottom: 1px solid var(--border-color); padding: 4px 0; }
+        .var-val { font-weight: bold; color: var(--col-keyword); }
+
+        .matrix-viz {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+            background: #cbd5e1; padding: 5px; border-radius: 4px; margin-bottom: 10px;
+        }
+        .cell {
+            aspect-ratio: 1; background: #fff; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-family: monospace; border-radius: 2px; color: #94a3b8; font-size: 1.1rem;
+        }
+        .cell.active { border: 3px solid var(--cell-active); transform: scale(1.1); z-index: 10; color: #000; background: #fff; }
+        .cell.filled { color: #000; background: var(--cell-filled); }
+
+        .console {
+            flex: 1; background: #1e293b; color: #10b981; font-family: monospace; font-size: 0.85rem;
+            padding: 10px; border-radius: 4px; overflow-y: auto; white-space: pre-wrap;
+        }
+        .console.error { color: #f87171; font-weight: bold; }
+
+        /* Indentation */
+        .pad-1 { padding-left: 30px; border-left: 1px solid rgba(0,0,0,0.03); } 
+        .pad-2 { padding-left: 60px; border-left: 1px solid rgba(0,0,0,0.03); }
+        .pad-3 { padding-left: 90px; border-left: 1px solid rgba(0,0,0,0.03); } 
+
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>💻 Προσομοίωση Πίνακα</h1>
+    <div class="controls">
+        <button class="btn-reset" onclick="reset()">🔄 Αρχή</button>
+        <button class="btn-run" id="btnRun" onclick="startExecution()" disabled>▶ Εκκίνηση</button>
+        <button class="btn-step" id="btnStep" onclick="step()" disabled>⤵ Βήμα</button>
+        <button class="btn-auto" id="btnAuto" onclick="toggleAuto()" disabled>Αυτόματη Εκτέλεση</button>
+        <div class="speed-control">
+            <span>🐢</span>
+            <input type="range" id="speedRange" min="50" max="1500" value="500" oninput="updateSpeed()">
+            <span>🐇</span>
+        </div>
+        <div style="width:1px; background:#ccc; margin:0 5px; height: 20px;"></div>
+        <button onclick="solve()">💡 Λύση</button>
+        <button onclick="document.body.classList.toggle('dark-mode')">🌙</button>
+    </div>
+</header>
+
+<div class="container">
+    
+    <div class="col-left">
+        <p>Δίνεται ο παρακάτω τετραγωνικός Πίνακας Α[4,4]:</p>
+        
+        <table class="matrix-static">
+            <tr><td>2</td><td>4</td><td>6</td><td>8</td></tr>
+            <tr><td>3</td><td>6</td><td>9</td><td>12</td></tr>
+            <tr><td>10</td><td>12</td><td>14</td><td>16</td></tr>
+            <tr><td>15</td><td>18</td><td>21</td><td>24</td></tr>
+        </table>
+        
+        <p style="text-align: justify;">Στις μονές γραμμές του Πίνακα Α[4,4] καταχωρίζονται οι τιμές 2, 4, 6, 8, 10, 12, 14, 16 και στις ζυγές γραμμές του οι τιμές 3, 6, 9, 12, 15, 18, 21, 24 όπως φαίνεται παραπάνω. Να γράψετε στο τετράδιό σας τους αριθμούς (1) έως (5) που αντιστοιχούν στα κενά του παρακάτω τμήματος προγράμματος και δίπλα ό,τι χρειάζεται, έτσι ώστε να σχηματιστεί ο παραπάνω Πίνακας Α[4,4].</p>
+        
+        <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-color);">
+        <p style="font-size: 0.9rem; color: var(--col-keyword);"><b>Οδηγία για την προσομοίωση:</b> Το κουμπί <b>"▶ Εκκίνηση"</b> θα ενεργοποιηθεί μόλις συμπληρώσετε όλα τα κενά. Πάτησε το κουμπί <b>Bήμα</b> για να εκτελείται ο κώδικας γραμμή-γραμμή ή το κουμπί <b>Aυτόματη Eκτέλεση</b> για να εκτελεστεί όλος ο κώδικας μαζί</p>
+    </div>
+
+    <div class="col-center">
+        <div class="code-editor" id="editor">
+            <div class="line" id="L1"><span class="var">κ</span> <span class="op">←</span> <span class="num">2</span></div>
+            <div class="line" id="L2"><span class="var">λ</span> <span class="op">←</span> <span class="num">3</span></div>
+            
+            <div class="line" id="L3"><span class="kw">ΓΙΑ</span> <span class="var">i</span> <span class="kw">ΑΠΟ</span> <span class="num">1</span> <span class="kw">ΜΕΧΡΙ</span> <span class="num">4</span></div>
+            <div class="line pad-1" id="L4"><span class="kw">ΓΙΑ</span> <span class="var">j</span> <span class="kw">ΑΠΟ</span> <span class="num">1</span> <span class="kw">ΜΕΧΡΙ</span> <span class="num">4</span></div>
+            
+            <div class="line pad-2" id="L5"><span class="kw">ΑΝ</span> <input id="in1" class="code-input" placeholder="(1)" style="width:200px"> <span class="kw">ΤΟΤΕ</span></div>
+            
+            <div class="line pad-3" id="L6"><input id="in2" class="code-input" placeholder="(2)" style="width:180px"></div>
+            <div class="line pad-3" id="L7"><span class="var">κ</span> <span class="op">←</span> <input id="in3" class="code-input" placeholder="(3)"></div>
+            
+            <div class="line pad-2" id="L8"><span class="kw">ΑΛΛΙΩΣ</span></div>
+            
+            <div class="line pad-3" id="L9"><span class="var">Α</span>[<span class="var">i</span>,<span class="var">j</span>] <span class="op">←</span> <input id="in4" class="code-input" placeholder="(4)"></div>
+            <div class="line pad-3" id="L10"><input id="in5" class="code-input" placeholder="(5)" style="width:180px"></div>
+            
+            <div class="line pad-2" id="L11"><span class="kw">ΤΕΛΟΣ_ΑΝ</span></div>
+            <div class="line pad-1" id="L12"><span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span></div>
+            <div class="line" id="L13"><span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span></div>
+        </div>
+    </div>
+
+    <div class="col-right">
+        <div style="font-weight:bold; margin-bottom:5px;">Μνήμη</div>
+        <div class="monitor">
+            <div class="var-row"><span>i:</span> <span id="val-i" class="var-val">-</span></div>
+            <div class="var-row"><span>j:</span> <span id="val-j" class="var-val">-</span></div>
+            <div class="var-row"><span>κ:</span> <span id="val-k" class="var-val">-</span></div>
+            <div class="var-row"><span>λ:</span> <span id="val-l" class="var-val">-</span></div>
+        </div>
+
+        <div style="font-weight:bold; margin-bottom:5px;">Πίνακας Α (Έξοδος)</div>
+        <div class="matrix-viz" id="vizGrid"></div>
+
+        <div class="console" id="console">Συμπληρώστε τα κενά...</div>
+    </div>
+</div>
+
+<script>
+    // --- Simulator State ---
+    let PC = 0; 
+    let VARS = { i:0, j:0, k:0, l:0 };
+    let TIMER = null;
+    let MATRIX_DATA = Array(4).fill().map(()=>Array(4).fill(null)); 
+    let ERROR_FLAG = false;
+
+    // --- Validations ---
+    function checkInputs() {
+        const ids = ['in1', 'in2', 'in3', 'in4', 'in5'];
+        let allFilled = true;
+        ids.forEach(id => {
+            if(!document.getElementById(id).value.trim()) allFilled = false;
+        });
+        if(PC === 0) document.getElementById('btnRun').disabled = !allFilled;
+    }
+
+    document.querySelectorAll('.code-input').forEach(inp => {
+        inp.addEventListener('input', checkInputs);
+        inp.addEventListener('keyup', checkInputs);
+    });
+
+    // --- Parser / Interpreter ---
+    function validateExpressionSyntax(expr, allowComparison) {
+        if (expr.includes('<-') || expr.includes('←')) {
+            throw new Error(`Σφάλμα Σύνταξης: Βρέθηκε εντολή εκχώρησης.`);
+        }
+        if (!allowComparison && expr.includes('=')) {
+             throw new Error(`Συντακτικό Σφάλμα: Μη αναμενόμενο σύμβολο '='.`);
+        }
+        if (/^[\+\*\/]/.test(expr)) { 
+            throw new Error(`Συντακτικό Σφάλμα: Λείπει τελεστέος.`);
+        }
+    }
+
+    function safeEval(expr) {
+        let clean = expr.trim().toLowerCase();
+        
+        clean = clean.replace(/<>/g, '!==');
+        clean = clean.replace(/=/g, '==='); 
+        clean = clean.replace(/mod/g, '%');
+        clean = clean.replace(/div/g, '/'); 
+        clean = clean.replace(/←/g, '='); 
+        clean = clean.replace(/<-/g, '=');
+        
+        clean = clean.replace(/κ/g, VARS.k);
+        clean = clean.replace(/λ/g, VARS.l);
+        clean = clean.replace(/\bk\b/g, VARS.k);
+        clean = clean.replace(/\bl\b/g, VARS.l);
+        clean = clean.replace(/\bi\b/g, VARS.i);
+        clean = clean.replace(/\bj\b/g, VARS.j);
+
+        if (/[aAαΑ]\[/.test(clean)) {
+            let r = VARS.i - 1;
+            let c = VARS.j - 1;
+            if (MATRIX_DATA[r][c] === null) {
+                throw new Error(`Σφάλμα Εκτέλεσης: Το στοιχείο A[${VARS.i},${VARS.j}] είναι κενό!`);
+            } else {
+                 clean = clean.replace(/[aAαΑ]\[.*?\]/g, MATRIX_DATA[r][c]);
+            }
+        }
+
+        try {
+            // eslint-disable-next-line no-eval
+            return eval(clean); 
+        } catch (e) {
+            throw new Error("Άγνωστο σφάλμα.");
+        }
+    }
+
+    const INSTRUCTIONS = [
+        { lineId: 'L1', action: () => { VARS.k = 2; log("κ ← 2"); } },
+        { lineId: 'L2', action: () => { VARS.l = 3; log("λ ← 3"); } },
+        { lineId: 'L3', action: () => { VARS.i = 1; log("i ← 1"); } },
+        { lineId: 'L4', action: () => { VARS.j = 1; } },
+        
+        // L5: Condition
+        { lineId: 'L5', action: () => {
+            let input = getIn('in1');
+            validateExpressionSyntax(input, true); 
+            
+            let processed = input.toLowerCase();
+            if(!processed.includes('i') && processed.includes('mod')) processed = "i " + processed;
+
+            let res = safeEval(processed);
+            log(`Έλεγχος i=${VARS.i}: ${res ? "Αληθής" : "Ψευδής"}`);
+            return res ? 5 : 8; 
+        }},
+
+        // L6: Assignment 1
+        { lineId: 'L6', action: () => {
+            let input = getIn('in2');
+            let parts = input.split(/<-|←/);
+            if(parts.length < 2) throw new Error("Συντακτικό Σφάλμα: Λείπει η εκχώρηση (<-)");
+            
+            let lhs = parts[0].trim().toLowerCase();
+            let rhs = parts[1].trim();
+            validateExpressionSyntax(rhs, false); 
+            
+            let val = safeEval(rhs);
+
+            if(/[aAαΑ]\[/.test(lhs)) {
+                MATRIX_DATA[VARS.i-1][VARS.j-1] = val;
+                updateMatrixUI(val);
+                log(`A[${VARS.i},${VARS.j}] ← ${val}`);
+            } else if(lhs === 'k' || lhs === 'κ') {
+                VARS.k = val; log(`κ ← ${val}`);
+            } else if(lhs === 'l' || lhs === 'λ') {
+                VARS.l = val; log(`λ ← ${val}`);
+            } else {
+                log(`Εκχώρηση: ${lhs} ← ${val}`);
+            }
+        }},
+
+        // L7: k update
+        { lineId: 'L7', action: () => {
+            let input = getIn('in3');
+            validateExpressionSyntax(input, false); 
+            
+            let val = safeEval(input);
+            VARS.k = val;
+            log(`κ ← ${val}`);
+            return 11; 
+        }},
+
+        { lineId: 'L8', action: () => {} },
+
+        // L9: Assignment 2
+        { lineId: 'L9', action: () => {
+            let input = getIn('in4');
+            validateExpressionSyntax(input, false);
+            
+            let val = safeEval(input);
+            MATRIX_DATA[VARS.i-1][VARS.j-1] = val;
+            updateMatrixUI(val);
+            log(`A[${VARS.i},${VARS.j}] ← ${val}`);
+        }},
+
+        // L10: l update
+        { lineId: 'L10', action: () => {
+            let input = getIn('in5');
+            let parts = input.split(/<-|←/);
+            if(parts.length < 2) throw new Error("Συντακτικό Σφάλμα: Λείπει η εκχώρηση (<-)");
+            
+            let lhs = parts[0].trim().toLowerCase();
+            let rhs = parts[1].trim();
+            validateExpressionSyntax(rhs, false);
+            
+            let val = safeEval(rhs);
+            
+            if(lhs === 'l' || lhs === 'λ') { VARS.l = val; log(`λ ← ${val}`); }
+            else if(/[aAαΑ]\[/.test(lhs)) { MATRIX_DATA[VARS.i-1][VARS.j-1] = val; updateMatrixUI(val); log(`A[] ← ${val}`); }
+            else { log(`Εκχώρηση: ${lhs} ← ${val}`); }
+        }},
+
+        { lineId: 'L11', action: () => {} },
+
+        { lineId: 'L12', action: () => {
+            if(VARS.j < 4) { VARS.j++; return 4; }
+        }},
+
+        { lineId: 'L13', action: () => {
+            if(VARS.i < 4) { VARS.i++; VARS.j=1; return 4; } 
+            else { stopAuto(); log("Τέλος."); }
+        }}
+    ];
+
+    function startExecution() {
+        // Disable code inputs, but NOT the slider
+        document.querySelectorAll('.code-input').forEach(i => i.disabled = true);
+        
+        document.getElementById('btnRun').disabled = true;
+        document.getElementById('btnStep').disabled = false;
+        document.getElementById('btnAuto').disabled = false;
+
+        PC = 0; VARS = { i:0, j:0, k:0, l:0 }; MATRIX_DATA = Array(4).fill().map(()=>Array(4).fill(null)); ERROR_FLAG = false;
+        
+        initGrid();
+        log("--- Έναρξη ---");
+        updateUI();
+    }
+
+    function step() {
+        if(PC >= INSTRUCTIONS.length || ERROR_FLAG) return;
+
+        document.querySelectorAll('.line').forEach(l => l.classList.remove('active', 'error'));
+
+        let instr = INSTRUCTIONS[PC];
+        let dom = document.getElementById(instr.lineId);
+        
+        if(dom) {
+            dom.classList.add('active');
+            dom.scrollIntoView({behavior: "smooth", block: "center"});
+        }
+
+        try {
+            let jump = instr.action();
+            updateUI();
+            if (jump !== undefined) PC = jump; else PC++;
+        } catch (e) {
+            ERROR_FLAG = true;
+            stopAuto();
+            if(dom) dom.classList.add('error');
+            log(e.message, true); 
+        }
+    }
+
+    function updateMatrixUI(val) {
+        if(VARS.i > 0 && VARS.j > 0) {
+            let id = `cell-${VARS.i}-${VARS.j}`;
+            let el = document.getElementById(id);
+            if(el) {
+                el.innerText = val;
+                el.classList.add('filled');
+            }
+        }
+    }
+
+    function updateUI() {
+        document.getElementById('val-i').innerText = VARS.i;
+        document.getElementById('val-j').innerText = VARS.j;
+        document.getElementById('val-k').innerText = VARS.k;
+        document.getElementById('val-l').innerText = VARS.l;
+
+        document.querySelectorAll('.cell').forEach(c => c.classList.remove('active'));
+        if(VARS.i > 0 && VARS.j > 0) {
+            let id = `cell-${VARS.i}-${VARS.j}`;
+            let el = document.getElementById(id);
+            if(el) el.classList.add('active');
+        }
+    }
+
+    function getIn(id) { return document.getElementById(id).value.trim(); }
+    
+    function log(m, isError = false) { 
+        let c = document.getElementById('console');
+        c.innerText = m + "\n" + c.innerText;
+        if(isError) c.classList.add('error'); else c.classList.remove('error');
+    }
+
+    function initGrid() {
+        const g = document.getElementById('vizGrid');
+        g.innerHTML = '';
+        for(let r=1; r<=4; r++) {
+            for(let c=1; c<=4; c++) {
+                let div = document.createElement('div');
+                div.className = 'cell';
+                div.id = `cell-${r}-${c}`;
+                g.appendChild(div);
+            }
+        }
+    }
+
+    function toggleAuto() {
+        if (TIMER) {
+            stopAuto();
+        } else {
+            startAuto();
+        }
+    }
+
+    function startAuto() {
+        document.getElementById('btnAuto').innerText = "Παύση";
+        updateSpeed();
+    }
+    
+    function stopAuto() {
+        if(TIMER) clearInterval(TIMER);
+        TIMER = null;
+        document.getElementById('btnAuto').innerText = "Αυτόματη Εκτέλεση";
+    }
+
+    function updateSpeed() {
+        if(document.getElementById('btnAuto').innerText === "Παύση") {
+            if(TIMER) clearInterval(TIMER);
+            let val = document.getElementById('speedRange').value;
+            // No inversion needed anymore, since Left=50 (Slow), Right=1500 (Fast)
+            // But setInterval needs ms. Low ms = Fast.
+            // So we need to map Range [50..1500] to Delay [1500..50]
+            let ms = 1550 - val;
+            TIMER = setInterval(step, ms);
+        }
+    }
+
+    function solve() {
+        document.getElementById('in1').value = "i mod 2 <> 0";
+        document.getElementById('in2').value = "A[i,j] <- k";
+        document.getElementById('in3').value = "k + 2";
+        document.getElementById('in4').value = "l";
+        document.getElementById('in5').value = "l <- l + 3";
+        checkInputs();
+    }
+
+    function reset() {
+        stopAuto();
+        PC=0; VARS={i:0,j:0,k:0,l:0}; ERROR_FLAG = false;
+        // Re-enable inputs
+        document.querySelectorAll('.code-input').forEach(i => { i.disabled = false; i.value = ""; });
+        document.querySelectorAll('.line').forEach(l => l.classList.remove('active', 'error'));
+        document.getElementById('btnRun').disabled = true;
+        document.getElementById('btnStep').disabled = true;
+        document.getElementById('btnAuto').disabled = true;
+        document.getElementById('console').innerText = "Συμπληρώστε τα κενά...";
+        document.getElementById('console').classList.remove('error');
+        initGrid();
+        updateUI();
+    }
+
+    initGrid();
+</script>
+</body>
+</html>
