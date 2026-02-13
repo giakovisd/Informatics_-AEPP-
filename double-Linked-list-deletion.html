@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Διαγραφή σε Διπλά Συνδεδεμένη Λίστα</title>
+    <style>
+        :root {
+            /* Light Mode */
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fef08a;
+            --border-color: #cbd5e1;
+            
+            --node-bg: #ffffff;
+            --node-border: #334155;
+            
+            /* Memory Colors */
+            --mem-bg: #f1f5f9;
+            --mem-cell-border: #94a3b8;
+            --mem-active: #dcfce7; 
+            --mem-head: #e9d5ff;   /* Purple */
+            --mem-tail: #fed7aa;   /* Orange */
+            --mem-del: #fee2e2;    /* Redish */
+            --mem-txt: #0f172a;
+            
+            --arrow-next: #2563eb; /* Blue */
+            --arrow-prev: #ea580c; /* Orange */
+            --pointer-txt: #dc2626; 
+            
+            --btn-white-bg: #ffffff;
+            --btn-white-text: #1e293b;
+            --btn-white-border: #cbd5e1;
+            
+            --btn-blue: #3b82f6;
+            --btn-blue-hover: #2563eb;
+            
+            --code-kw: #0000CD;
+            --code-sym: #FF0000;
+            --code-txt: #000000;
+            
+            --disabled-btn: #94a3b8;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --text-color: #f1f5f9;
+            --panel-bg: #1e293b;
+            --highlight-line: #334155;
+            --border-color: #475569;
+            
+            --node-bg: #1e293b;
+            --node-border: #94a3b8;
+            
+            --mem-bg: #334155;
+            --mem-cell-border: #64748b;
+            --mem-active: #065f46;
+            --mem-head: #6b21a8;
+            --mem-tail: #7c2d12;
+            --mem-del: #7f1d1d;
+            --mem-txt: #f1f5f9;
+            
+            --arrow-next: #60a5fa;
+            --arrow-prev: #fb923c;
+            --pointer-txt: #f87171;
+            
+            --btn-white-bg: #1e293b;
+            --btn-white-text: #f1f5f9;
+            --btn-white-border: #475569;
+            
+            --code-kw: #60a5fa;
+            --code-sym: #f87171;
+            --code-txt: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* HEADER */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 5px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            height: 60px; flex-shrink: 0; gap: 20px; transition: background-color 0.3s;
+        }
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; flex:1; }
+
+        button {
+            padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem;
+            transition: all 0.2s; white-space: nowrap; height: 36px; display: flex; align-items: center; gap:5px;
+        }
+        .btn-white { background-color: var(--btn-white-bg); color: var(--btn-white-text); border: 1px solid var(--btn-white-border); }
+        .btn-white:hover { filter: brightness(0.95); }
+        .btn-blue { background-color: var(--btn-blue); color: white; border: 1px solid var(--btn-blue); }
+        .btn-blue:hover { background-color: var(--btn-blue-hover); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .icon { font-size: 1.1em; }
+
+        .slider-group {
+            display: flex; align-items: center; gap: 8px;
+            background: var(--btn-white-bg); padding: 4px 8px;
+            border: 1px solid var(--btn-white-border); border-radius: 4px; height: 36px;
+            color: var(--text-color); font-size: 0.85rem;
+        }
+        input[type=range] { width: 90px; cursor: pointer; }
+
+        /* LAYOUT */
+        .main-container {
+            display: flex; flex: 1; padding: 10px; gap: 10px; height: calc(100% - 60px); box-sizing: border-box;
+        }
+
+        .col-left {
+            flex: 0 0 420px; display: flex; flex-direction: column; gap: 10px; overflow: hidden;
+            transition: width 0.3s ease;
+        }
+        .col-left.hidden { width: 0; flex: 0 0 0; padding: 0; }
+        
+        .col-code {
+            flex: 1; display: flex; flex-direction: column;
+            background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+        .code-content {
+            flex: 1; overflow-y: auto; padding: 10px;
+            font-family: 'Consolas', monospace; font-size: 0.8rem; line-height: 1.4;
+            background-color: var(--panel-bg); color: var(--code-txt);
+        }
+        .code-line { padding: 2px 6px; border-radius: 3px; white-space: pre; }
+        .code-line.active { background-color: var(--highlight-line); font-weight: bold; color: var(--text-color); }
+        .kw { color: var(--code-kw); font-weight: bold; }
+        .sym { color: var(--code-sym); font-weight: bold; }
+        .txt { color: var(--code-txt); }
+
+        .col-viz {
+            flex: 1; background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; padding: 10px; position: relative; overflow: hidden;
+        }
+        
+        .scenario-box {
+            font-weight: bold; color: var(--btn-blue); margin-bottom: 5px; font-size: 0.95rem;
+        }
+
+        .narrative {
+            padding: 8px; margin-bottom: 10px;
+            background: rgba(59, 130, 246, 0.15); border-left: 4px solid var(--btn-blue);
+            font-size: 0.9rem; min-height: 24px; border-radius: 4px; color: var(--text-color);
+        }
+        
+        .viz-content {
+            flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; overflow: auto;
+        }
+
+        /* MEMORY GRID */
+        .memory-wrapper { width: 100%; margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; }
+        .mem-label { font-size: 0.8rem; font-weight: bold; margin-bottom: 4px; opacity: 0.8; }
+        .memory-grid {
+            display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(3, auto);
+            gap: 4px; background: var(--border-color); padding: 12px 4px 4px 4px; border-radius: 6px; width: 100%; max-width: 950px; 
+        }
+        .mem-cell {
+            background: var(--mem-bg); color: var(--mem-txt); font-family: monospace; 
+            border-radius: 3px; border: 1px solid var(--mem-cell-border);
+            display: flex; flex-direction: column; justify-content: space-between; height: 55px;
+            padding: 2px; position: relative; transition: all 0.3s;
+            overflow: visible !important; z-index: 1;
+        }
+        .mem-addr { font-size: 0.6rem; opacity: 0.7; text-align: left; letter-spacing: -0.5px; }
+        .mem-content { 
+            font-size: 0.65rem; font-weight: bold; text-align: center;
+            display: flex; justify-content: center; align-items: center; height: 100%; 
+            white-space: nowrap; overflow: hidden;
+        }
+        .mem-cell.active { background: var(--mem-active); border-color: #10b981; }
+        .mem-cell.head { background: var(--mem-head); border-color: #8b5cf6; z-index: 10; }
+        .mem-cell.tail { background: var(--mem-tail); border-color: #f97316; z-index: 10; }
+        .mem-cell.deleted { background: var(--mem-del); border-color: #ef4444; color: #b91c1c; }
+
+        .tag-mem { 
+            position: absolute; top: -10px; right: -5px; 
+            color: white; font-size: 0.7rem; padding: 1px 4px; 
+            border-radius: 3px; font-weight: bold; z-index: 10; 
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.3); white-space: nowrap;
+        }
+        .tag-head { background: #7c3aed; }
+        .tag-tail { background: #ea580c; }
+
+        /* LIST VIZ */
+        .list-area {
+            position: relative; width: 100%; height: 400px; margin-top: 5px;
+            overflow-x: auto; overflow-y: hidden;
+        }
+
+        /* Doubly Linked Node */
+        .node {
+            position: absolute; width: 160px; height: 75px; 
+            background: var(--node-bg); border: 2px solid var(--node-border);
+            border-radius: 6px; display: flex; flex-direction: column;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.1); transition: all 0.8s ease-in-out; z-index: 2;
+        }
+        
+        .node.detached {
+            border-color: #ef4444; border-style: dashed; opacity: 0.7;
+        }
+
+        .node-header {
+            background: var(--border-color); font-size: 0.65rem; text-align: center; color: var(--text-color);
+            padding: 1px; border-radius: 4px 4px 0 0; font-family: monospace; font-weight: bold;
+        }
+        
+        /* 3-Column Body for Prev|Data|Next */
+        .node-body { flex: 1; display: flex; overflow: hidden; }
+        
+        .node-ptr {
+            flex: 0.8; display: flex; align-items: center; justify-content: center;
+            font-family: monospace; font-size: 0.65rem; color: var(--pointer-txt); flex-direction: column;
+            background: rgba(0,0,0,0.03);
+        }
+        .node-ptr.prev { border-right: 1px solid var(--node-border); }
+        .node-ptr.next { border-left: 1px solid var(--node-border); }
+        
+        .node-data {
+            flex: 1.5; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 0.8rem;
+            padding: 2px 4px; text-align: center; white-space: nowrap; overflow: hidden;
+        }
+        
+        .ptr-lbl { font-size: 0.5rem; opacity: 0.6; margin-bottom: 2px; text-transform: uppercase; }
+
+        .node-tag {
+            position: absolute; top: -20px; left: 0; width: 100%; text-align: center;
+            font-weight: bold; color: var(--btn-blue); font-size: 0.8rem;
+        }
+
+        /* Special Boxes for HEAD/TAIL */
+        .special-box {
+            position: absolute; width: 60px; height: 60px;
+            border: 2px solid; border-radius: 6px; z-index: 3;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .box-head { background: var(--mem-head); border-color: #7c3aed; }
+        .box-tail { background: var(--mem-tail); border-color: #ea580c; }
+        .box-title { font-weight: bold; font-size: 0.8rem; margin-bottom: 4px; }
+        .box-val { font-family: monospace; font-size: 0.7rem; font-weight: bold; }
+
+        /* SVG */
+        .svg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+        path { stroke-width: 2; fill: none; transition: all 0.5s; }
+        path.next-arrow { stroke: var(--arrow-next); }
+        path.prev-arrow { stroke: var(--arrow-prev); }
+
+        /* OUTPUT */
+        .col-output {
+            flex: 0 0 90px; background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .output-header { padding: 5px; background: var(--bg-color); font-weight: bold; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; text-align: center; }
+        .output-log { flex: 1; padding: 5px; overflow-y: auto; font-family: monospace; font-size: 0.7rem; background: var(--panel-bg); color: var(--text-color); }
+        .log-item { border-bottom: 1px solid var(--border-color); padding: 2px 0; }
+
+        .speak-btn.active { color: #ef4444; border-color: #ef4444; }
+.code-line { 
+            padding: 8px; 
+            border-radius: 4px; 
+            white-space: pre-wrap; /* Επιτρέπει την αναδίπλωση */
+            line-height: 1.4; 
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Διαγραφή-Διπλά Συνδεδεμένη Λίστα. Τυχαίες θέσεις μνήμης</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button style="display:none;" class="btn btn-white speak-btn" id="btnSpeak" onclick="toggleSpeech()" title="Αφήγηση">
+            <span class="icon">🔇</span>
+        </button>
+
+        <button class="btn btn-white" onclick="resetSim()">
+            <span class="icon">🔄</span> Αρχή
+        </button>
+        
+        <button class="btn btn-blue" id="btnPlay" onclick="play()">
+            <span class="icon">▶</span> Αυτόματη Εκτέλεση
+        </button>
+        
+        <button class="btn btn-white" id="btnStep" onclick="step()">
+            Βήμα <span class="icon">⏩</span>
+        </button>
+        
+        <button class="btn btn-white" id="btnCode" onclick="toggleCode()">
+            <span class="icon">👁</span> Κώδικας
+        </button>
+
+        <div class="slider-group">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="100" max="2000" value="1000" id="speedSlider" oninput="updateSpeed()">
+        </div>
+
+        <button class="btn btn-white" onclick="toggleTheme()" title="Θέμα">
+            <span class="icon">🌙</span>
+        </button>
+    </div>
+</header>
+
+<div class="main-container">
+    <div class="col-left">
+        <div class="col-code">
+            <div class="code-content" id="codeContainer"></div>
+        </div>
+    </div>
+
+    <div class="col-viz">
+        <div id="scenarioBox" class="scenario-box"></div>
+        <div class="narrative" id="narrativeBox">Πατήστε εκτέλεση...</div>
+        
+        <div class="viz-content">
+            <div class="memory-wrapper">
+                <div class="mem-label">Μνήμη Υπολογιστή</div>
+                <div class="memory-grid" id="memGrid"></div>
+            </div>
+
+            <div class="list-area" id="listArea">
+                <svg class="svg-layer" id="svgLayer">
+                    <defs>
+                        <marker id="arrowNext" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="var(--arrow-next)" />
+                        </marker>
+                        <marker id="arrowPrev" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="var(--arrow-prev)" />
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">Οθόνη</div>
+        <div class="output-log" id="outputLog"></div>
+    </div>
+</div>
+
+<script>
+    // --- Algorithms ---
+    
+    const CODE_HEAD = [
+        "1. Επιλέγουμε ως «Στόχο» τον πρώτο κόμβο της λίστας (αυτόν που δείχνει το HEAD).",
+        "2. Ενημερώνουμε το HEAD ώστε να δείχνει στον επόμενο κόμβο (ο δεύτερος γίνεται πρώτος).",
+        "3. Αν μετά την αλλαγή υπάρχει νέος πρώτος κόμβος, τότε ρυθμίζουμε το Προηγούμενο του νέου πρώτου κόμβου ώστε να μην δείχνει σε κανέναν (δεν έχει προηγούμενο).",
+        "4. Ο παλιός πρώτος κόμβος αποκόπτεται από τη λίστα και παύει να ανήκει σε αυτή.",
+        "5. Η λίστα παραμένει σωστά συνδεδεμένη και η διαγραφή ολοκληρώνεται."
+    ];
+
+    const CODE_MIDDLE = [
+        "1. Εντοπίζουμε τον κόμβο που θέλουμε να διαγράψουμε (τον «Στόχο»).",
+        "2. Αλλάζουμε τον δείκτη Επόμενο του προηγούμενου κόμβου, ώστε να δείχνει στον επόμενο του «Στόχου».",
+        "3. Αλλάζουμε τον δείκτη Προηγούμενο του επόμενου κόμβου, ώστε να δείχνει στον προηγούμενο του «Στόχου».",
+        "4. Ο «Στόχος» αποκόπτεται από τη λίστα και παύει να ανήκει σε αυτή.",
+        "5. Η λίστα παραμένει σωστά συνδεδεμένη και η διαγραφή ολοκληρώνεται."
+    ];
+
+    const CODE_TAIL = [
+        "1. Επιλέγουμε ως «Στόχο» τον τελευταίο κόμβο της λίστας (αυτόν που δείχνει το TAIL).",
+        "2. Ενημερώνουμε το TAIL ώστε να δείχνει στον προηγούμενο κόμβο (ο προτελευταίος γίνεται τελευταίος).",
+        "3. Αν μετά την αλλαγή υπάρχει νέος τελευταίος κόμβος, τότε ρυθμίζουμε το Επόμενο του νέου τελευταίου κόμβου ώστε να μην δείχνει σε κανέναν (δεν έχει επόμενο).",
+        "4. Ο παλιός τελευταίος κόμβος αποκόπτεται από τη λίστα και παύει να ανήκει σε αυτή.",
+        "5. Η λίστα παραμένει σωστά συνδεδεμένη και η διαγραφή ολοκληρώνεται."
+    ];
+
+    function kw(t) { return `<span class="kw">${t}</span>`; }
+    function sym(t) { return `<span class="sym">${t}</span>`; }
+    function txt(t) { return `<span class="txt">${t}</span>`; }
+
+    // --- Themes ---
+    const THEMES = [
+        { type: 'nums', name: 'Αριθμοί' },
+        { type: 'chars', name: 'Γράμματα' },
+        { type: 'trip', name: 'Πόλεις', path: ['Αθήνα', 'Λαμία', 'Βόλος', 'Λάρισα', 'Κατερίνη', 'Θεσ/νίκη', 'Σέρρες', 'Δράμα'] }
+    ];
+
+    // --- State ---
+    let steps = [];
+    let stepIdx = -1;
+    let timer = null;
+    let isPlaying = false;
+    let isAnimating = false;
+    let speed = 2500;
+    let memBaseAddr = 1000;
+    let memSlots = [];
+    let nodes = []; 
+    let headViz = {}, tailViz = {};
+    let speechEnabled = false;
+    let currentScenario = 'MIDDLE'; 
+
+    function init() {
+        resetSim();
+        updateSpeed();
+    }
+
+    // --- Setup ---
+    function resetSim() {
+        isPlaying = false;
+        isAnimating = false;
+        clearTimeout(timer);
+        stepIdx = -1;
+        document.getElementById('btnPlay').innerHTML = '<span class="icon">▶</span> Αυτόματη Εκτέλεση';
+        document.getElementById('narrativeBox').innerText = "Πατήστε εκτέλεση...";
+        document.getElementById('outputLog').innerHTML = '';
+
+        // Random Scenario: 0=Head, 1=Tail, 2=Middle
+        const roll = Math.random();
+        if (roll < 0.25) currentScenario = 'HEAD';
+        else if (roll < 0.5) currentScenario = 'TAIL';
+        else currentScenario = 'MIDDLE';
+
+        // Render Code
+        const codeDiv = document.getElementById('codeContainer');
+        let activeCode = (currentScenario==='HEAD') ? CODE_HEAD : (currentScenario==='TAIL') ? CODE_TAIL : CODE_MIDDLE;
+        codeDiv.innerHTML = activeCode.map((l, i) => `<div class="code-line" id="line-${i}">${l}</div>`).join('');
+
+        // Init Memory
+        memBaseAddr = Math.floor(Math.random() * 5000) + 1000;
+        initMemoryGrid();
+
+        // Init Content
+        initContent();
+    }
+
+    function initContent() {
+        const theme = THEMES[Math.floor(Math.random() * THEMES.length)];
+        let items = [];
+        let delItem = '';
+        let delIdx = 0; // The index to delete (0=Head, 3=Tail, 1,2=Middle)
+
+        if (theme.type === 'nums') {
+            for(let i=0; i<4; i++) items.push(Math.floor(Math.random()*100));
+        } else if (theme.type === 'chars') {
+            const chars = "ABCDEFGHKLMN";
+            for(let i=0; i<4; i++) items.push(chars.charAt(Math.floor(Math.random()*chars.length)));
+        } else {
+            const start = Math.floor(Math.random() * (theme.path.length - 4));
+            items = theme.path.slice(start, start+4);
+        }
+        
+        // Decide index based on scenario
+        if (currentScenario === 'HEAD') delIdx = 0;
+        else if (currentScenario === 'TAIL') delIdx = 3;
+        else delIdx = Math.floor(Math.random() * 2) + 1; // 1 or 2
+
+        delItem = items[delIdx];
+        
+        // Assign addresses
+        const locs = assignRandomSlots();
+        const headAddr = memSlots[locs.headIdx].addr;
+        const tailAddr = memSlots[locs.tailIdx].addr;
+        const nAddr = [memSlots[locs.n1Idx].addr, memSlots[locs.n2Idx].addr, memSlots[locs.n3Idx].addr, memSlots[locs.n4Idx].addr];
+
+        // Populate Memory & Nodes (4 items)
+        // Link them
+        memSlots[locs.headIdx] = { ...memSlots[locs.headIdx], val: nAddr[0], type: 'head' };
+        memSlots[locs.tailIdx] = { ...memSlots[locs.tailIdx], val: nAddr[3], type: 'tail' };
+        
+        memSlots[locs.n1Idx] = { ...memSlots[locs.n1Idx], val: `[${items[0]}]`, type: 'active' };
+        memSlots[locs.n2Idx] = { ...memSlots[locs.n2Idx], val: `[${items[1]}]`, type: 'active' };
+        memSlots[locs.n3Idx] = { ...memSlots[locs.n3Idx], val: `[${items[2]}]`, type: 'active' };
+        memSlots[locs.n4Idx] = { ...memSlots[locs.n4Idx], val: `[${items[3]}]`, type: 'active' };
+
+        renderMemoryGrid();
+
+        // Visual Setup
+        headViz = { x: 20, y: 140, val: nAddr[0], title: 'HEAD', class:'box-head' };
+        
+        const gap = 200; 
+        const startX = 140; 
+        
+        // Create 4 nodes
+        nodes = [];
+        for(let i=0; i<4; i++) {
+            let prev = (i===0) ? 'NULL' : nAddr[i-1];
+            let next = (i===3) ? 'NULL' : nAddr[i+1];
+            nodes.push({
+                id: `n${i}`, x: startX + (i*gap), y: 140, 
+                val: items[i], prev: prev, next: next, addr: nAddr[i], label: ''
+            });
+        }
+        
+        tailViz = { x: nodes[3].x + 200, y: 140, val: nAddr[3], title: 'TAIL', class:'box-tail' };
+
+        // Labels
+        nodes[delIdx].label = "Στόχος";
+        
+        // Scenario Text
+        const box = document.getElementById('scenarioBox');
+        box.innerText = `Σενάριο: Διαγραφή του ${delIdx+1}ου κόμβου`;
+
+        // Calc Steps
+        if (currentScenario === 'HEAD') calcStepsHead(delIdx);
+        else if (currentScenario === 'TAIL') calcStepsTail(delIdx);
+        else calcStepsMiddle(delIdx);
+
+        renderNodes();
+        highlightLine(-1);
+    }
+
+    // --- Step Calculations ---
+    function calcStepsHead(idx) {
+        // Διαγραφή Κόμβου 0 (Head). Νέο Head θα είναι ο Κόμβος 1.
+        const target = nodes[0];
+        const nextNode = nodes[1];
+        
+        steps = [
+            { line: 0, msg: "Επιλογή του 1ου κόμβου ως Στόχου.", action: ()=>{} },
+            
+            { line: 1, msg: `Το HEAD αλλάζει και δείχνει στον επόμενο κόμβο (${nextNode.addr}).`, 
+              action: () => {
+                  headViz.val = nextNode.addr;
+                  let s = memSlots.find(s=>s.type==='head'); if(s) updateMemoryCell(s.addr, nextNode.addr, 'head');
+                  renderNodes(); drawLines();
+              }},
+              
+            { line: 2, msg: `Το Προηγούμενο του νέου 1ου κόμβου γίνεται NULL.`, 
+              action: () => {
+                  nextNode.prev = 'NULL'; 
+                  renderNodes(); drawLines();
+              }},
+              
+            { line: 3, msg: `Ο παλιός κόμβος αποκολλάται.`,
+              action: () => {
+                  target.detached = true;
+                  updateMemoryCell(target.addr, `[${target.val}]`, 'deleted'); 
+                  renderNodes(); drawLines();
+              }},
+              
+            { line: 4, msg: "Ολοκλήρωση.",
+              action: () => {
+                  target.y += 120; // Κίνηση προς τα κάτω
+                  const gap = 200;
+                  for(let i=1; i<nodes.length; i++) nodes[i].x -= gap; // Μετακίνηση λίστας αριστερά
+                  headViz.x = 20; // Reset Head viz positon fix logic if needed
+                  tailViz.x -= gap; 
+                  renderNodes(); drawLines();
+              }}
+        ];
+    }
+
+    function calcStepsTail(idx) {
+        // Διαγραφή Κόμβου 3 (Tail). Νέο Tail θα είναι ο Κόμβος 2.
+        const target = nodes[3];
+        const prevNode = nodes[2];
+
+        steps = [
+            { line: 0, msg: "Επιλογή του Τελευταίου κόμβου ως Στόχου.", action: ()=>{} },
+            
+            { line: 1, msg: `Το TAIL αλλάζει και δείχνει στον προηγούμενο κόμβο (${prevNode.addr}).`, 
+              action: () => {
+                  tailViz.val = prevNode.addr;
+                  let s = memSlots.find(s=>s.type==='tail'); if(s) updateMemoryCell(s.addr, prevNode.addr, 'tail');
+                  renderNodes(); drawLines();
+              }},
+              
+            { line: 2, msg: `Το Επόμενο του νέου Τελευταίου κόμβου γίνεται NULL.`, 
+              action: () => {
+                  prevNode.next = 'NULL'; 
+                  renderNodes(); drawLines();
+              }},
+              
+            { line: 3, msg: `Ο παλιός κόμβος αποκολλάται.`,
+              action: () => {
+                  target.detached = true;
+                  updateMemoryCell(target.addr, `[${target.val}]`, 'deleted');
+                  renderNodes(); drawLines();
+              }},
+              
+            { line: 4, msg: "Ολοκλήρωση.",
+              action: () => {
+                  target.y += 120; 
+                  renderNodes(); drawLines();
+              }}
+        ];
+    }
+
+    function calcStepsMiddle(idx) {
+        // Διαγραφή ενδιάμεσου κόμβου.
+        const target = nodes[idx];
+        const prevNode = nodes[idx-1];
+        const nextNode = nodes[idx+1];
+
+        steps = [
+            { line: 0, msg: `Εντοπισμός του ενδιάμεσου κόμβου (Στόχος).`, action: ()=>{} },
+            
+            { line: 1, msg: `Το Επόμενο του Προηγούμενου δείχνει στον Επόμενο του Στόχου (${nextNode.addr}).`, 
+              action: () => {
+                  prevNode.next = nextNode.addr; 
+                  renderNodes(); drawLines();
+              }},
+              
+            { line: 2, msg: `Το Προηγούμενο του Επόμενου δείχνει στον Προηγούμενο του Στόχου (${prevNode.addr}).`, 
+              action: () => {
+                  nextNode.prev = prevNode.addr; 
+                  renderNodes(); drawLines();
+              }},
+              
+            { line: 3, msg: `Ο Στόχος αποκολλάται από τη λίστα.`,
+              action: () => {
+                  target.detached = true;
+                  updateMemoryCell(target.addr, `[${target.val}]`, 'deleted');
+                  renderNodes(); drawLines();
+              }},
+              
+            { line: 4, msg: "Ολοκλήρωση. Αναδιάταξη της λίστας.",
+              action: () => {
+                  target.y += 120;
+                  const gap = 200;
+                  // Μετακίνηση των επόμενων κόμβων αριστερά για να κλείσει το κενό
+                  for(let i=idx+1; i<nodes.length; i++) nodes[i].x -= gap;
+                  tailViz.x -= gap;
+                  renderNodes(); drawLines();
+              }}
+        ];
+    }
+    // --- Helpers ---
+    function initMemoryGrid() {
+        memSlots = Array.from({length: 30}, (_, i) => ({ addr: memBaseAddr + (i*4), val: '0', type: 'empty' }));
+    }
+    
+    function assignRandomSlots() {
+        let idxs = Array.from({length:30},(_,i)=>i).sort(()=>Math.random()-0.5);
+        return { headIdx: idxs[0], tailIdx: idxs[1], n1Idx: idxs[2], n2Idx: idxs[3], n3Idx: idxs[4], n4Idx: idxs[5] };
+    }
+
+    function renderMemoryGrid() {
+        const grid = document.getElementById('memGrid');
+        grid.innerHTML = '';
+        memSlots.forEach(s => {
+            const d = document.createElement('div');
+            d.className = `mem-cell ${s.type}`;
+            d.id = `mem-${s.addr}`;
+            let tag = '';
+            if(s.type==='head') tag=`<div class="tag-mem tag-head">HEAD</div>`;
+            if(s.type==='tail') tag=`<div class="tag-mem tag-tail">TAIL</div>`;
+            d.innerHTML = `<div class="mem-addr">${s.addr}</div><div class="mem-content">${s.val}</div>${tag}`;
+            grid.appendChild(d);
+        });
+        const isDark = document.body.classList.contains('dark-mode');
+        document.querySelector('#arrowNext polygon').setAttribute('fill', isDark?'#60a5fa':'#2563eb');
+        document.querySelector('#arrowPrev polygon').setAttribute('fill', isDark?'#fb923c':'#ea580c');
+    }
+
+    function updateMemoryCell(addr, val, type) {
+        let idx = memSlots.findIndex(s=>s.addr===addr);
+        if(idx!==-1) {
+            memSlots[idx].val = val; 
+            if(type) memSlots[idx].type = type;
+            renderMemoryGrid();
+            let c = document.getElementById(`mem-${addr}`);
+            if(c){ c.style.transform='scale(1.15)'; setTimeout(()=>c.style.transform='scale(1)',200); }
+        }
+    }
+
+    function renderNodes() {
+        const area = document.getElementById('listArea');
+        document.querySelectorAll('.node, .special-box').forEach(e=>e.remove());
+
+        // Head Box
+        area.innerHTML += `<div class="special-box ${headViz.class}" style="left:${headViz.x}px; top:${headViz.y}px"><div class="box-title">${headViz.title}</div><div class="box-val">${headViz.val}</div></div>`;
+        
+        // Tail Box
+        area.innerHTML += `<div class="special-box ${tailViz.class}" style="left:${tailViz.x}px; top:${tailViz.y}px"><div class="box-title">${tailViz.title}</div><div class="box-val">${tailViz.val}</div></div>`;
+
+        nodes.forEach(n => {
+            let cls = 'node' + (n.detached ? ' detached' : '');
+            let html = `
+            <div class="${cls}" id="${n.id}" style="left:${n.x}px; top:${n.y}px">
+                ${n.label ? `<div class="node-tag">${n.label}</div>` : ''}
+                <div class="node-header">${n.addr}</div>
+                <div class="node-body">
+                    <div class="node-ptr prev"><div class="ptr-lbl">PREV</div>${n.prev}</div>
+                    <div class="node-data">${n.val}</div>
+                    <div class="node-ptr next"><div class="ptr-lbl">NEXT</div>${n.next}</div>
+                </div>
+            </div>`;
+            area.innerHTML += html;
+        });
+        drawLines();
+    }
+
+    function drawLines() {
+        const svg = document.getElementById('svgLayer');
+        svg.innerHTML = `
+        <defs>
+            <marker id="arrowNext" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="var(--arrow-next)" /></marker>
+            <marker id="arrowPrev" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="var(--arrow-prev)" /></marker>
+        </defs>`;
+
+        // Head -> First (find node with addr == headViz.val)
+        let first = nodes.find(n => n.addr === headViz.val);
+        if(first) drawPath(headViz.x+60, headViz.y+30, first.x-5, first.y+30, 'next-arrow', 'arrowNext');
+
+        // Tail -> Last
+        let last = nodes.find(n => n.addr === tailViz.val);
+        if(last) drawPath(tailViz.x, tailViz.y+30, last.x+160+5, last.y+30, 'prev-arrow', 'arrowPrev');
+
+        // Node Connections
+        nodes.forEach(src => {
+            if(src.detached) return;
+            if(src.next !== 'NULL' && src.next !== '?') {
+                let tgt = nodes.find(n=>n.addr===src.next);
+                if(tgt && !tgt.detached) drawPath(src.x+160, src.y+20, tgt.x-5, tgt.y+20, 'next-arrow', 'arrowNext');
+            }
+            if(src.prev !== 'NULL' && src.prev !== '?') {
+                let tgt = nodes.find(n=>n.addr===src.prev);
+                if(tgt && !tgt.detached) drawPath(src.x, src.y+55, tgt.x+160+5, tgt.y+55, 'prev-arrow', 'arrowPrev');
+            }
+        });
+    }
+
+    function drawPath(x1,y1,x2,y2, cls, marker) {
+        const svg = document.getElementById('svgLayer');
+        const path = document.createElementNS("http://www.w3.org/2000/svg", 'path');
+        path.setAttribute('class', cls);
+        path.style.stroke = (cls==='next-arrow') ? 'var(--arrow-next)' : 'var(--arrow-prev)';
+        
+        const dist = Math.abs(x2-x1);
+        
+        // If distance is large (e.g. skipping a deleted node), curve it
+        if(dist > 250) {
+             const arc = 70;
+             // Up or Down arc depending on direction
+             const dir = (y1 < 100) ? -1 : 1; 
+             path.setAttribute('d', `M${x1},${y1} C${x1+50},${y1-arc} ${x2-50},${y2-arc} ${x2},${y2}`);
+        } else {
+             path.setAttribute('d', `M${x1},${y1} L${x2},${y2}`);
+        }
+        
+        path.setAttribute('marker-end', `url(#${marker})`);
+        svg.appendChild(path);
+    }
+
+    // --- Control ---
+    function highlightLine(idx) {
+        document.querySelectorAll('.code-line').forEach(l => l.classList.remove('active'));
+        if(idx>=0) document.getElementById(`line-${idx}`).classList.add('active');
+    }
+
+    function step() {
+        if(isAnimating) return;
+        if(stepIdx >= steps.length - 1) return;
+        stepIdx++;
+        const s = steps[stepIdx];
+        highlightLine(s.line);
+        document.getElementById('narrativeBox').innerText = s.msg;
+        speak(s.msg);
+        if(s.action) s.action();
+        if(stepIdx === steps.length - 1) {
+            isPlaying = false;
+            document.getElementById('btnPlay').innerHTML = '<span class="icon">▶</span> Επανεκκίνηση';
+        } else if(isPlaying) {
+            isAnimating = true;
+            timer = setTimeout(() => { isAnimating = false; step(); }, speed);
+        }
+    }
+
+    function play() {
+        if(!isPlaying) {
+            if(stepIdx >= steps.length - 1) resetSim();
+            isPlaying = true;
+            document.getElementById('btnPlay').innerHTML = '<span class="icon">⏸</span> Παύση';
+            step();
+        } else {
+            isPlaying = false;
+            clearTimeout(timer);
+            document.getElementById('btnPlay').innerHTML = '<span class="icon">▶</span> Αυτόματη Εκτέλεση';
+        }
+    }
+
+    function toggleCode() { document.querySelector('.col-left').classList.toggle('hidden'); }
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); renderMemoryGrid(); }
+    function updateSpeed() { speed = 3500 - document.getElementById('speedSlider').value; }
+    function toggleSpeech() {
+        speechEnabled = !speechEnabled;
+        const btn = document.getElementById('btnSpeak');
+        if(speechEnabled) { btn.innerHTML = '🔈'; btn.classList.add('active'); }
+        else { btn.innerHTML = '🔇'; btn.classList.remove('active'); window.speechSynthesis.cancel(); }
+    }
+    function speak(text) {
+        if(!speechEnabled) return;
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text); u.lang='el-GR'; window.speechSynthesis.speak(u);
+    }
+
+    init();
+</script>
+</body>
+</html>

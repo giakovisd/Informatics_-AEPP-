@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Εισαγωγή σε Διπλά Συνδεδεμένη Λίστα</title>
+    <style>
+        :root {
+            /* Light Mode */
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fef08a;
+            --border-color: #cbd5e1;
+            
+            --node-bg: #ffffff;
+            --node-border: #334155;
+            
+            /* Colors */
+            --mem-bg: #f1f5f9;
+            --mem-cell-border: #94a3b8;
+            --mem-active: #dcfce7; 
+            --mem-head: #e9d5ff;   /* Purple */
+            --mem-tail: #fed7aa;   /* Orange */
+            --mem-new: #fef08a;    /* Yellow */
+            --mem-txt: #0f172a;
+            
+            --arrow-next: #2563eb; /* Blue */
+            --arrow-prev: #ea580c; /* Orange */
+            --pointer-txt: #dc2626; 
+            
+            --btn-white-bg: #ffffff;
+            --btn-white-text: #1e293b;
+            --btn-white-border: #cbd5e1;
+            
+            --btn-blue: #3b82f6;
+            --btn-blue-hover: #2563eb;
+            
+            --code-kw: #0000CD;
+            --code-sym: #FF0000;
+            --code-txt: #000000;
+            
+            --disabled-btn: #94a3b8;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --text-color: #f1f5f9;
+            --panel-bg: #1e293b;
+            --highlight-line: #334155;
+            --border-color: #475569;
+            
+            --node-bg: #1e293b;
+            --node-border: #94a3b8;
+            
+            --mem-bg: #334155;
+            --mem-cell-border: #64748b;
+            --mem-active: #065f46;
+            --mem-head: #6b21a8;
+            --mem-tail: #7c2d12;
+            --mem-new: #854d0e;
+            --mem-txt: #f1f5f9;
+            
+            --arrow-next: #60a5fa;
+            --arrow-prev: #fb923c;
+            --pointer-txt: #f87171;
+            
+            --btn-white-bg: #1e293b;
+            --btn-white-text: #f1f5f9;
+            --btn-white-border: #475569;
+            
+            --code-kw: #60a5fa;
+            --code-sym: #f87171;
+            --code-txt: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* HEADER */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 5px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            height: 60px; flex-shrink: 0; gap: 20px; transition: background-color 0.3s;
+        }
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; flex:1; }
+
+        button {
+            padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem;
+            transition: all 0.2s; white-space: nowrap; height: 36px; display: flex; align-items: center; gap:5px;
+        }
+        .btn-white { background-color: var(--btn-white-bg); color: var(--btn-white-text); border: 1px solid var(--btn-white-border); }
+        .btn-white:hover { filter: brightness(0.95); }
+        .btn-blue { background-color: var(--btn-blue); color: white; border: 1px solid var(--btn-blue); }
+        .btn-blue:hover { background-color: var(--btn-blue-hover); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .icon { font-size: 1.1em; }
+
+        .slider-group {
+            display: flex; align-items: center; gap: 8px;
+            background: var(--btn-white-bg); padding: 4px 8px;
+            border: 1px solid var(--btn-white-border); border-radius: 4px; height: 36px;
+            color: var(--text-color); font-size: 0.85rem;
+        }
+        input[type=range] { width: 90px; cursor: pointer; }
+
+        /* LAYOUT */
+        .main-container {
+            display: flex; flex: 1; padding: 10px; gap: 10px; height: calc(100% - 60px); box-sizing: border-box;
+        }
+
+        .col-left {
+            flex: 0 0 380px; display: flex; flex-direction: column; gap: 10px; overflow: hidden;
+            transition: width 0.3s ease;
+        }
+        .col-left.hidden { width: 0; flex: 0 0 0; padding: 0; }
+        
+        .col-code {
+            flex: 1; display: flex; flex-direction: column;
+            background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+        .code-content {
+            flex: 1; overflow-y: auto; padding: 10px;
+            font-family: 'Consolas', monospace; font-size: 0.8rem; line-height: 1.4;
+            background-color: var(--panel-bg); color: var(--code-txt);
+        }
+        .code-line { padding: 2px 6px; border-radius: 3px; white-space: pre; }
+        .code-line.active { background-color: var(--highlight-line); font-weight: bold; color: var(--text-color); }
+        .kw { color: var(--code-kw); font-weight: bold; }
+        .sym { color: var(--code-sym); font-weight: bold; }
+        .txt { color: var(--code-txt); }
+
+        .col-viz {
+            flex: 1; background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; padding: 10px; position: relative; overflow: hidden;
+        }
+        
+        .scenario-box {
+            font-weight: bold; color: var(--btn-blue); margin-bottom: 5px; font-size: 0.95rem;
+        }
+
+        .narrative {
+            padding: 8px; margin-bottom: 10px;
+            background: rgba(59, 130, 246, 0.15); border-left: 4px solid var(--btn-blue);
+            font-size: 0.9rem; min-height: 24px; border-radius: 4px; color: var(--text-color);
+        }
+        
+        .viz-content {
+            flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; overflow: auto;
+        }
+
+        /* MEMORY GRID */
+        .memory-wrapper { width: 100%; margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; }
+        .mem-label { font-size: 0.8rem; font-weight: bold; margin-bottom: 4px; opacity: 0.8; }
+        .memory-grid {
+            display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(3, auto);
+            gap: 4px; background: var(--border-color); padding: 12px 4px 4px 4px; border-radius: 6px; width: 100%; max-width: 950px; 
+        }
+        .mem-cell {
+            background: var(--mem-bg); color: var(--mem-txt); font-family: monospace; 
+            border-radius: 3px; border: 1px solid var(--mem-cell-border);
+            display: flex; flex-direction: column; justify-content: space-between; height: 50px;
+            padding: 2px; position: relative; transition: all 0.3s;
+            overflow: visible !important; z-index: 1;
+        }
+        .mem-addr { font-size: 0.6rem; opacity: 0.7; text-align: left; letter-spacing: -0.5px; }
+        .mem-content { 
+            font-size: 0.65rem; font-weight: bold; text-align: center;
+            display: flex; justify-content: center; align-items: center; height: 100%; 
+            white-space: nowrap; overflow: hidden;
+        }
+        .mem-cell.active { background: var(--mem-active); border-color: #10b981; }
+        .mem-cell.head { background: var(--mem-head); border-color: #8b5cf6; z-index: 10; }
+        .mem-cell.tail { background: var(--mem-tail); border-color: #f97316; z-index: 10; }
+        .mem-cell.new { background: var(--mem-new); border-color: #f59e0b; }
+
+        .tag-mem { 
+            position: absolute; top: -10px; right: -5px; 
+            color: white; font-size: 0.7rem; padding: 1px 4px; 
+            border-radius: 3px; font-weight: bold; z-index: 10; 
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.3); white-space: nowrap;
+        }
+        .tag-head { background: #7c3aed; }
+        .tag-tail { background: #ea580c; }
+
+        /* LIST VIZ */
+        .list-area {
+            position: relative; width: 100%; height: 400px; margin-top: 5px;
+            overflow-x: auto; overflow-y: hidden;
+        }
+
+        /* Doubly Linked Node */
+        .node {
+            position: absolute; width: 160px; height: 75px; 
+            background: var(--node-bg); border: 2px solid var(--node-border);
+            border-radius: 6px; display: flex; flex-direction: column;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.1); transition: all 0.8s ease-in-out; z-index: 2;
+        }
+        
+        .node-header {
+            background: var(--border-color); font-size: 0.65rem; text-align: center; color: var(--text-color);
+            padding: 1px; border-radius: 4px 4px 0 0; font-family: monospace; font-weight: bold;
+        }
+        
+        /* 3-Column Body for Prev|Data|Next */
+        .node-body { flex: 1; display: flex; overflow: hidden; }
+        
+        .node-ptr {
+            flex: 0.8; display: flex; align-items: center; justify-content: center;
+            font-family: monospace; font-size: 0.65rem; color: var(--pointer-txt); flex-direction: column;
+            background: rgba(0,0,0,0.03);
+        }
+        .node-ptr.prev { border-right: 1px solid var(--node-border); }
+        .node-ptr.next { border-left: 1px solid var(--node-border); }
+        
+        .node-data {
+            flex: 1.5; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 0.8rem;
+            padding: 2px 4px; text-align: center; white-space: nowrap; overflow: hidden;
+        }
+        
+        .ptr-lbl { font-size: 0.5rem; opacity: 0.6; margin-bottom: 2px; text-transform: uppercase; }
+
+        .node-tag {
+            position: absolute; top: -20px; left: 0; width: 100%; text-align: center;
+            font-weight: bold; color: var(--btn-blue); font-size: 0.8rem;
+        }
+
+        /* Special Boxes for HEAD/TAIL */
+        .special-box {
+            position: absolute; width: 60px; height: 60px;
+            border: 2px solid; border-radius: 6px; z-index: 3;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .box-head { background: var(--mem-head); border-color: #7c3aed; }
+        .box-tail { background: var(--mem-tail); border-color: #ea580c; }
+        .box-title { font-weight: bold; font-size: 0.8rem; margin-bottom: 4px; }
+        .box-val { font-family: monospace; font-size: 0.7rem; font-weight: bold; }
+
+        /* SVG */
+        .svg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+        path { stroke-width: 2; fill: none; transition: all 0.5s; }
+        path.next-arrow { stroke: var(--arrow-next); }
+        path.prev-arrow { stroke: var(--arrow-prev); }
+
+        /* OUTPUT */
+        .col-output {
+            flex: 0 0 90px; background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .output-header { padding: 5px; background: var(--bg-color); font-weight: bold; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; text-align: center; }
+        .output-log { flex: 1; padding: 5px; overflow-y: auto; font-family: monospace; font-size: 0.7rem; background: var(--panel-bg); color: var(--text-color); }
+        .log-item { border-bottom: 1px solid var(--border-color); padding: 2px 0; }
+
+        .speak-btn.active { color: #ef4444; border-color: #ef4444; }
+/* ΝΕΟΣ ΚΑΝΟΝΑΣ ΓΙΑ ΤΑ ΚΕΙΜΕΝΑ */
+        .code-line { 
+            padding: 8px !important; 
+            border-radius: 4px; 
+            white-space: pre-wrap !important; /* Αυτό κάνει τη δουλειά */
+            line-height: 1.5 !important; 
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Εισαγωγή σε Διπλά Συνδεδεμένη Λίστα. Τυχαίες θέσεις μνήμης</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button style="display:none;" class="btn btn-white speak-btn" id="btnSpeak" onclick="toggleSpeech()" title="Αφήγηση">
+            <span class="icon">🔇</span>
+        </button>
+
+        <button class="btn btn-white" onclick="resetSim()">
+            <span class="icon">🔄</span> Αρχή
+        </button>
+        
+        <button class="btn btn-blue" id="btnPlay" onclick="play()">
+            <span class="icon">▶</span> Αυτόματη Εκτέλεση
+        </button>
+        
+        <button class="btn btn-white" id="btnStep" onclick="step()">
+            Βήμα <span class="icon">⏩</span>
+        </button>
+        
+        <button class="btn btn-white" id="btnCode" onclick="toggleCode()">
+            <span class="icon">👁</span> Κώδικας
+        </button>
+
+        <div class="slider-group">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="100" max="2000" value="1000" id="speedSlider" oninput="updateSpeed()">
+        </div>
+
+        <button class="btn btn-white" onclick="toggleTheme()" title="Θέμα">
+            <span class="icon">🌙</span>
+        </button>
+    </div>
+</header>
+
+<div class="main-container">
+    <div class="col-left">
+        <div class="col-code">
+            <div class="code-content" id="codeContainer"></div>
+        </div>
+    </div>
+
+    <div class="col-viz">
+        <div id="scenarioBox" class="scenario-box"></div>
+        <div class="narrative" id="narrativeBox">Πατήστε εκτέλεση...</div>
+        
+        <div class="viz-content">
+            <div class="memory-wrapper">
+                <div class="mem-label">Μνήμη Υπολογιστή</div>
+                <div class="memory-grid" id="memGrid"></div>
+            </div>
+
+            <div class="list-area" id="listArea">
+                <svg class="svg-layer" id="svgLayer">
+                    <defs>
+                        <marker id="arrowNext" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="var(--arrow-next)" />
+                        </marker>
+                        <marker id="arrowPrev" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="var(--arrow-prev)" />
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">Οθόνη</div>
+        <div class="output-log" id="outputLog"></div>
+    </div>
+</div>
+
+<script>
+    // --- Algorithmic Logic ---
+    // Cases: 1. Head, 2. Middle, 3. Tail
+    
+    const CODE_HEAD = [
+        "1. Δημιουργούμε έναν νέο κόμβο στη μνήμη.",
+        "2. Αποθηκεύουμε τα δεδομένα που θέλουμε στον νέο κόμβο.",
+        "3. Ρυθμίζουμε τον δείκτη Επόμενο του νέου κόμβου ώστε να δείχνει στον παλιό πρώτο κόμβο (στον κόμβο που έδειχνε το HEAD).",
+        "4. Ρυθμίζουμε τον δείκτη Προηγ του νέου κόμβου ώστε να μην δείχνει σε κανέναν (δεν υπάρχει προηγούμενος).",
+        "5. Ρυθμίζουμε τον δείκτη Προηγ του παλιού πρώτου κόμβου ώστε να δείχνει στον νέο κόμβο.",
+        "6. Ενημερώνουμε το HEAD ώστε να δείχνει στον νέο κόμβο.",
+        "7. Η εισαγωγή στην αρχή ολοκληρώνεται."
+    ];
+
+    const CODE_MIDDLE = [
+        "1. Δημιουργούμε έναν νέο κόμβο στη μνήμη.",
+        "2. Αποθηκεύουμε τα δεδομένα που θέλουμε στον νέο κόμβο.",
+        "3. Ρυθμίζουμε τον δείκτη Επόμενο του νέου κόμβου ώστε να δείχνει στον κόμβο που ακολουθούσε τον τρέχοντα.",
+        "4. Ρυθμίζουμε τον δείκτη Προηγ του νέου κόμβου ώστε να δείχνει στον τρέχοντα κόμβο.",
+        "5. Αν υπάρχει επόμενος κόμβος μετά τον τρέχοντα, τότε ρυθμίζουμε τον δείκτη Προηγ του επόμενου κόμβου ώστε να δείχνει στον νέο κόμβο.",
+        "6. Ρυθμίζουμε τον δείκτη Επόμενο του τρέχοντα κόμβου ώστε να δείχνει στον νέο κόμβο.",
+        "7. Η εισαγωγή στο μέσο ολοκληρώνεται."
+    ];
+
+    const CODE_TAIL = [
+        "1. Δημιουργούμε έναν νέο κόμβο στη μνήμη.",
+        "2. Αποθηκεύουμε τα δεδομένα που θέλουμε στον νέο κόμβο.",
+        "3. Ρυθμίζουμε τον δείκτη Επόμενο του νέου κόμβου ώστε να μην δείχνει σε κανέναν (δεν υπάρχει επόμενος).",
+        "4. Ρυθμίζουμε τον δείκτη Προηγ του νέου κόμβου ώστε να δείχνει στον παλιό τελευταίο κόμβο (στον κόμβο που έδειχνε το TAIL).",
+        "5. Ρυθμίζουμε τον δείκτη Επόμενο του παλιού τελευταίου κόμβου ώστε να δείχνει στον νέο κόμβο.",
+        "6. Ενημερώνουμε το TAIL ώστε να δείχνει στον νέο κόμβο.",
+        "7. Η εισαγωγή στο τέλος ολοκληρώνεται."
+    ];
+
+    function kw(t) { return `<span class="kw">${t}</span>`; }
+    function sym(t) { return `<span class="sym">${t}</span>`; }
+    function txt(t) { return `<span class="txt">${t}</span>`; }
+
+    // --- Themes ---
+    const THEMES = [
+        { type: 'nums', name: 'Αριθμοί' },
+        { type: 'chars', name: 'Γράμματα' },
+        { type: 'trip', name: 'Πόλεις', path: ['Αθήνα', 'Λαμία', 'Βόλος', 'Λάρισα', 'Κατερίνη', 'Θεσ/νίκη', 'Σέρρες'] }
+    ];
+
+    // --- State ---
+    let steps = [];
+    let stepIdx = -1;
+    let timer = null;
+    let isPlaying = false;
+    let isAnimating = false;
+    let speed = 2500;
+    let memBaseAddr = 1000;
+    let memSlots = [];
+    let nodes = []; // Actual visual list nodes
+    let headViz = {}, tailViz = {};
+    let speechEnabled = false;
+    let currentScenario = 'MIDDLE'; 
+
+    function init() {
+        resetSim();
+        updateSpeed();
+    }
+
+    // --- Setup ---
+    function resetSim() {
+        isPlaying = false;
+        isAnimating = false;
+        clearTimeout(timer);
+        stepIdx = -1;
+        document.getElementById('btnPlay').innerHTML = '<span class="icon">▶</span> Αυτόματη Εκτέλεση';
+        document.getElementById('narrativeBox').innerText = "Πατήστε εκτέλεση...";
+        document.getElementById('outputLog').innerHTML = '';
+
+        // Random Scenario: 0=Head, 1=Tail, 2=Middle
+        const roll = Math.random();
+        if (roll < 0.3) currentScenario = 'HEAD';
+        else if (roll < 0.6) currentScenario = 'TAIL';
+        else currentScenario = 'MIDDLE';
+
+        // Render Code
+        const codeDiv = document.getElementById('codeContainer');
+        let activeCode = (currentScenario==='HEAD') ? CODE_HEAD : (currentScenario==='TAIL') ? CODE_TAIL : CODE_MIDDLE;
+        codeDiv.innerHTML = activeCode.map((l, i) => `<div class="code-line" id="line-${i}">${l}</div>`).join('');
+
+        // Init Memory
+        memBaseAddr = Math.floor(Math.random() * 5000) + 1000;
+        initMemoryGrid();
+
+        // Init Content
+        initContent();
+    }
+
+    function initContent() {
+        const theme = THEMES[Math.floor(Math.random() * THEMES.length)];
+        let items = [], insertItem = '';
+        
+        // We need 3 items initially
+        if (theme.type === 'nums') {
+            for(let i=0; i<4; i++) items.push(Math.floor(Math.random()*100));
+        } else if (theme.type === 'chars') {
+            const chars = "ABCDEFGHKLMN";
+            for(let i=0; i<4; i++) items.push(chars.charAt(Math.floor(Math.random()*chars.length)));
+        } else {
+            const start = Math.floor(Math.random() * (theme.path.length - 4));
+            items = theme.path.slice(start, start+4);
+        }
+        
+        insertItem = items.pop(); // The 4th item is the one to insert
+        
+        // Assign addresses
+        const locs = assignRandomSlots();
+        const headAddr = memSlots[locs.headIdx].addr;
+        const tailAddr = memSlots[locs.tailIdx].addr;
+        const n1Addr = memSlots[locs.n1Idx].addr;
+        const n2Addr = memSlots[locs.n2Idx].addr;
+        const n3Addr = memSlots[locs.n3Idx].addr;
+        const newAddr = memSlots[locs.newIdx].addr;
+
+        // Populate Memory & Nodes based on scenario
+        // Initial List: N1 <-> N2 <-> N3
+        memSlots[locs.headIdx] = { ...memSlots[locs.headIdx], val: n1Addr, type: 'head' };
+        memSlots[locs.tailIdx] = { ...memSlots[locs.tailIdx], val: n3Addr, type: 'tail' };
+        
+        memSlots[locs.n1Idx] = { ...memSlots[locs.n1Idx], val: `[${items[0]}]`, type: 'active' };
+        memSlots[locs.n2Idx] = { ...memSlots[locs.n2Idx], val: `[${items[1]}]`, type: 'active' };
+        memSlots[locs.n3Idx] = { ...memSlots[locs.n3Idx], val: `[${items[2]}]`, type: 'active' };
+
+        renderMemoryGrid();
+
+        // Visual Setup
+        headViz = { x: 20, y: 140, val: n1Addr, title: 'HEAD', class:'box-head' };
+        // We'll calculate tail pos dynamically based on nodes
+        
+        const gap = 240; 
+        const startX = 140; 
+        
+        let n1 = { id: 'n1', x: startX, y: 140, val: items[0], prev: 'NULL', next: n2Addr, addr: n1Addr, label: '' };
+        let n2 = { id: 'n2', x: startX + gap, y: 140, val: items[1], prev: n1Addr, next: n3Addr, addr: n2Addr, label: '' };
+        let n3 = { id: 'n3', x: startX + gap*2, y: 140, val: items[2], prev: n2Addr, next: 'NULL', addr: n3Addr, label: '' };
+        
+        nodes = [n1, n2, n3];
+        tailViz = { x: n3.x + 200, y: 140, val: n3Addr, title: 'TAIL', class:'box-tail' };
+
+        // Scenario Text
+        const box = document.getElementById('scenarioBox');
+        
+        if (currentScenario === 'HEAD') {
+            box.innerText = `Σενάριο: Εισαγωγή του '${insertItem}' στην ΑΡΧΗ της λίστας`;
+            calcStepsHead(newAddr, insertItem, n1Addr);
+        } else if (currentScenario === 'TAIL') {
+            box.innerText = `Σενάριο: Εισαγωγή του '${insertItem}' στο ΤΕΛΟΣ της λίστας`;
+            calcStepsTail(newAddr, insertItem, n3Addr);
+        } else {
+            // Middle: Insert between 1 and 2
+            nodes[0].label = "Τρέχων";
+            box.innerText = `Σενάριο: Εισαγωγή του '${insertItem}' μετά τον '${items[0]}' (Μέσο)`;
+            calcStepsMiddle(newAddr, insertItem, n1Addr, n2Addr);
+        }
+
+        renderNodes();
+        highlightLine(-1);
+    }
+
+    // --- Step Calculations ---
+    function calcStepsHead(newAddr, val, oldHeadAddr) {
+        steps = [
+            { line: 0, msg: "Δημιουργία νέου κόμβου.", action: () => {
+                  updateMemoryCell(newAddr, `[?]`, 'new');
+                  nodes.unshift({ id: 'new', x: 140, y: 280, val: '?', prev: '?', next: '?', addr: newAddr, label: 'Νέος' });
+                  renderNodes();
+            }},
+            { line: 1, msg: `Αποθήκευση δεδομένων (${val}).`, action: () => {
+                  nodes[0].val = val; updateMemoryCell(newAddr, `[${val}]`, 'new'); renderNodes();
+            }},
+            { line: 2, msg: "Σύνδεση Επόμενου -> Παλιό Head.", action: () => {
+                  nodes[0].next = oldHeadAddr; renderNodes(); drawLines();
+            }},
+            { line: 3, msg: "Το Προηγούμενο είναι NULL.", action: () => {
+                  nodes[0].prev = 'NULL'; renderNodes();
+            }},
+            { line: 4, msg: "Σύνδεση Παλιού Head -> Νέος.", action: () => {
+                  nodes[1].prev = newAddr; renderNodes(); drawLines();
+            }},
+            { line: 5, msg: "Ενημέρωση HEAD.", action: () => {
+                  headViz.val = newAddr; 
+                  let s = memSlots.find(s=>s.type==='head'); if(s) updateMemoryCell(s.addr, newAddr, 'head');
+                  renderNodes(); drawLines();
+            }},
+            { line: 6, msg: "Ολοκλήρωση.", action: () => {
+                  nodes[0].y = 140; 
+                  const gap = 240;
+                  for(let i=1; i<nodes.length; i++) nodes[i].x += gap;
+                  tailViz.x += gap;
+                  updateMemoryCell(newAddr, `[${val}]`, 'active');
+                  renderNodes(); drawLines();
+            }}
+        ];
+    }
+
+    function calcStepsTail(newAddr, val, oldTailAddr) {
+        steps = [
+            { line: 0, msg: "Δημιουργία νέου κόμβου.", action: () => {
+                  updateMemoryCell(newAddr, `[?]`, 'new');
+                  const lastX = nodes[nodes.length-1].x;
+                  nodes.push({ id: 'new', x: lastX + 120, y: 280, val: '?', prev: '?', next: '?', addr: newAddr, label: 'Νέος' });
+                  renderNodes();
+            }},
+            { line: 1, msg: `Αποθήκευση δεδομένων (${val}).`, action: () => {
+                  nodes[nodes.length-1].val = val; updateMemoryCell(newAddr, `[${val}]`, 'new'); renderNodes();
+            }},
+            { line: 2, msg: "Το Επόμενο είναι NULL.", action: () => {
+                  nodes[nodes.length-1].next = 'NULL'; renderNodes();
+            }},
+            { line: 3, msg: "Σύνδεση Προηγούμενου -> Παλιό Tail.", action: () => {
+                  nodes[nodes.length-1].prev = oldTailAddr; renderNodes(); drawLines();
+            }},
+            { line: 4, msg: "Σύνδεση Παλιού Tail -> Νέος.", action: () => {
+                  nodes[nodes.length-2].next = newAddr; renderNodes(); drawLines();
+            }},
+            { line: 5, msg: "Ενημέρωση TAIL.", action: () => {
+                  tailViz.val = newAddr; 
+                  let s = memSlots.find(s=>s.type==='tail'); if(s) updateMemoryCell(s.addr, newAddr, 'tail');
+                  renderNodes(); drawLines();
+            }},
+            { line: 6, msg: "Ολοκλήρωση.", action: () => {
+                  const newNode = nodes[nodes.length-1];
+                  newNode.y = 140; 
+                  newNode.x = nodes[nodes.length-2].x + 240;
+                  tailViz.x = newNode.x + 200;
+                  updateMemoryCell(newAddr, `[${val}]`, 'active');
+                  renderNodes(); drawLines();
+            }}
+        ];
+    }
+
+   function calcStepsMiddle(newAddr, val, currAddr, nextAddr) {
+        steps = [
+            { line: 0, msg: "Δημιουργία νέου κόμβου.", action: () => {
+                  updateMemoryCell(newAddr, `[?]`, 'new');
+                  const midX = (nodes[0].x + nodes[1].x) / 2;
+                  nodes.splice(1, 0, { id: 'new', x: midX - 30, y: 280, val: '?', prev: '?', next: '?', addr: newAddr, label: 'Νέος' });
+                  renderNodes();
+            }},
+            { line: 1, msg: `Αποθήκευση δεδομένων (${val}).`, action: () => {
+                  nodes[1].val = val; updateMemoryCell(newAddr, `[${val}]`, 'new'); renderNodes();
+            }},
+            { line: 2, msg: "Σύνδεση Επόμενου -> Επόμενο Τρέχοντος.", action: () => {
+                  nodes[1].next = nextAddr; renderNodes(); drawLines();
+            }},
+            { line: 3, msg: "Σύνδεση Προηγούμενου -> Τρέχων.", action: () => {
+                  nodes[1].prev = currAddr; renderNodes(); drawLines();
+            }},
+            { line: 4, msg: "Σύνδεση Επόμενου κόμβου (Προηγ) -> Νέος.", action: () => {
+                  nodes[2].prev = newAddr; renderNodes(); drawLines();
+            }},
+            { line: 5, msg: "Σύνδεση Τρέχοντος (Επόμενο) -> Νέος.", action: () => {
+                  nodes[0].next = newAddr; renderNodes(); drawLines();
+            }},
+            { line: 6, msg: "Ολοκλήρωση.", action: () => {
+                  const newNode = nodes[1];
+                  newNode.y = 140;
+                  const gap = 240;
+                  for(let i=1; i<nodes.length; i++) nodes[i].x = nodes[i-1].x + gap;
+                  tailViz.x = nodes[nodes.length-1].x + 200;
+                  updateMemoryCell(newAddr, `[${val}]`, 'active');
+                  renderNodes(); drawLines();
+            }}
+        ];
+    }
+
+    // --- Helpers ---
+    function initMemoryGrid() {
+        memSlots = Array.from({length: 30}, (_, i) => ({ addr: memBaseAddr + (i*4), val: '0', type: 'empty' }));
+    }
+    
+    function assignRandomSlots() {
+        let idxs = Array.from({length:30},(_,i)=>i).sort(()=>Math.random()-0.5);
+        return { headIdx: idxs[0], tailIdx: idxs[1], n1Idx: idxs[2], n2Idx: idxs[3], n3Idx: idxs[4], newIdx: idxs[5] };
+    }
+
+    function renderMemoryGrid() {
+        const grid = document.getElementById('memGrid');
+        grid.innerHTML = '';
+        memSlots.forEach(s => {
+            const d = document.createElement('div');
+            d.className = `mem-cell ${s.type}`;
+            d.id = `mem-${s.addr}`;
+            let tag = '';
+            if(s.type==='head') tag=`<div class="tag-mem tag-head">HEAD</div>`;
+            if(s.type==='tail') tag=`<div class="tag-mem tag-tail">TAIL</div>`;
+            d.innerHTML = `<div class="mem-addr">${s.addr}</div><div class="mem-content">${s.val}</div>${tag}`;
+            grid.appendChild(d);
+        });
+        const isDark = document.body.classList.contains('dark-mode');
+        document.querySelector('#arrowNext polygon').setAttribute('fill', isDark?'#60a5fa':'#2563eb');
+        document.querySelector('#arrowPrev polygon').setAttribute('fill', isDark?'#fb923c':'#ea580c');
+    }
+
+    function updateMemoryCell(addr, val, type) {
+        let idx = memSlots.findIndex(s=>s.addr===addr);
+        if(idx!==-1) {
+            memSlots[idx].val = val; 
+            if(type) memSlots[idx].type = type;
+            renderMemoryGrid();
+            let c = document.getElementById(`mem-${addr}`);
+            if(c){ c.style.transform='scale(1.15)'; setTimeout(()=>c.style.transform='scale(1)',200); }
+        }
+    }
+
+    function renderNodes() {
+        const area = document.getElementById('listArea');
+        document.querySelectorAll('.node, .special-box').forEach(e=>e.remove());
+
+        // Head Box
+        area.innerHTML += `<div class="special-box ${headViz.class}" style="left:${headViz.x}px; top:${headViz.y}px"><div class="box-title">${headViz.title}</div><div class="box-val">${headViz.val}</div></div>`;
+        
+        // Tail Box
+        area.innerHTML += `<div class="special-box ${tailViz.class}" style="left:${tailViz.x}px; top:${tailViz.y}px"><div class="box-title">${tailViz.title}</div><div class="box-val">${tailViz.val}</div></div>`;
+
+        nodes.forEach(n => {
+            let html = `
+            <div class="node" id="${n.id}" style="left:${n.x}px; top:${n.y}px">
+                ${n.label ? `<div class="node-tag">${n.label}</div>` : ''}
+                <div class="node-header">${n.addr}</div>
+                <div class="node-body">
+                    <div class="node-ptr prev"><div class="ptr-lbl">PREV</div>${n.prev}</div>
+                    <div class="node-data">${n.val}</div>
+                    <div class="node-ptr next"><div class="ptr-lbl">NEXT</div>${n.next}</div>
+                </div>
+            </div>`;
+            area.innerHTML += html;
+        });
+        drawLines();
+    }
+
+    function drawLines() {
+        const svg = document.getElementById('svgLayer');
+        svg.innerHTML = `
+        <defs>
+            <marker id="arrowNext" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="var(--arrow-next)" /></marker>
+            <marker id="arrowPrev" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="var(--arrow-prev)" /></marker>
+        </defs>`;
+
+        // Head -> First
+        if(nodes.length>0) drawPath(headViz.x+60, headViz.y+30, nodes[0].x-5, nodes[0].y+30, 'next-arrow', 'arrowNext');
+
+        // Tail -> Last
+        if(nodes.length>0) drawPath(tailViz.x, tailViz.y+30, nodes[nodes.length-1].x+160+5, nodes[nodes.length-1].y+30, 'prev-arrow', 'arrowPrev');
+
+        // Node Connections
+        nodes.forEach(src => {
+            if(src.next !== 'NULL' && src.next !== '?') {
+                let tgt = nodes.find(n=>n.addr===src.next);
+                if(tgt) drawPath(src.x+160, src.y+20, tgt.x-5, tgt.y+20, 'next-arrow', 'arrowNext');
+            }
+            if(src.prev !== 'NULL' && src.prev !== '?') {
+                let tgt = nodes.find(n=>n.addr===src.prev);
+                if(tgt) drawPath(src.x, src.y+55, tgt.x+160+5, tgt.y+55, 'prev-arrow', 'arrowPrev');
+            }
+        });
+    }
+
+    function drawPath(x1,y1,x2,y2, cls, marker) {
+        const svg = document.getElementById('svgLayer');
+        const path = document.createElementNS("http://www.w3.org/2000/svg", 'path');
+        path.setAttribute('class', cls);
+        
+        const dist = Math.abs(x2-x1);
+        if(Math.abs(y1-y2)<20 && dist < 300) {
+            path.setAttribute('d', `M${x1},${y1} L${x2},${y2}`);
+        } else {
+            // Curve
+            const arc = (dist>300) ? 90 : 50;
+            // Arc direction depends on if we go right or left roughly
+            const dir = (y2>y1) ? 1 : -1; 
+            path.setAttribute('d', `M${x1},${y1} C${x1+50},${y1} ${x2-50},${y2} ${x2},${y2}`);
+        }
+        path.setAttribute('marker-end', `url(#${marker})`);
+        svg.appendChild(path);
+    }
+
+    // --- Control ---
+    function highlightLine(idx) {
+        document.querySelectorAll('.code-line').forEach(l => l.classList.remove('active'));
+        if(idx>=0) document.getElementById(`line-${idx}`).classList.add('active');
+    }
+
+    function step() {
+        if(isAnimating) return;
+        if(stepIdx >= steps.length - 1) return;
+        stepIdx++;
+        const s = steps[stepIdx];
+        highlightLine(s.line);
+        document.getElementById('narrativeBox').innerText = s.msg;
+        speak(s.msg);
+        if(s.action) s.action();
+        if(stepIdx === steps.length - 1) {
+            isPlaying = false;
+            document.getElementById('btnPlay').innerHTML = '<span class="icon">▶</span> Επανεκκίνηση';
+        } else if(isPlaying) {
+            isAnimating = true;
+            timer = setTimeout(() => { isAnimating = false; step(); }, speed);
+        }
+    }
+
+    function play() {
+        if(!isPlaying) {
+            if(stepIdx >= steps.length - 1) resetSim();
+            isPlaying = true;
+            document.getElementById('btnPlay').innerHTML = '<span class="icon">⏸</span> Παύση';
+            step();
+        } else {
+            isPlaying = false;
+            clearTimeout(timer);
+            document.getElementById('btnPlay').innerHTML = '<span class="icon">▶</span> Αυτόματη Εκτέλεση';
+        }
+    }
+
+    function toggleCode() { document.querySelector('.col-left').classList.toggle('hidden'); }
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); renderMemoryGrid(); }
+    function updateSpeed() { speed = 3500 - document.getElementById('speedSlider').value; }
+    function toggleSpeech() {
+        speechEnabled = !speechEnabled;
+        const btn = document.getElementById('btnSpeak');
+        if(speechEnabled) { btn.innerHTML = '🔈'; btn.classList.add('active'); }
+        else { btn.innerHTML = '🔇'; btn.classList.remove('active'); window.speechSynthesis.cancel(); }
+    }
+    function speak(text) {
+        if(!speechEnabled) return;
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text); u.lang='el-GR'; window.speechSynthesis.speak(u);
+    }
+
+    init();
+</script>
+</body>
+</html>
