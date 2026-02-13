@@ -14,6 +14,7 @@
             --col-1d: #3b82f6;   /* Blue */
             --col-2d: #8b5cf6;   /* Purple */
             --col-ds: #10b981;   /* Emerald */
+            --col-sub: #f59e0b;  /*Orange */   
             
             --card-bg: #ffffff;
             --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -226,6 +227,16 @@
             text-align: center; padding: 30px; color: var(--text-muted); font-size: 0.9rem;
             margin-top: auto; border-top: 1px solid #e2e8f0;
         }
+/* --- ΣΤΥΛ ΓΙΑ ΥΠΟΠΡΟΓΡΑΜΜΑΤΑ (NEW) --- */
+.tab-btn.active[data-cat="sub"] { color: var(--col-sub); }
+
+.card[data-cat="sub"] .card-stripe { background: var(--col-sub); }
+
+.card[data-cat="sub"] .launch-btn { background: #fffbeb; color: var(--col-sub); }
+.card[data-cat="sub"] .launch-btn:hover { background: var(--col-sub); color: white; }
+
+.card[data-cat="sub"] .badge { background: #fffbeb; color: var(--col-sub); }
+
 
     </style>
 </head>
@@ -243,6 +254,7 @@
             <button class="tab-btn" onclick="filterApps('1d')" data-cat="1d">Μονοδιάστατοι</button>
             <button class="tab-btn" onclick="filterApps('2d')" data-cat="2d">Δισδιάστατοι</button>
             <button class="tab-btn" onclick="filterApps('struct')" data-cat="struct">Δομές Δεδομένων</button>
+            <button class="tab-btn" onclick="filterApps('sub')" data-cat="sub">Υποπρογράμματα</button>
         </div>
 
         <div class="search-wrapper">
@@ -273,12 +285,13 @@
         { title: "Ταξινόμηση Φυσαλίδας", file: "bubble-sort-all.html", cat: "1d", icon: "🫧", desc: "Η κλασική Bubble Sort - αλγόριθμος ευθείας ανταλλαγής με όλες τις παραλλαγές της." },
         { title: "Ταξινόμηση με κάποιο κριτήριο", file: "bubble-under-contition.html", cat: "1d", icon: "🧠", desc: "Με δεδομένους τους πίνακες ΟΝ και Τ που περιέχουν ονόματα και τάξεις μαθητών ('Α', 'Β', 'Γ'), να εμφανίζονται κατά αλφαβητική σειρά οι μαθητές της 'Β' τάξης." },
         { title: "Φυσαλίδα με 2ο Κλειδί", file: "bubble-sec-key.html", cat: "1d", icon: "🔑", desc: "Με δεδομένους τους πίνακες ΟΝ και Β, που περιέχουν ονόματα και βαθμούς μαθητών, να ταξινομούνται οι βαθμοί και σε περίπτωση ισοβαθμίας η σειρά των ονομάτων να είναι αλφαβητική." },
-        { title: "Ταξινόμηση με επιλογή", file: "insertion-sort.html", cat: "1d", icon: "📥", desc: "Ταξινόμηση με επιλογή (selection sort), κατ' επανάληψη εύρεση του max ή του min." },
+        { title: "Ταξινόμηση Εισαγωγής", file: "insertion-sort.html", cat: "1d", icon: "📥", desc: "Ταξινόμηση με επιλογή (Insertion Sort), κατ' επανάληψη εύρεση του max ή του min." },
         { title: "Συγχώνευση (Merge)", file: "Merge.html", cat: "1d", icon: "🔗", desc: "Συγχώνευση δύο πινάκων σε έναν τρίτο. Στις πρώτες θέσεις του νέου πίνακα μπαίνουν τα στοιχεία του πρώτου πίνακα και στη συνέχεια μπαίνουν τα στοιχεία του δεύτερου πίνακα" },
         { title: "Συγχώνευση Ταξινομημένων", file: "merge-sorted-tables.html", cat: "1d", icon: "zipper", emoji: "🤐", desc: "Συγχώνευση ταξινομημένων πινάκων σε τρίτο που θα είναι ταξινομημένος." },  
-        { title: "Ολίσθηση (Shift)", file: "Shift.html", cat: "1d", icon: "⬅️", desc: "Μετακίνηση στοιχείων προς τα αριστερά (ή πάνω) ή δεξιά (ή κάτω)." },
+        { title: "Ολίσθηση (Shift)", file: "shift.html", cat: "1d", icon: "⬅️", desc: "Μετακίνηση στοιχείων προς τα αριστερά (ή πάνω) ή δεξιά (ή κάτω)." },
         { title: "Συχνότητα Εμφάνισης", file: "frequency-of-occurrence.html", cat: "1d", icon: "📊", desc: "Πόσες φορές υπάρχει η κάθε διαφορετική τιμή στον πίνακα." },
         { title: "Μοναδικότητα", file: "uniqueness.html", cat: "1d", icon: "✨", desc: "Δημιουργία πίνακα χωρίς διπλοεγγραφές (μοναδικότητα)" },
+        { title: "Πωλήσεις Τριμήνων", file: "trimina.html", cat: "1d", icon: "📊", desc: "Υπολογισμός αθροισμάτων πωλήσεων ανά τρίμηνο με πολλαπλές αλγοριθμικές λύσεις." },
 
         // 2D ARRAYS (Δισδιάστατοι) - Purple
         { title: "Εισαγωγή στοιχείων σε δισδιάστατο", file: "2d-insert.html", cat: "2d", icon: "✍️", desc: "Εισαγωγή στοιχείων κατά γραμμές ή κατά στήλες." },
@@ -289,12 +302,43 @@
         { title: "Ταξινόμηση Γραμμής/Στήλης", file: "2d-bubble-line-column.html", cat: "2d", icon: "🔃", desc: "Εφαρμογή φυσαλίδας σε κάθε γραμμή ή στήλη." },
         { title: "Έλεγχος Συνθηκών", file: "2d-at-least-all.html", cat: "2d", icon: "✅", desc: "Προβλήματα τύπου 'τουλάχιστον ένα' ή 'όλα τα στοιχεία, γραμμής ή στήλης'." },
         { title: "Ιδιότητες Τετραγωνικού", file: "2d-square.html", cat: "2d", icon: "🔲", desc: "Κύρια/Δευτερεύουσα διαγώνιος και τρίγωνα πίνακα." },
+        { title: "Πίνακες: Θέμα Β 2024", file: "tables-24-kan.html", cat: "2d", icon: "📝", desc: "Συμπλήρωση κενών σε αλγόριθμο πινάκων σε δισδιάστατο πίνακα." },
+        { title: "Πίνακες: Θέμα Β 2024 - Ο μαθητής βλέπει την απάντηση του", file: "table-fill&check-24.html", cat: "2d", icon: "💯", desc: "Διαδραστική συμπλήρωση και έλεγχος εκτέλεσης κώδικα (Θέμα Β 2024)." },
+        
         
         
 
         // DATA STRUCTURES (Αλλες Δομές Δεδομένων)  - Green
         { title: "Στοίβα & Ουρά (Βασικά)", file: "stack-queue.html", cat: "struct", icon: "🥞", desc: "Οι βασικές λειτουργίες: Ώθηση/Απώθηση και Εισαγωγή/Εξαγωγή." },
-        { title: "Μαζικές Λειτουργίες", file: "stack-queue-mass-operations.html", cat: "struct", icon: "🏗️", desc: "Γέμισμα και άδειασμα δομών με επαναληπτικές δομές." },
+        { title: "Μαζικές Λειτουργίες", file: "stack-queue-mass-operations.html", cat: "struct", icon: "🏗️", desc: "Οπτικοποίηση μαζικού γεμίσματος και αδειάσματος Στοίβας και Ουράς, λαμβάνοντας υπόψη τα στοιχεία που ήδη περιέχονται σε αυτές." },
+	// --- ΑΠΛΕΣ ΛΙΣΤΕΣ ---
+	{ title: "Εισαγωγή σε Απλή Λίστα", file: "Linked-list-Insertion.html", cat: "struct", icon: "➕", desc: "Προσθήκη κόμβου στην αρχή, στο τέλος ή ενδιάμεσα σε απλή λίστα." },
+	{ title: "Διαγραφή σε Απλή Λίστα", file: "Linked-list-deletion.html", cat: "struct", icon: "✂️", desc: "Αφαίρεση κόμβου από απλή συνδεδεμένη λίστα." },
+	// --- ΔΙΠΛΕΣ ΛΙΣΤΕΣ ---
+	{ title: "Εισαγωγή σε Διπλή Λίστα", file: "double-Linked-list-Insertion.html", cat: "struct", icon: "📥", desc: "Εισαγωγή κόμβου σε διπλά συνδεδεμένη λίστα με ενημέρωση prev/next." },
+	{ title: "Διαγραφή σε Διπλή Λίστα", file: "double-Linked-list-deletion.html", cat: "struct", icon: "📤", desc: "Διαγραφή κόμβου από διπλά συνδεδεμένη λίστα." },
+
+	// --- ΔΕΝΔΡΑ & ΓΡΑΦΟΙ ---
+	{ title: "Δημιουργία Δυαδικού Δένδρο αναζήτησης - Αναζήτηση σε αυτό", file: "trees-binary.html", cat: "struct", icon: "🌲", desc: "Δημιουργία και πλοήγηση σε Δυαδικό Δένδρο Αναζήτησης με οπτική αναπαράσταση των συγκρίσεων. Παρακολούθησε βήμα-βήμα τη λογική της εισαγωγής και της αναζήτησης." },
+	{ title: "Εργαστήριο Γράφων", file: "graphs-drawing.html", cat: "struct", icon: "🕸️", desc: "Σχεδίασε γράφους και λύσε διαδραστικούς γρίφους τύπου Euler. Δοκίμασε στρατηγικές και ανακάλυψε τη διαφορά ανάμεσα σε άπληστη και βέλτιστη λύση." },
+
+        // SUBROUTINES (Υποπρογράμματα)  - Orange
+        { title: "Εκτέλεση συνάρτησης (2005)", file: "sub-05-kan.html", cat: "sub", icon: "ƒ", desc: "Κλήση συνάρτησης" },
+        { title: "Εκτέλεση συνάρτησης και διαδικασίας (Επαν 2006)", file: "sub-06-epan.html", cat: "sub", icon: "⚙️", desc: "Κλήση συνάρτησης και διαδικασίας" },
+        { title: "Εκτέλεση διαδικασίας (Καν 2011)", file: "sub-11-kan.html", cat: "sub", icon: "📝", desc: "Κλήση διαδικασίας επαναληπτικά." },
+        { title: "Εκτέλεση διαδικασίας (2006)", file: "sub-06-kan.html", cat: "sub", icon: "📋", desc: "Κλήση διαδικασίας" }, 
+        { title: "Συμπλήρωση κενών (2025)", file: "sub-fill-25.html", cat: "sub", icon: "🧩", desc: "Άσκηση συμπλήρωσης κενών σε κώδικα υποπρογραμμάτος." },
+// --- ΜΕΤΑΒΙΒΑΣΗ ΠΙΝΑΚΩΝ & ΠΑΡΑΜΕΤΡΟΙ ---
+{ title: "Συνάρτηση 1D Πίνακα", file: "sub-1d-table.html", cat: "sub", icon: "➖", desc: "Παράδειγμα μεταβίβασης μονοδιάστατου πίνακα σε συνάρτηση." },
+{ title: "Διαδικασία με 1D Πίνακα", file: "sub-1d-table-proc.html", cat: "sub", icon: "🔨", desc: "Παράδειγμα μεταβίβασης μονοδιάστατου πίνακα σε Διαδικασία" },
+{ title: "Πέρασμα 2D Πίνακα", file: "sub-2d-table.html", cat: "sub", icon: "▦", desc: "Μεταβίβαση δισδιάστατου πίνακα και επεξεργασία στοιχείων." },
+{ title: "Μέγιστος 4 Αριθμών", file: "sub-four-max.html", cat: "sub", icon: "4️⃣", desc: "Εύρεση μεγίστου 4 αριθμών με κλήση υποπρογραμμάτων." },
+
+// --- ΜΕΤΑΤΡΟΠΕΣ & ΤΕΧΝΙΚΕΣ ---
+{ title: "Μετατροπή: Διαδικασίας σε Συνάρτηση", file: "sub-proc-to-fun.html", cat: "sub", icon: "ƒ", desc: "Μετατροπή κώδικα από Διαδικασία σε Συνάρτηση (Θέμα Β4)." },
+{ title: "Μετατροπή: Συνάρτησης σε Διαδικασία", file: "sub-tranform.html", cat: "sub", icon: "🔄", desc: "Η αντίστροφη πορεία: Μετατροπή Συνάρτησης σε Διαδικασία." },
+{ title: "Μετατροπή: Συνάρτησης σε Διαδικασία - Προσοχή στις παραμέτρους", file: "sub-tranform-rusian.html", cat: "sub", icon: "🇷🇺", desc: "Πολλαπλασιασμός αλα Ρωσσικά & χρήση βοηθητικών μεταβλητών." },
+        
         
 
 // ... κλείσιμο λίστας ];
@@ -337,6 +381,7 @@
             if(app.cat === '1d') catLabel = "ΠΙΝΑΚΕΣ 1D";
             if(app.cat === '2d') catLabel = "ΠΙΝΑΚΕΣ 2D";
             if(app.cat === 'struct') catLabel = "ΔΟΜΕΣ";
+            if(app.cat === 'sub') catLabel = "ΥΠΟΠΡΟΓΡΑΜΜΑΤΑ";
 
             card.innerHTML = `
                 <div class="card-stripe"></div>
@@ -378,6 +423,4 @@
 </script>
 
 </body>
-
 </html>
-
