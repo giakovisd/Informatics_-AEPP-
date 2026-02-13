@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Πανελλήνιες 2005 - Συνάρτηση Fun</title>
+    <title>Εκτέλεση προγράμματος με συνάρτηση</title>
     <style>
         :root {
             --bg-color: #f8fafc;
@@ -288,7 +288,7 @@
 
 <header>
     <div class="header-title">
-        <h1>Πανελλήνιες 2005 - Συνάρτηση Fun</h1>
+        <h1>Εκτέλεση προγράμματος με συνάρτηση - χρήση πίνακα τιμών</h1>
     </div>
     
     <div class="controls-area">
@@ -299,7 +299,7 @@
         
         <div class="slider-container">
             <span>Ταχύτητα:</span>
-            <input type="range" min="500" max="6000" value="4500" id="speedSlider" oninput="updateSpeed()">
+            <input type="range" min="500" max="6300" value="5500" id="speedSlider" oninput="updateSpeed()">
         </div>
     </div>
 </header>
@@ -372,7 +372,7 @@
         `A ← 1`,
         `Όσο A < 8 επανάλαβε`,
         `   Αν K MOD L = 0 τότε`,
-        `      <span id="c-assign-X" class="param-token main">X</span> ← <span id="c-fun-def" class="param-token main">Fun</span>(<span id="c-call-A" class="param-token main">A</span>, <span id="c-call-L" class="param-token main">L</span>)`,
+        `      <span id="c-assign-X" class="param-token main">X</span> ← <span id="targetCall" class="param-token main">Fun</span>(<span id="c-call-A" class="param-token main">A</span>, <span id="c-call-L" class="param-token main">L</span>)`,
         `   Αλλιώς`,
         `      X ← A + L`,
         `   Τέλος_αν`,
@@ -385,7 +385,7 @@
         `   Μεταβλητές`,
         `      Ακέραιες: Β, Δ`,
         `   Αρχή`,
-        `      Fun ← (Β + Δ) DIV 2`,
+        `      <span id="targetReturn">Fun</span> ← (Β + Δ) DIV 2`,
         `Τέλος_συνάρτησης`
     ];
 
@@ -481,8 +481,8 @@
                 steps.push({
                     line: 19, type: 'return',
                     mapping: [
-                        {from: 'c-fun-def', to: 'c-assign-X', val: Fun, targetStack: 'stack-main-X'}
-                    ],
+                    {from: 'targetReturn', to: 'targetCall', val: Fun, targetStack: 'stack-main-X'}
+                 ],
                     msg: "Επιστροφή τιμής στο X"
                 });
                 X = Fun;
@@ -694,7 +694,7 @@
         // Αντιστρέφουμε: Το 6500 είναι το σύνολο.
         // Αν η μπάρα είναι 6000 (Δεξιά) -> speed = 500 (Γρήγορο)
         // Αν η μπάρα είναι 500 (Αριστερά) -> speed = 6000 (Αργό)
-        speed = 6500 - sliderVal;
+        speed = (6500 - sliderVal)/2;
     }
 
     function toggleCode() {

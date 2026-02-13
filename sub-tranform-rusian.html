@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Μετατροπή συνάρτησης σε διαδικασία</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fef08a;
+            --border-color: #cbd5e1;
+            
+            --main-prog-bg: #eff6ff; 
+            --sub-prog-bg: #f0fdf4;  
+            
+            --btn-white-bg: #ffffff;
+            --btn-white-text: #1e293b;
+            --btn-white-border: #cbd5e1;
+            
+            --btn-blue: #3b82f6;
+            --btn-blue-hover: #2563eb;
+            
+            --code-kw: #0000CD;
+            --code-sym: #FF0000;
+            --code-txt: #000000;
+            --changed-text: #ea580c; 
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --text-color: #f1f5f9;
+            --panel-bg: #1e293b;
+            --highlight-line: #334155;
+            --border-color: #475569;
+            
+            --main-prog-bg: #1e3a8a;
+            --sub-prog-bg: #14532d;
+            
+            --btn-white-bg: #1e293b;
+            --btn-white-text: #f1f5f9;
+            --btn-white-border: #475569;
+            
+            --code-kw: #60a5fa;
+            --code-sym: #f87171;
+            --code-txt: #e2e8f0;
+            --changed-text: #fbbf24;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* HEADER */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 5px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            height: 60px; flex-shrink: 0; gap: 20px;
+        }
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; flex:1; }
+
+        button {
+            padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem;
+            transition: all 0.2s; white-space: nowrap; height: 36px; display: flex; align-items: center; gap:5px;
+        }
+        .btn-white { background-color: var(--btn-white-bg); color: var(--btn-white-text); border: 1px solid var(--btn-white-border); }
+        .btn-white:hover:not(:disabled) { filter: brightness(0.95); }
+        .btn-blue { background-color: var(--btn-blue); color: white; border: 1px solid var(--btn-blue); }
+        .btn-blue:hover:not(:disabled) { background-color: var(--btn-blue-hover); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .icon { font-size: 1.1em; }
+
+        .slider-group {
+            display: flex; align-items: center; gap: 8px;
+            background: var(--btn-white-bg); padding: 4px 8px;
+            border: 1px solid var(--btn-white-border); border-radius: 4px; height: 36px;
+            color: var(--text-color); font-size: 0.85rem;
+        }
+        input[type=range] { width: 90px; cursor: pointer; }
+
+        /* LAYOUT */
+        .main-container {
+            display: flex; flex: 1; padding: 10px; gap: 10px; height: calc(100% - 60px); box-sizing: border-box;
+        }
+
+        /* LEFT: Info */
+        .col-left {
+            flex: 0 0 280px; display: flex; flex-direction: column; gap: 10px; overflow: hidden;
+            background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color); padding: 15px;
+        }
+        .info-title { font-weight: bold; color: var(--btn-blue); font-size: 1.2rem; margin-bottom: 5px; }
+        .info-text { font-size: 1.1rem; line-height: 1.5; text-align: justify; }
+
+        /* CENTER: Viz */
+        .col-viz {
+            flex: 1; background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; padding: 15px; position: relative; overflow: hidden;
+        }
+        
+        .narrative {
+            padding: 10px; margin-bottom: 15px;
+            background: rgba(59, 130, 246, 0.15); border-left: 4px solid var(--btn-blue);
+            font-size: 1rem; min-height: 24px; border-radius: 4px; color: var(--text-color);
+            font-weight: bold; flex-shrink: 0; display: flex; align-items: center;
+        }
+
+        .workspace {
+            display: flex; gap: 15px; flex: 1; overflow: hidden;
+        }
+
+        /* Code Blocks */
+        .code-block {
+            flex: 1; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden;
+            display: flex; flex-direction: column; width: 50%;
+        }
+        .block-header { padding: 8px; font-weight: bold; font-size: 0.9rem; text-align: center; border-bottom: 1px solid var(--border-color); }
+        .main-header { background: var(--main-prog-bg); }
+        .sub-header { background: var(--sub-prog-bg); }
+
+        .code-content {
+            flex: 1; padding: 15px; font-family: 'Consolas', monospace; font-size: 0.95rem; line-height: 1.6;
+            color: var(--code-txt); background: var(--panel-bg); overflow-y: auto; overflow-x: hidden;
+        }
+        
+        .code-line { 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            white-space: pre-wrap; 
+            word-wrap: break-word;
+            transition: background-color 0.3s; 
+        }
+        .code-line.active { background-color: var(--highlight-line); font-weight: bold; color: var(--text-color); border-left: 3px solid var(--btn-blue);}
+        
+        .kw { color: var(--code-kw); font-weight: bold; }
+        .sym { color: var(--code-sym); font-weight: bold; }
+        
+        .changed { 
+            color: var(--changed-text); 
+            font-weight: bold; 
+            display: inline-block; 
+            transform-origin: left center;
+        }
+        
+        .animate-pulse { animation: pulse-scale 2s ease-in-out forwards; }
+        
+        @keyframes pulse-scale {
+            0% { transform: scale(1); background-color: rgba(234, 88, 12, 0); }
+            20% { transform: scale(1.08); background-color: rgba(234, 88, 12, 0.3); border-radius: 4px; }
+            40% { transform: scale(1); background-color: rgba(234, 88, 12, 0); }
+            60% { transform: scale(1.08); background-color: rgba(234, 88, 12, 0.3); border-radius: 4px; }
+            80% { transform: scale(1); background-color: rgba(234, 88, 12, 0); }
+            100% { transform: scale(1); background-color: transparent; }
+        }
+
+        .hide { display: none !important; }
+
+        .speak-btn.active { color: #ef4444; border-color: #ef4444; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Μετατροπή συνάρτησης σε διαδικασία</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button class="btn btn-white speak-btn" id="btnSpeak" onclick="toggleSpeech()" title="Αφήγηση" style="display:none;">
+            <span class="icon">🔇</span>
+        </button>
+
+        <button class="btn btn-white" onclick="resetSim()">
+            <span class="icon">🔄</span> Αρχή
+        </button>
+        
+        <button class="btn btn-blue" id="btnPlay" onclick="play()">
+            <span class="icon">▶</span> Αυτόματη Εκτέλεση
+        </button>
+        
+        <button class="btn btn-white" id="btnStep" onclick="step()">
+            Βήμα <span class="icon">⏩</span>
+        </button>
+
+        <div class="slider-group">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="500" max="4000" value="2000" id="speedSlider" oninput="updateSpeed()">
+        </div>
+
+        <button class="btn btn-white" onclick="toggleTheme()" title="Θέμα">
+            <span class="icon">🌙</span>
+        </button>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-left">
+        <div class="info-title">Εκφώνηση</div>
+        <div class="info-text">
+            Δίνεται η συνάρτηση και το τμήμα του προγράμματος που καλείται<br><br> α. Να ξαναγράψετε το τμήμα προγράμματος, ώστε να επιτελεί την ίδια λειτουργία, καλώντας ΔΙΑΔΙΚΑΣΙΑ Δ1 αντί της ΣΥΝΑΡΤΗΣΗΣ ΠΑΡ. <p>β. Να κατασκευάσετε την ΔΙΑΔΙΚΑΣΙΑ Δ1, ώστε να επιτελεί την ίδια λειτουργία με τη ΣΥΝΑΡΤΗΣΗ ΠΑΡ.</p> <p><b>ΣΗΜΕΙΩΣΗ:</p></b>To τμήμα προγράμματος που θα κατασκευάσετε θα πρέπει, με τη χρήση της ΔΙΑΔΙΚΑΣΙΑΣ, για τις ίδιες τιμές εισόδου να εμφανίζει τις ίδιες τιμές εξόδου με το τμήμα προγράμματος και τη χρήση της συνάρτησης που δόθηκαν.
+        </div>
+    </div>
+
+    <div class="col-viz">
+        <div class="narrative" id="narrativeBox">Πατήστε εκτέλεση για να ξεκινήσει η μετατροπή...</div>
+        
+        <div class="workspace">
+            
+            <div class="code-block">
+                <div class="block-header main-header">ΚΥΡΙΟ ΠΡΟΓΡΑΜΜΑ</div>
+                <div class="code-content" id="codeMainContainer">
+                    </div>
+            </div>
+
+            <div class="code-block">
+                <div class="block-header sub-header">ΥΠΟΠΡΟΓΡΑΜΜΑ</div>
+                <div class="code-content" id="codeSubContainer">
+                    </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- HTML Structure ---
+    const mainHTML = 
+    `<div class="code-line" id="m-0"><span class="kw">ΠΡΟΓΡΑΜΜΑ</span> Κύριο</div>` +
+    `<div class="code-line" id="m-1"><span class="kw">ΜΕΤΑΒΛΗΤΕΣ</span></div>` +
+    `<div class="code-line" id="m-2">  <span class="kw">ΑΚΕΡΑΙΕΣ</span>: Α, Β<span id="m-vars-new" class="hide changed">, Α1, Β1, Ζ</span></div>` +
+    `<div class="code-line" id="m-3"><span class="kw">ΑΡΧΗ</span></div>` +
+    `<div class="code-line" id="m-4">  <span class="kw">ΔΙΑΒΑΣΕ</span> Α, Β</div>` +
+    `<div id="m-copy-block" class="hide">` +
+// Προσθέτουμε style="display:block" για να αναγκάσουμε την αλλαγή γραμμής
+`<div class="code-line changed" style="display:block">  Α1 <span class="sym">←</span> Α</div>` +
+`<div class="code-line changed" style="display:block">  Β1 <span class="sym">←</span> Β</div>` +
+`</div>` +
+    `<div class="code-line" id="m-5">` +
+    `<span id="m-call-old">  ΓΡΑΨΕ ΠΑΡ(Α, Β)</span>` + 
+    `<span id="m-call-inter" class="hide changed">  <span class="kw">ΚΑΛΕΣΕ</span> Δ1(Α, Β, Ζ)</span>` + 
+    `<span id="m-call-final" class="hide changed">  <span class="kw">ΚΑΛΕΣΕ</span> Δ1(Α1, Β1, Ζ)</span>` + // Η κλήση είναι σωστά στοιχισμένη τώρα
+    `</div>` +
+    `<div class="code-line" id="m-6"><span id="m-print-old">  ΓΡΑΨΕ Α, Β</span><span id="m-print-new" class="hide changed">  <span class="kw">ΓΡΑΨΕ</span> Ζ, Α, Β</span></div>` +
+    `<div class="code-line" id="m-7"><span class="kw">ΤΕΛΟΣ_ΠΡΟΓΡΑΜΜΑΤΟΣ</span></div>`;
+
+    const subHTML = 
+    `<div class="code-line" id="s-0"><span id="s-head-old"><span class="kw">ΣΥΝΑΡΤΗΣΗ</span> ΠΑΡ(Χ,Υ): <span class="kw">ΑΚΕΡΑΙΑ</span></span><span id="s-head-new" class="hide changed"><span class="kw">ΔΙΑΔΙΚΑΣΙΑ</span> Δ1(Χ, Υ, Ζ)</span></div>` +
+    `<div class="code-line" id="s-1"><span class="kw">ΜΕΤΑΒΛΗΤΕΣ</span></div>` +
+    `<div class="code-line" id="s-2">  <span class="kw">ΑΚΕΡΑΙΕΣ</span>: Χ, Υ, Ζ</div>` +
+    `<div class="code-line" id="s-3"><span class="kw">ΑΡΧΗ</span></div>` +
+    `<div class="code-line" id="s-4">  Ζ <span class="sym">←</span> 0</div>` +
+    `<div class="code-line" id="s-5">  <span class="kw">ΟΣΟ</span> Χ > 0 <span class="kw">ΕΠΑΝΑΛΑΒΕ</span></div>` +
+    `<div class="code-line" id="s-6">    <span class="kw">ΑΝ</span> Χ MOD 2 = 1 <span class="kw">ΤΟΤΕ</span></div>` +
+    `<div class="code-line" id="s-7">      Ζ <span class="sym">←</span> Ζ + Υ</div>` +
+    `<div class="code-line" id="s-8">    <span class="kw">ΤΕΛΟΣ_ΑΝ</span></div>` +
+    `<div class="code-line" id="s-9">    Χ <span class="sym">←</span> Χ DIV 2</div>` +
+    `<div class="code-line" id="s-10">    Υ <span class="sym">←</span> Υ * 2</div>` +
+    `<div class="code-line" id="s-11">  <span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span></div>` +
+    `<div class="code-line" id="s-12"><span id="s-ret-old">  ΠΑΡ <span class="sym">←</span> Ζ</span><span id="s-ret-new" class="hide changed" style="color:#aaa; text-decoration:line-through;">  (Καταργείται)</span></div>` +
+    `<div class="code-line" id="s-13"><span id="s-end-old" class="kw">ΤΕΛΟΣ_ΣΥΝΑΡΤΗΣΗΣ</span><span id="s-end-new" class="hide changed kw">ΤΕΛΟΣ_ΔΙΑΔΙΚΑΣΙΑΣ</span></div>`;
+
+    document.getElementById('codeMainContainer').innerHTML = mainHTML;
+    document.getElementById('codeSubContainer').innerHTML = subHTML;
+
+    // --- State ---
+    let steps = [];
+    let stepIdx = -1;
+    let isPlaying = false;
+    let timer = null;
+    let speed = 2500;
+    
+    // --- Steps Logic ---
+    function buildSteps() {
+        steps = [
+            // STEP 1: Basic conversion Func -> Proc
+            { 
+                loc: 's', idx: 0, 
+                msg: "1. Μετατροπή επικεφαλίδας: Αλλάζουμε σε ΔΙΑΔΙΚΑΣΙΑ και προσθέτουμε την παράμετρο Ζ.", 
+                action: () => { hide('s-head-old'); show('s-head-new'); } 
+            },
+            { 
+                loc: 's', idx: 12, 
+                msg: "2. Καταργούμε την επιστροφή τιμής μέσω του ονόματος. Το Ζ έχει ήδη την τιμή.", 
+                action: () => { hide('s-ret-old'); show('s-ret-new'); } 
+            },
+            { 
+                loc: 's', idx: 13, 
+                msg: "3. Αλλάζουμε το τέλος σε ΤΕΛΟΣ_ΔΙΑΔΙΚΑΣΙΑΣ.", 
+                action: () => { hide('s-end-old'); show('s-end-new'); } 
+            },
+            
+            // STEP 2: Naive Call in Main
+            { 
+                loc: 'm', idx: 5, 
+                msg: "4. Αρχικά, ας δοκιμάσουμε να καλέσουμε τη διαδικασία με τα Α και Β...", 
+                action: () => { hide('m-call-old'); show('m-call-inter'); } 
+            },
+            { 
+                loc: 'm', idx: 6, 
+                msg: "5. Και να εμφανίσουμε το αποτέλεσμα Ζ.", 
+                action: () => { hide('m-print-old'); show('m-print-new'); } 
+            },
+
+            // STEP 3: The "Wait!" Moment
+            { 
+                loc: 'm', idx: 5, 
+                msg: "ΠΡΟΣΟΧΗ! Η διαδικασία τροποποιεί τα Χ και Υ. Αν περάσουμε τα Α και Β, θα αλλοιωθούν οι τιμές τους!", 
+                action: () => { 
+                    const el = document.getElementById('m-call-inter');
+                    el.style.color = 'red'; 
+                    el.style.textDecoration = 'line-through';
+                } 
+            },
+
+            // STEP 4: The Trick
+            { 
+                loc: 'm', idx: 2, 
+                msg: "6. Γι' αυτό δηλώνουμε βοηθητικές μεταβλητές (Α1, Β1) για να χρησιμοποιήσουμε αυτές.", 
+                action: () => { show('m-vars-new'); } 
+            },
+            { 
+                loc: 'm', idx: 4, // Highlight around READ
+                msg: "7. Πριν την κλήση, αντιγράφουμε τα Α, Β στα Α1, Β1.", 
+                action: () => { show('m-copy-block'); } 
+            },
+            { 
+                loc: 'm', idx: 5, 
+                msg: "8. Και καλούμε τη διαδικασία περνώντας τα ΑΝΤΙΓΡΑΦΑ (Α1, Β1). Έτσι τα Α, Β μένουν ασφαλή!", 
+                action: () => { hide('m-call-inter'); show('m-call-final'); } 
+            },
+            { 
+                loc: 'm', idx: -1, 
+                msg: "Η μετατροπή ολοκληρώθηκε σωστά με το τέχνασμα των βοηθητικών μεταβλητών!", 
+                action: () => { highlightLine('', -1); } 
+            }
+        ];
+    }
+
+    // --- Helpers ---
+    function show(id) { 
+        const el = document.getElementById(id); 
+        if(el) { el.classList.remove('hide'); el.classList.remove('animate-pulse'); void el.offsetWidth; el.classList.add('animate-pulse'); }
+    }
+    function hide(id) { const el = document.getElementById(id); if(el) el.classList.add('hide'); }
+
+    function highlightLine(loc, idx) {
+        document.querySelectorAll('.code-line').forEach(l => l.classList.remove('active'));
+        if (idx >= 0) {
+            const el = document.getElementById(`${loc}-${idx}`);
+            if (el) el.classList.add('active');
+        }
+    }
+
+    function resetSim() {
+        isPlaying = false;
+        clearTimeout(timer);
+        stepIdx = -1;
+        document.getElementById('btnPlay').innerHTML = '<span class="icon">▶</span> Αυτόματη Εκτέλεση';
+        document.getElementById('narrativeBox').innerText = "Πατήστε εκτέλεση για να ξεκινήσει η μετατροπή του κώδικα...";
+        
+        // Reset DOM state
+        const resetEl = (id, hideEl) => {
+            const el = document.getElementById(id);
+            if(el) {
+                el.classList.remove('hide', 'animate-pulse');
+                el.style.color = ''; el.style.textDecoration = '';
+                if(hideEl) el.classList.add('hide');
+            }
+        };
+
+        resetEl('s-head-old', false); resetEl('s-head-new', true);
+        resetEl('s-ret-old', false); resetEl('s-ret-new', true);
+        resetEl('s-end-old', false); resetEl('s-end-new', true);
+        resetEl('m-vars-new', true);
+        resetEl('m-copy-block', true); // Ξανακρύβουμε τις εκχωρήσεις
+        resetEl('m-call-old', false); resetEl('m-call-inter', true); resetEl('m-call-final', true);
+        resetEl('m-print-old', false); resetEl('m-print-new', true);
+        
+        highlightLine('', -1);
+        buildSteps();
+    }
+
+    // --- Execution Engine ---
+    function step() {
+        if (stepIdx >= steps.length - 1) return;
+        
+        stepIdx++;
+        const s = steps[stepIdx];
+        
+        highlightLine(s.loc, s.idx);
+        document.getElementById('narrativeBox').innerText = s.msg;
+        
+        if (s.action) s.action();
+
+        if (stepIdx === steps.length - 1) {
+            isPlaying = false;
+            document.getElementById('btnPlay').innerHTML = '<span class="icon">▶</span> Επανεκκίνηση';
+        }
+    }
+
+    function play() {
+        const btn = document.getElementById('btnPlay');
+        if (!isPlaying) {
+            if (stepIdx >= steps.length - 1) resetSim();
+            isPlaying = true;
+            btn.innerHTML = '<span class="icon">⏸</span> Παύση';
+            runLoop();
+        } else {
+            isPlaying = false;
+            clearTimeout(timer);
+            btn.innerHTML = '<span class="icon">▶</span> Αυτόματη Εκτέλεση';
+        }
+    }
+
+    function runLoop() {
+        if (!isPlaying) return;
+        step();
+        if (stepIdx < steps.length - 1) {
+            timer = setTimeout(runLoop, speed);
+        }
+    }
+
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+    function updateSpeed() { speed = 4500 - document.getElementById('speedSlider').value; }
+    function toggleSpeech() { /* No op */ }
+
+    buildSteps();
+    updateSpeed();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Μέγιστος 4 Αριθμών</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            --border-color: #cbd5e1;
+            
+            --main-prog-bg: #eff6ff; 
+            --sub-prog-bg: #f0fdf4;  
+            
+            --btn-white-bg: #ffffff;
+            --btn-white-text: #1e293b;
+            --btn-white-border: #cbd5e1;
+            
+            --btn-blue: #3b82f6;
+            --btn-blue-hover: #2563eb;
+            
+            --code-kw: #0000CD;
+            --code-sym: #FF0000;
+            --code-txt: #000000;
+            
+            --arrow-color: #dc2626; 
+            --flyer-bg: #ea580c;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --text-color: #f1f5f9;
+            --panel-bg: #1e293b;
+            --header-bg: #334155;
+            --highlight-line: #334155;
+            --border-color: #475569;
+            
+            --main-prog-bg: #1e3a8a;
+            --sub-prog-bg: #14532d;
+            
+            --btn-white-bg: #1e293b;
+            --btn-white-text: #f1f5f9;
+            --btn-white-border: #475569;
+            
+            --code-kw: #60a5fa;
+            --code-sym: #f87171;
+            --code-txt: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* HEADER */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 5px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            height: 60px; flex-shrink: 0; gap: 20px;
+        }
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; flex:1; }
+
+        button {
+            padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem;
+            transition: all 0.2s; white-space: nowrap; height: 36px; display: flex; align-items: center; gap:5px;
+        }
+        .btn-white { background-color: var(--btn-white-bg); color: var(--btn-white-text); border: 1px solid var(--btn-white-border); }
+        .btn-white:hover:not(:disabled) { filter: brightness(0.95); }
+        .btn-blue { background-color: var(--btn-blue); color: white; border: 1px solid var(--btn-blue); }
+        .btn-blue:hover:not(:disabled) { background-color: var(--btn-blue-hover); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .icon { font-size: 1.1em; }
+
+        .slider-group {
+            display: flex; align-items: center; gap: 8px;
+            background: var(--btn-white-bg); padding: 4px 8px;
+            border: 1px solid var(--btn-white-border); border-radius: 4px; height: 36px;
+            font-size: 0.85rem;
+            color: var(--text-color);
+        }
+        input[type=range] { width: 90px; cursor: pointer; }
+
+        /* LAYOUT */
+        .main-container {
+            display: flex; flex: 1; padding: 10px; gap: 10px; height: calc(100% - 60px); box-sizing: border-box;
+        }
+
+        .col-left {
+            flex: 0 0 250px; display: flex; flex-direction: column; gap: 10px; overflow: hidden;
+            background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color); padding: 15px;
+        }
+        .info-title { font-weight: bold; color: var(--btn-blue); font-size: 1rem; margin-bottom: 5px; }
+        .info-text { font-size: 0.95rem; line-height: 1.5; }
+
+        .col-viz {
+            flex: 1; background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; padding: 15px; position: relative; overflow: hidden;
+        }
+        
+        .col-output {
+            flex: 0 0 160px; background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .output-header { padding: 5px; background: var(--header-bg, #e2e8f0); font-weight: bold; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; text-align: center; }
+        .output-log { flex: 1; padding: 8px; overflow-y: auto; font-family: monospace; font-size: 0.8rem; background: var(--panel-bg); color: var(--text-color); }
+        .log-item { border-bottom: 1px solid var(--border-color); padding: 3px 0; }
+
+        .narrative {
+            padding: 10px; margin-bottom: 10px;
+            background: rgba(59, 130, 246, 0.15); border-left: 4px solid var(--btn-blue);
+            font-size: 0.95rem; min-height: 24px; border-radius: 4px; color: var(--text-color);
+            font-weight: bold; flex-shrink: 0;
+        }
+
+        .workspace {
+            display: flex; gap: 10px; flex: 1; overflow: hidden; position: relative;
+        }
+
+        .code-container {
+            flex: 1; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; padding-right: 5px;
+        }
+        
+        .code-block {
+            border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden;
+            display: flex; flex-direction: column; flex-shrink: 0;
+        }
+        .block-main { border-left: 5px solid #3b82f6; background: var(--main-prog-bg); }
+        .block-func { border-left: 5px solid #10b981; background: var(--sub-prog-bg); margin-top: auto; opacity: 0.5; transition: opacity 0.3s;}
+        .block-func.active { opacity: 1; box-shadow: 0 0 10px rgba(16, 185, 129, 0.2); }
+
+        .block-header { padding: 6px; font-weight: bold; font-size: 0.85rem; text-align: center; border-bottom: 1px solid var(--border-color); background-color: var(--header-bg, #e2e8f0); }
+        
+        .code-content {
+            padding: 10px; font-family: 'Consolas', monospace; font-size: 0.85rem; line-height: 1.5;
+            color: var(--code-txt); background: var(--panel-bg);
+        }
+        .code-line { padding: 2px 4px; border-radius: 3px; white-space: pre-wrap; transition: background-color 0.1s; }
+        .code-line.active { background-color: var(--highlight-line); font-weight: bold; color: var(--text-color); }
+
+        .tok { display: inline-block; padding: 0 3px; border-radius: 3px; border: 1px solid transparent; cursor: default; font-weight: bold; }
+        .tok-main { color: #3b82f6; background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3); }
+        .tok-func { color: #10b981; background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); }
+
+        .memory-sidebar {
+            flex: 0 0 180px; 
+            display: flex; flex-direction: column; gap: 10px; border-left: 1px solid var(--border-color); padding-left: 10px; overflow-y: auto;
+        }
+        
+        .trace-table { border: 1px solid var(--border-color); border-radius: 6px; display: flex; flex-direction: column; font-size: 0.85rem; background: var(--panel-bg); color: var(--text-color); }
+        .table-head { background: var(--header-bg, #e2e8f0); padding: 5px; font-weight: bold; text-align: center; border-bottom: 1px solid var(--border-color); }
+        
+        .var-row { display: flex; justify-content: space-between; align-items: center; padding: 6px; border-bottom: 1px solid var(--border-color); }
+        .var-name { font-weight: bold; opacity: 0.8; }
+        .var-val { font-family: monospace; color: #2563eb; font-weight: bold; }
+        body.dark-mode .var-val { color: #60a5fa; }
+
+        .arrow-head {
+            position: absolute; width: 0; height: 0; 
+            border-left: 8px solid transparent; border-right: 8px solid transparent; 
+            z-index: 9991; transform: translateX(-50%);
+        }
+        .arrow-down { border-top: 14px solid var(--arrow-color); border-bottom: none; }
+        .arrow-up { border-bottom: 14px solid var(--arrow-color); border-top: none; }
+
+        .flying-element {
+            position: fixed; display: flex; align-items: center; justify-content: center;
+            z-index: 9999; box-shadow: 0 4px 10px rgba(0,0,0,0.4); pointer-events: none;
+            border-radius: 4px; padding: 4px; background: var(--flyer-bg); color: white; font-weight: bold;
+        }
+
+        .kw { color: var(--code-kw); font-weight: bold; }
+        .sym { color: var(--code-sym); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Χρήση υποπρογράμματος με διαφορετικές παραμέτρους</h1>
+    </div>
+    <div class="controls-area">
+        <button class="btn btn-white" onclick="resetSim()">
+            <span class="icon">🔄</span> Αρχή
+        </button>
+        <button class="btn btn-blue" id="btnPlay" onclick="play()">
+            <span class="icon">▶</span> Αυτόματη Εκτέλεση
+        </button>
+        <button class="btn btn-white" id="btnStep" onclick="step()">
+            Βήμα <span class="icon">⏩</span>
+        </button>
+        <div class="slider-group">
+            <span>Ταχύτητα:</span>
+            <input type="range" min="500" max="4000" value="2000" id="speedSlider" oninput="updateSpeed()">
+        </div>
+        <button class="btn btn-white" onclick="toggleTheme()" title="Θέμα">
+            <span class="icon">🌙</span>
+        </button>
+    </div>
+</header>
+
+<div class="main-container">
+    <div class="col-left">
+        <div class="info-title">Εκφώνηση</div>
+        <div class="info-text">
+        Να γραφεί πρόγραμμα που θα διαβάζει 4 αριθμούς και μόνο με εντολές στη δομή ακολουθίας, να εμφανίζει τον μεγαλύτερο από αυτούς. Για το σκοπό αυτό, να υλοποιηθεί και να κληθεί, όπου είναι απαραίτητο, μια συνάρτηση που θα δέχεται 2 αριθμούς και θα επιστρέφει τον μεγαλύτερο από αυτούς.
+        </div>
+    </div>
+
+    <div class="col-viz">
+        <div class="narrative" id="narrativeBox">Πατήστε εκτέλεση...</div>
+        
+        <div class="workspace" id="vizArea">
+            <div class="code-container">
+                <div class="code-block block-main">
+                    <div class="block-header">ΚΥΡΙΟ ΠΡΟΓΡΑΜΜΑ</div>
+                    <div class="code-content" id="codeMainContainer"></div>
+                </div>
+                <div class="code-block block-func" id="funcBlock">
+                    <div class="block-header">ΣΥΝΑΡΤΗΣΗ υπ_μαχ(χ, ψ)</div>
+                    <div class="code-content" id="codeSubContainer"></div>
+                </div>
+            </div>
+
+            <div class="memory-sidebar">
+                <div class="trace-table" id="memTableMain">
+                    <div class="table-head">ΜΝΗΜΗ ΠΡΟΓΡ.</div>
+                    <div id="memMainContent"></div>
+                </div>
+                <div class="trace-table" id="memTableSub" style="display:none;">
+                    <div class="table-head">ΜΝΗΜΗ ΣΥΝ/ΣΗΣ</div>
+                    <div id="memSubContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">Οθόνη</div>
+        <div class="output-log" id="outputLog"></div>
+    </div>
+</div>
+
+<script>
+    // --- HTML --- (ΕΔΩ ΕΓΙΝΕ Η ΑΛΛΑΓΗ ΣΤΑ IDs)
+    const mainHTML = 
+    `<div class="code-line" id="m-0"><span class="kw">ΠΡΟΓΡΑΜΜΑ</span> μεγ_4</div>` +
+    `<div class="code-line" id="m-1"><span class="kw">ΜΕΤΑΒΛΗΤΕΣ</span></div>` +
+    `<div class="code-line" id="m-2">  <span class="kw">ΑΚΕΡΑΙΕΣ</span>: α,β,γ,δ,m1,m2,m</div>` +
+    `<div class="code-line" id="m-3"><span class="kw">ΑΡΧΗ</span></div>` +
+    `<div class="code-line" id="m-4">  <span class="kw">ΔΙΑΒΑΣΕ</span> α,β,γ,δ</div>` +
+    `<div class="code-line" id="m-5">  m1 <span class="sym">←</span> <span id="call-m1" class="kw">υπ_μαχ</span>(<span id="src-a" class="tok tok-main">α</span>, <span id="src-b" class="tok tok-main">β</span>)</div>` +
+    `<div class="code-line" id="m-6">  m2 <span class="sym">←</span> <span id="call-m2" class="kw">υπ_μαχ</span>(<span id="src-c" class="tok tok-main">γ</span>, <span id="src-d" class="tok tok-main">δ</span>)</div>` +
+    `<div class="code-line" id="m-7">  m <span class="sym">←</span> <span id="call-m" class="kw">υπ_μαχ</span>(<span id="src-m1" class="tok tok-main">m1</span>, <span id="src-m2" class="tok tok-main">m2</span>)</div>` +
+    `<div class="code-line" id="m-8">  <span class="kw">ΓΡΑΨΕ</span> m</div>` +
+    `<div class="code-line" id="m-9"><span class="kw">ΤΕΛΟΣ_ΠΡΟΓΡΑΜΜΑΤΟΣ</span></div>`;
+
+    const subHTML = 
+    `<div class="code-line" id="f-0"><span class="kw">ΣΥΝΑΡΤΗΣΗ</span> <span class="kw">υπ_μαχ</span>(<span id="func-x" class="tok tok-func">χ</span>, <span id="func-y" class="tok tok-func">ψ</span>): <span class="kw">ΑΚΕΡΑΙΑ</span></div>` +
+    `<div class="code-line" id="f-1"><span class="kw">ΑΡΧΗ</span></div>` +
+    `<div class="code-line" id="f-2">  <span class="kw">ΑΝ</span> χ > ψ <span class="kw">ΤΟΤΕ</span></div>` +
+    `<div class="code-line" id="f-3">    <span id="ret-x" class="tok tok-func">υπ_μαχ</span> <span class="sym">←</span> χ</div>` +
+    `<div class="code-line" id="f-4">  <span class="kw">ΑΛΛΙΩΣ</span></div>` +
+    `<div class="code-line" id="f-5">    <span id="ret-y" class="tok tok-func">υπ_μαχ</span> <span class="sym">←</span> ψ</div>` +
+    `<div class="code-line" id="f-6">  <span class="kw">ΤΕΛΟΣ_ΑΝ</span></div>` +
+    `<div class="code-line" id="f-7"><span class="kw">ΤΕΛΟΣ_ΣΥΝΑΡΤΗΣΗΣ</span></div>`;
+
+    document.getElementById('codeMainContainer').innerHTML = mainHTML;
+    document.getElementById('codeSubContainer').innerHTML = subHTML;
+
+    // --- State ---
+    let vM = { 'α':'?', 'β':'?', 'γ':'?', 'δ':'?', 'm1':'?', 'm2':'?', 'm':'?' };
+    let vS = { 'χ':'?', 'ψ':'?', 'ret':'?' };
+    
+    let steps = [];
+    let stepIdx = -1;
+    let isPlaying = false;
+    let isAnimating = false;
+    let timer = null;
+    let speed = 2000;
+
+    function renderMem() {
+        const render = (obj, id) => {
+            const html = Object.keys(obj).map(k => {
+                let dispK = k==='ret' ? 'υπ_μαχ' : k;
+                return `<div class="var-row"><span class="var-name">${dispK}</span><span class="var-val">${obj[k]}</span></div>`;
+            }).join('');
+            document.getElementById(id).innerHTML = html;
+        };
+        render(vM, 'memMainContent');
+        render(vS, 'memSubContent');
+    }
+
+    function init() { resetSim(); }
+
+    function resetSim() {
+        isPlaying = false; isAnimating = false; clearTimeout(timer); stepIdx = -1;
+        document.getElementById('btnPlay').innerHTML = '<span class="icon">▶</span> Αυτόματη Εκτέλεση';
+        document.getElementById('narrativeBox').innerText = "Πατήστε εκτέλεση...";
+        document.getElementById('outputLog').innerHTML = ''; 
+        
+        vM = { 'α':'?', 'β':'?', 'γ':'?', 'δ':'?', 'm1':'?', 'm2':'?', 'm':'?' };
+        vS = { 'χ':'?', 'ψ':'?', 'ret':'?' };
+        
+        document.getElementById('memTableSub').style.display = 'none';
+        document.getElementById('funcBlock').style.opacity = '0.5';
+        document.getElementById('funcBlock').classList.remove('active');
+        document.querySelectorAll('svg').forEach(s => s.remove());
+
+        calcSteps();
+        highlightLine('m', -1);
+        highlightLine('f', -1);
+    }
+
+    // --- STEPS GENERATION ---
+    function calcSteps() {
+        steps = [];
+        
+        const a = Math.floor(Math.random()*100);
+        const b = Math.floor(Math.random()*100);
+        const c = Math.floor(Math.random()*100);
+        const d = Math.floor(Math.random()*100);
+        
+        const m1 = Math.max(a,b);
+        const m2 = Math.max(c,d);
+        const m = Math.max(m1,m2);
+
+        steps.push({ loc:'m', idx:0, msg: "Έναρξη Προγράμματος." });
+        
+        steps.push({ loc:'m', idx:4, msg: `Διάβασε: α=${a}, β=${b}, γ=${c}, δ=${d}`, action: () => {
+            vM.α=a; vM.β=b; vM.γ=c; vM.δ=d; renderMem();
+        }});
+
+        // CALL 1
+        addFuncSteps(5, 'src-a', 'src-b', a, b, 'm1');
+
+        // CALL 2
+        addFuncSteps(6, 'src-c', 'src-d', c, d, 'm2');
+
+        // CALL 3
+        addFuncSteps(7, 'src-m1', 'src-m2', m1, m2, 'm');
+
+        steps.push({ 
+            loc:'m', idx:8, 
+            msg: `Εμφάνιση αποτελέσματος: ${m}`,
+            action: () => { log(`ΓΡΑΨΕ: ${m}`); } 
+        });
+        steps.push({ loc:'m', idx:9, msg: "Τέλος." });
+    }
+
+    function addFuncSteps(mainIdx, srcId1, srcId2, val1, val2, targetVar) {
+        steps.push({ 
+            loc: 'm', idx: mainIdx, 
+            msg: `Κλήση υπ_μαχ(${val1}, ${val2}). Μεταφορά τιμών...`,
+            asyncAction: async () => {
+                await Promise.all([
+                    animateTransfer(srcId1, 'func-x', val1, true),
+                    animateTransfer(srcId2, 'func-y', val2, true)
+                ]);
+            }
+        });
+
+        steps.push({ 
+            loc: 'f', idx: 0, 
+            msg: "Η συνάρτηση παραλαμβάνει τις τιμές.", 
+            action: () => {
+                document.getElementById('funcBlock').classList.add('active');
+                document.getElementById('funcBlock').style.opacity = '1';
+                document.getElementById('memTableSub').style.display = 'flex';
+                vS.χ = val1; vS.ψ = val2; vS.ret = '?'; renderMem();
+            }
+        });
+
+        steps.push({ loc: 'f', idx: 2, msg: `Έλεγχος: ${val1} > ${val2};` });
+
+        let result = (val1 > val2) ? val1 : val2;
+        if (val1 > val2) {
+            steps.push({ loc: 'f', idx: 3, msg: "Αληθές. Το αποτέλεσμα είναι το χ.", action: () => { vS.ret=result; renderMem(); } });
+        } else {
+            steps.push({ loc: 'f', idx: 4, msg: "Ψευδές. Πάμε στο ΑΛΛΙΩΣ." });
+            steps.push({ loc: 'f', idx: 5, msg: "Το αποτέλεσμα είναι το ψ.", action: () => { vS.ret=result; renderMem(); } });
+        }
+
+        steps.push({ loc: 'f', idx: 7, msg: "Τέλος Συνάρτησης. Επιστροφή τιμής..." });
+
+        steps.push({
+            loc: 'm', idx: mainIdx,
+            msg: `Η τιμή ${result} επιστρέφει και εκχωρείται στο ${targetVar}.`,
+            asyncAction: async () => {
+                document.getElementById('funcBlock').classList.remove('active');
+                document.getElementById('funcBlock').style.opacity = '0.5';
+                document.getElementById('memTableSub').style.display = 'none';
+                highlightLine('f', -1);
+                
+                let retSrc = (val1 > val2) ? 'ret-x' : 'ret-y';
+                
+                // --- ΕΔΩ ΕΓΙΝΕ Η ΑΛΛΑΓΗ ΤΟΥ TARGET ---
+                await animateTransfer(retSrc, `call-${targetVar}`, result, false);
+
+                vM[targetVar] = result;
+                renderMem();
+            }
+        });
+    }
+
+    // --- ENGINE & ANIMATION ---
+    async function executeStep(s) {
+        if (s.loc) highlightLine(s.loc, s.idx);
+        document.getElementById('narrativeBox').innerText = s.msg;
+        if (s.action) s.action();
+        if (s.asyncAction) await s.asyncAction();
+    }
+
+    function step() {
+        if (isAnimating) return;
+        if (stepIdx < steps.length - 1) {
+            stepIdx++;
+            isAnimating = true;
+            executeStep(steps[stepIdx]).then(() => {
+                isAnimating = false;
+                if (isPlaying) timer = setTimeout(step, speed * 0.5);
+            });
+        } else {
+            document.getElementById('narrativeBox').innerText = "Τέλος.";
+            isPlaying = false;
+            document.getElementById('btnPlay').innerHTML = '<span class="icon">▶</span> Αυτόματη Εκτέλεση';
+        }
+    }
+
+    function play() {
+        if (isAnimating) return;
+        const btn = document.getElementById('btnPlay');
+        if (!isPlaying) {
+            if (stepIdx >= steps.length - 1) resetSim();
+            isPlaying = true;
+            btn.innerHTML = '<span class="icon">⏸</span> Παύση';
+            step();
+        } else {
+            isPlaying = false;
+            clearTimeout(timer);
+            btn.innerHTML = '<span class="icon">▶</span> Αυτόματη Εκτέλεση';
+        }
+    }
+
+    function highlightLine(loc, idx) {
+        document.querySelectorAll('.code-line').forEach(l => l.classList.remove('active'));
+        if (idx >= 0) {
+            const el = document.getElementById(`${loc}-${idx}`);
+            if (el) el.classList.add('active');
+        }
+    }
+
+    function log(msg) {
+        const div = document.createElement('div');
+        div.className = 'log-item';
+        div.innerText = "> " + msg;
+        const c = document.getElementById('outputLog');
+        c.appendChild(div);
+        c.scrollTop = c.scrollHeight;
+    }
+
+    function animateTransfer(fromId, toId, contentHtml, isGoingDown) {
+        return new Promise(resolve => {
+            const fromEl = document.getElementById(fromId);
+            let targetEl = document.getElementById(toId);
+
+            if(!fromEl || !targetEl) { resolve(); return; } // Ασφάλεια
+
+            const r1 = fromEl.getBoundingClientRect();
+            const r2 = targetEl.getBoundingClientRect();
+
+            let svg = document.getElementById('svgLayer');
+            if(!svg) {
+                svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                svg.id = 'svgLayer';
+                svg.style.position = 'fixed'; svg.style.top = 0; svg.style.left = 0; svg.style.width = '100%'; svg.style.height = '100%'; svg.style.pointerEvents = 'none'; svg.style.zIndex = 9990;
+                document.body.appendChild(svg);
+            }
+            
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            const x1 = r1.left + r1.width/2;
+            const y1 = r1.bottom - 2; 
+            const x2 = r2.left + r2.width/2;
+            const y2 = r2.top + 2; 
+
+            const offset = isGoingDown ? 60 : -60;
+            const cx1 = x1 + offset; const cy1 = y1 + offset; 
+            const cx2 = x2 + offset; const cy2 = y2 - offset;
+
+            path.setAttribute("d", `M${x1},${y1} C${cx1},${cy1} ${cx2},${cy2} ${x2},${y2}`);
+            path.setAttribute("stroke", "#dc2626");
+            path.setAttribute("stroke-width", "4"); 
+            path.setAttribute("fill", "none");
+            svg.appendChild(path);
+
+            const head = document.createElement('div');
+            head.className = 'arrow-head';
+            if (isGoingDown) { head.classList.add('arrow-down'); head.style.left = x2 + 'px'; head.style.top = (y2 - 10) + 'px'; } 
+            else { head.classList.add('arrow-up'); head.style.left = x2 + 'px'; head.style.top = (y2 - 5) + 'px'; }
+            document.body.appendChild(head);
+
+            const flyer = document.createElement('div');
+            flyer.className = 'flying-element';
+            flyer.innerHTML = contentHtml; 
+            flyer.style.left = r1.left + 'px';
+            flyer.style.top = r1.top + 'px';
+            document.body.appendChild(flyer);
+
+            void flyer.offsetWidth;
+
+            const duration = speed * 0.7; 
+            flyer.style.transition = `all ${duration}ms ease-in-out`;
+            flyer.style.left = (x2 - flyer.offsetWidth/2) + 'px';
+            flyer.style.top = (y2 - flyer.offsetHeight/2) + 'px';
+
+            setTimeout(() => { flyer.remove(); path.remove(); head.remove(); resolve(); }, duration);
+        });
+    }
+
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+    function updateSpeed() { speed = 4000 - document.getElementById('speedSlider').value; }
+
+    init();
+    updateSpeed();
+</script>
+</body>
+</html>
