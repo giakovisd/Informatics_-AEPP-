@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Εισαγωγή σε Διπλά Συνδεδεμένη Λίστα</title>
+    <title>Εισαγωγή σε Διπλά Συνδεδεμένη Λίστα (Final Layout)</title>
     <style>
         :root {
             /* Light Mode */
@@ -134,7 +134,14 @@
             font-family: 'Consolas', monospace; font-size: 0.8rem; line-height: 1.4;
             background-color: var(--panel-bg); color: var(--code-txt);
         }
-        .code-line { padding: 2px 6px; border-radius: 3px; white-space: pre; }
+        .code-line { 
+            padding: 8px !important; 
+            border-radius: 4px; 
+            white-space: pre-wrap !important;
+            line-height: 1.5 !important; 
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
         .code-line.active { background-color: var(--highlight-line); font-weight: bold; color: var(--text-color); }
         .kw { color: var(--code-kw); font-weight: bold; }
         .sym { color: var(--code-sym); font-weight: bold; }
@@ -160,34 +167,48 @@
         }
 
         /* MEMORY GRID */
-        .memory-wrapper { width: 100%; margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; }
+        .memory-wrapper { width: 100%; margin-bottom: 5px; display: flex; flex-direction: column; align-items: center; }
         .mem-label { font-size: 0.8rem; font-weight: bold; margin-bottom: 4px; opacity: 0.8; }
+        
         .memory-grid {
             display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(3, auto);
             gap: 4px; background: var(--border-color); padding: 12px 4px 4px 4px; border-radius: 6px; width: 100%; max-width: 950px; 
         }
         .mem-cell {
-            background: var(--mem-bg); color: var(--mem-txt); font-family: monospace; 
+            background: var(--mem-bg); color: var(--mem-txt); font-family: 'Consolas', monospace; 
             border-radius: 3px; border: 1px solid var(--mem-cell-border);
-            display: flex; flex-direction: column; justify-content: space-between; height: 50px;
-            padding: 2px; position: relative; transition: all 0.3s;
-            overflow: visible !important; z-index: 1;
+            display: flex; flex-direction: column; 
+            height: 65px; 
+            position: relative; transition: all 0.3s;
+            overflow: visible !important; 
+            z-index: 1;
+            box-shadow: 1px 1px 2px rgba(0,0,0,0.05);
         }
-        .mem-addr { font-size: 0.6rem; opacity: 0.7; text-align: left; letter-spacing: -0.5px; }
-        .mem-content { 
-            font-size: 0.65rem; font-weight: bold; text-align: center;
-            display: flex; justify-content: center; align-items: center; height: 100%; 
-            white-space: nowrap; overflow: hidden;
+        .mem-addr { 
+            font-size: 0.55rem; opacity: 0.8; text-align: center; 
+            background: rgba(0,0,0,0.05); width: 100%; border-bottom: 1px solid rgba(0,0,0,0.1);
         }
+        
+        /* Mini Node Structure inside Memory */
+        .mini-node { display: flex; flex-direction: column; flex: 1; width: 100%; }
+        .mini-row { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: bold; }
+        
+        .mini-prev { color: var(--arrow-prev); border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 0.55rem;}
+        .mini-data { background: rgba(255,255,255,0.3); font-size: 0.75rem; color: var(--text-color); }
+        .mini-next { color: var(--arrow-next); border-top: 1px solid rgba(0,0,0,0.05); font-size: 0.55rem;}
+
+        /* Fallback for simple values */
+        .mem-simple-val { flex: 1; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.7rem; }
+
         .mem-cell.active { background: var(--mem-active); border-color: #10b981; }
         .mem-cell.head { background: var(--mem-head); border-color: #8b5cf6; z-index: 10; }
         .mem-cell.tail { background: var(--mem-tail); border-color: #f97316; z-index: 10; }
         .mem-cell.new { background: var(--mem-new); border-color: #f59e0b; }
 
         .tag-mem { 
-            position: absolute; top: -10px; right: -5px; 
-            color: white; font-size: 0.7rem; padding: 1px 4px; 
-            border-radius: 3px; font-weight: bold; z-index: 10; 
+            position: absolute; top: -12px; right: -5px; 
+            color: white; font-size: 0.65rem; padding: 1px 5px; 
+            border-radius: 3px; font-weight: bold; z-index: 20; 
             box-shadow: 1px 1px 3px rgba(0,0,0,0.3); white-space: nowrap;
         }
         .tag-head { background: #7c3aed; }
@@ -195,7 +216,8 @@
 
         /* LIST VIZ */
         .list-area {
-            position: relative; width: 100%; height: 400px; margin-top: 5px;
+            position: relative; width: 100%; height: 320px; /* Reduced height as list moved up */
+            margin-top: 0;
             overflow-x: auto; overflow-y: hidden;
         }
 
@@ -263,15 +285,6 @@
         .log-item { border-bottom: 1px solid var(--border-color); padding: 2px 0; }
 
         .speak-btn.active { color: #ef4444; border-color: #ef4444; }
-/* ΝΕΟΣ ΚΑΝΟΝΑΣ ΓΙΑ ΤΑ ΚΕΙΜΕΝΑ */
-        .code-line { 
-            padding: 8px !important; 
-            border-radius: 4px; 
-            white-space: pre-wrap !important; /* Αυτό κάνει τη δουλειά */
-            line-height: 1.5 !important; 
-            margin-bottom: 8px;
-            font-size: 0.85rem;
-        }
     </style>
 </head>
 <body>
@@ -353,8 +366,6 @@
 
 <script>
     // --- Algorithmic Logic ---
-    // Cases: 1. Head, 2. Middle, 3. Tail
-    
     const CODE_HEAD = [
         "1. Δημιουργούμε έναν νέο κόμβο στη μνήμη.",
         "2. Αποθηκεύουμε τα δεδομένα που θέλουμε στον νέο κόμβο.",
@@ -405,7 +416,7 @@
     let speed = 2500;
     let memBaseAddr = 1000;
     let memSlots = [];
-    let nodes = []; // Actual visual list nodes
+    let nodes = [];
     let headViz = {}, tailViz = {};
     let speechEnabled = false;
     let currentScenario = 'MIDDLE'; 
@@ -425,22 +436,17 @@
         document.getElementById('narrativeBox').innerText = "Πατήστε εκτέλεση...";
         document.getElementById('outputLog').innerHTML = '';
 
-        // Random Scenario: 0=Head, 1=Tail, 2=Middle
         const roll = Math.random();
         if (roll < 0.3) currentScenario = 'HEAD';
         else if (roll < 0.6) currentScenario = 'TAIL';
         else currentScenario = 'MIDDLE';
 
-        // Render Code
         const codeDiv = document.getElementById('codeContainer');
         let activeCode = (currentScenario==='HEAD') ? CODE_HEAD : (currentScenario==='TAIL') ? CODE_TAIL : CODE_MIDDLE;
         codeDiv.innerHTML = activeCode.map((l, i) => `<div class="code-line" id="line-${i}">${l}</div>`).join('');
 
-        // Init Memory
         memBaseAddr = Math.floor(Math.random() * 5000) + 1000;
         initMemoryGrid();
-
-        // Init Content
         initContent();
     }
 
@@ -448,7 +454,6 @@
         const theme = THEMES[Math.floor(Math.random() * THEMES.length)];
         let items = [], insertItem = '';
         
-        // We need 3 items initially
         if (theme.type === 'nums') {
             for(let i=0; i<4; i++) items.push(Math.floor(Math.random()*100));
         } else if (theme.type === 'chars') {
@@ -459,9 +464,8 @@
             items = theme.path.slice(start, start+4);
         }
         
-        insertItem = items.pop(); // The 4th item is the one to insert
+        insertItem = items.pop();
         
-        // Assign addresses
         const locs = assignRandomSlots();
         const headAddr = memSlots[locs.headIdx].addr;
         const tailAddr = memSlots[locs.tailIdx].addr;
@@ -470,32 +474,31 @@
         const n3Addr = memSlots[locs.n3Idx].addr;
         const newAddr = memSlots[locs.newIdx].addr;
 
-        // Populate Memory & Nodes based on scenario
-        // Initial List: N1 <-> N2 <-> N3
         memSlots[locs.headIdx] = { ...memSlots[locs.headIdx], val: n1Addr, type: 'head' };
         memSlots[locs.tailIdx] = { ...memSlots[locs.tailIdx], val: n3Addr, type: 'tail' };
         
-        memSlots[locs.n1Idx] = { ...memSlots[locs.n1Idx], val: `[${items[0]}]`, type: 'active' };
-        memSlots[locs.n2Idx] = { ...memSlots[locs.n2Idx], val: `[${items[1]}]`, type: 'active' };
-        memSlots[locs.n3Idx] = { ...memSlots[locs.n3Idx], val: `[${items[2]}]`, type: 'active' };
+        // Active slots - content will be rendered via renderMemoryGrid looking up nodes
+        memSlots[locs.n1Idx] = { ...memSlots[locs.n1Idx], type: 'active' };
+        memSlots[locs.n2Idx] = { ...memSlots[locs.n2Idx], type: 'active' };
+        memSlots[locs.n3Idx] = { ...memSlots[locs.n3Idx], type: 'active' };
+        memSlots[locs.newIdx] = { ...memSlots[locs.newIdx], type: 'empty' }; // Initially empty
 
-        renderMemoryGrid();
-
-        // Visual Setup
-        headViz = { x: 20, y: 140, val: n1Addr, title: 'HEAD', class:'box-head' };
-        // We'll calculate tail pos dynamically based on nodes
+        // MOVED UP: Y = 50 (was 140)
+        headViz = { x: 20, y: 50, val: n1Addr, title: 'HEAD', class:'box-head' };
         
         const gap = 240; 
         const startX = 140; 
         
-        let n1 = { id: 'n1', x: startX, y: 140, val: items[0], prev: 'NULL', next: n2Addr, addr: n1Addr, label: '' };
-        let n2 = { id: 'n2', x: startX + gap, y: 140, val: items[1], prev: n1Addr, next: n3Addr, addr: n2Addr, label: '' };
-        let n3 = { id: 'n3', x: startX + gap*2, y: 140, val: items[2], prev: n2Addr, next: 'NULL', addr: n3Addr, label: '' };
+        // MOVED UP: Y = 50 (was 140)
+        let n1 = { id: 'n1', x: startX, y: 50, val: items[0], prev: 'NULL', next: n2Addr, addr: n1Addr, label: '' };
+        let n2 = { id: 'n2', x: startX + gap, y: 50, val: items[1], prev: n1Addr, next: n3Addr, addr: n2Addr, label: '' };
+        let n3 = { id: 'n3', x: startX + gap*2, y: 50, val: items[2], prev: n2Addr, next: 'NULL', addr: n3Addr, label: '' };
         
         nodes = [n1, n2, n3];
-        tailViz = { x: n3.x + 200, y: 140, val: n3Addr, title: 'TAIL', class:'box-tail' };
+        tailViz = { x: n3.x + 200, y: 50, val: n3Addr, title: 'TAIL', class:'box-tail' };
 
-        // Scenario Text
+        renderMemoryGrid(); 
+
         const box = document.getElementById('scenarioBox');
         
         if (currentScenario === 'HEAD') {
@@ -505,7 +508,6 @@
             box.innerText = `Σενάριο: Εισαγωγή του '${insertItem}' στο ΤΕΛΟΣ της λίστας`;
             calcStepsTail(newAddr, insertItem, n3Addr);
         } else {
-            // Middle: Insert between 1 and 2
             nodes[0].label = "Τρέχων";
             box.innerText = `Σενάριο: Εισαγωγή του '${insertItem}' μετά τον '${items[0]}' (Μέσο)`;
             calcStepsMiddle(newAddr, insertItem, n1Addr, n2Addr);
@@ -518,106 +520,111 @@
     // --- Step Calculations ---
     function calcStepsHead(newAddr, val, oldHeadAddr) {
         steps = [
-            { line: 0, msg: "Δημιουργία νέου κόμβου.", action: () => {
-                  updateMemoryCell(newAddr, `[?]`, 'new');
-                  nodes.unshift({ id: 'new', x: 140, y: 280, val: '?', prev: '?', next: '?', addr: newAddr, label: 'Νέος' });
-                  renderNodes();
+            { line: 0, msg: "Δημιουργία νέου κόμβου. (Οι παλιοί κόμβοι μετακινούνται για να ανοίξει χώρος)", action: () => {
+                  updateMemoryCell(newAddr, null, 'new'); 
+                  const gap = 240;
+                  for(let i=0; i<nodes.length; i++) nodes[i].x += gap;
+                  tailViz.x += gap;
+                  // MOVED UP: Y = 190 (was 280)
+                  nodes.unshift({ id: 'new', x: 140, y: 190, val: '?', prev: '?', next: '?', addr: newAddr, label: 'Νέος' });
+                  renderNodes(); renderMemoryGrid();
             }},
             { line: 1, msg: `Αποθήκευση δεδομένων (${val}).`, action: () => {
-                  nodes[0].val = val; updateMemoryCell(newAddr, `[${val}]`, 'new'); renderNodes();
+                  nodes[0].val = val; renderNodes(); renderMemoryGrid();
             }},
             { line: 2, msg: "Σύνδεση Επόμενου -> Παλιό Head.", action: () => {
-                  nodes[0].next = oldHeadAddr; renderNodes(); drawLines();
+                  nodes[0].next = oldHeadAddr; renderNodes(); renderMemoryGrid(); drawLines();
             }},
             { line: 3, msg: "Το Προηγούμενο είναι NULL.", action: () => {
-                  nodes[0].prev = 'NULL'; renderNodes();
+                  nodes[0].prev = 'NULL'; renderNodes(); renderMemoryGrid();
             }},
             { line: 4, msg: "Σύνδεση Παλιού Head -> Νέος.", action: () => {
-                  nodes[1].prev = newAddr; renderNodes(); drawLines();
+                  nodes[1].prev = newAddr; renderNodes(); renderMemoryGrid(); drawLines();
             }},
             { line: 5, msg: "Ενημέρωση HEAD.", action: () => {
                   headViz.val = newAddr; 
-                  let s = memSlots.find(s=>s.type==='head'); if(s) updateMemoryCell(s.addr, newAddr, 'head');
-                  renderNodes(); drawLines();
+                  let s = memSlots.find(s=>s.type==='head'); if(s) { s.val = newAddr; }
+                  renderNodes(); renderMemoryGrid(); drawLines();
             }},
             { line: 6, msg: "Ολοκλήρωση.", action: () => {
-                  nodes[0].y = 140; 
-                  const gap = 240;
-                  for(let i=1; i<nodes.length; i++) nodes[i].x += gap;
-                  tailViz.x += gap;
-                  updateMemoryCell(newAddr, `[${val}]`, 'active');
-                  renderNodes(); drawLines();
+                  // MOVED UP: Y = 50 (was 140)
+                  nodes[0].y = 50; 
+                  updateMemoryCell(newAddr, null, 'active');
+                  renderNodes(); renderMemoryGrid(); drawLines();
             }}
         ];
     }
 
     function calcStepsTail(newAddr, val, oldTailAddr) {
         steps = [
-            { line: 0, msg: "Δημιουργία νέου κόμβου.", action: () => {
-                  updateMemoryCell(newAddr, `[?]`, 'new');
+            { line: 0, msg: "Δημιουργία νέου κόμβου. (Το TAIL μετακινείται για να ανοίξει χώρος)", action: () => {
+                  updateMemoryCell(newAddr, null, 'new');
+                  const gap = 240;
                   const lastX = nodes[nodes.length-1].x;
-                  nodes.push({ id: 'new', x: lastX + 120, y: 280, val: '?', prev: '?', next: '?', addr: newAddr, label: 'Νέος' });
-                  renderNodes();
+                  tailViz.x += gap;
+                  // MOVED UP: Y = 190 (was 280)
+                  nodes.push({ id: 'new', x: lastX + gap, y: 190, val: '?', prev: '?', next: '?', addr: newAddr, label: 'Νέος' });
+                  renderNodes(); renderMemoryGrid();
             }},
             { line: 1, msg: `Αποθήκευση δεδομένων (${val}).`, action: () => {
-                  nodes[nodes.length-1].val = val; updateMemoryCell(newAddr, `[${val}]`, 'new'); renderNodes();
+                  nodes[nodes.length-1].val = val; renderNodes(); renderMemoryGrid();
             }},
             { line: 2, msg: "Το Επόμενο είναι NULL.", action: () => {
-                  nodes[nodes.length-1].next = 'NULL'; renderNodes();
+                  nodes[nodes.length-1].next = 'NULL'; renderNodes(); renderMemoryGrid();
             }},
             { line: 3, msg: "Σύνδεση Προηγούμενου -> Παλιό Tail.", action: () => {
-                  nodes[nodes.length-1].prev = oldTailAddr; renderNodes(); drawLines();
+                  nodes[nodes.length-1].prev = oldTailAddr; renderNodes(); renderMemoryGrid(); drawLines();
             }},
             { line: 4, msg: "Σύνδεση Παλιού Tail -> Νέος.", action: () => {
-                  nodes[nodes.length-2].next = newAddr; renderNodes(); drawLines();
+                  nodes[nodes.length-2].next = newAddr; renderNodes(); renderMemoryGrid(); drawLines();
             }},
             { line: 5, msg: "Ενημέρωση TAIL.", action: () => {
                   tailViz.val = newAddr; 
-                  let s = memSlots.find(s=>s.type==='tail'); if(s) updateMemoryCell(s.addr, newAddr, 'tail');
-                  renderNodes(); drawLines();
+                  let s = memSlots.find(s=>s.type==='tail'); if(s) { s.val = newAddr; }
+                  renderNodes(); renderMemoryGrid(); drawLines();
             }},
             { line: 6, msg: "Ολοκλήρωση.", action: () => {
-                  const newNode = nodes[nodes.length-1];
-                  newNode.y = 140; 
-                  newNode.x = nodes[nodes.length-2].x + 240;
-                  tailViz.x = newNode.x + 200;
-                  updateMemoryCell(newAddr, `[${val}]`, 'active');
-                  renderNodes(); drawLines();
+                  // MOVED UP: Y = 50 (was 140)
+                  nodes[nodes.length-1].y = 50; 
+                  updateMemoryCell(newAddr, null, 'active');
+                  renderNodes(); renderMemoryGrid(); drawLines();
             }}
         ];
     }
 
    function calcStepsMiddle(newAddr, val, currAddr, nextAddr) {
         steps = [
-            { line: 0, msg: "Δημιουργία νέου κόμβου.", action: () => {
-                  updateMemoryCell(newAddr, `[?]`, 'new');
-                  const midX = (nodes[0].x + nodes[1].x) / 2;
-                  nodes.splice(1, 0, { id: 'new', x: midX - 30, y: 280, val: '?', prev: '?', next: '?', addr: newAddr, label: 'Νέος' });
-                  renderNodes();
+            { line: 0, msg: "Δημιουργία νέου κόμβου. (Οι κόμβοι σπρώχνονται δεξιά για να ανοίξει χώρος)", action: () => {
+                  updateMemoryCell(newAddr, null, 'new');
+                  const gap = 240;
+                  nodes[1].x += gap;
+                  nodes[2].x += gap;
+                  tailViz.x += gap;
+                  const targetX = nodes[0].x + gap; 
+                  // MOVED UP: Y = 190 (was 280)
+                  nodes.splice(1, 0, { id: 'new', x: targetX, y: 190, val: '?', prev: '?', next: '?', addr: newAddr, label: 'Νέος' });
+                  renderNodes(); renderMemoryGrid();
             }},
             { line: 1, msg: `Αποθήκευση δεδομένων (${val}).`, action: () => {
-                  nodes[1].val = val; updateMemoryCell(newAddr, `[${val}]`, 'new'); renderNodes();
+                  nodes[1].val = val; renderNodes(); renderMemoryGrid();
             }},
             { line: 2, msg: "Σύνδεση Επόμενου -> Επόμενο Τρέχοντος.", action: () => {
-                  nodes[1].next = nextAddr; renderNodes(); drawLines();
+                  nodes[1].next = nextAddr; renderNodes(); renderMemoryGrid(); drawLines();
             }},
             { line: 3, msg: "Σύνδεση Προηγούμενου -> Τρέχων.", action: () => {
-                  nodes[1].prev = currAddr; renderNodes(); drawLines();
+                  nodes[1].prev = currAddr; renderNodes(); renderMemoryGrid(); drawLines();
             }},
             { line: 4, msg: "Σύνδεση Επόμενου κόμβου (Προηγ) -> Νέος.", action: () => {
-                  nodes[2].prev = newAddr; renderNodes(); drawLines();
+                  nodes[2].prev = newAddr; renderNodes(); renderMemoryGrid(); drawLines();
             }},
             { line: 5, msg: "Σύνδεση Τρέχοντος (Επόμενο) -> Νέος.", action: () => {
-                  nodes[0].next = newAddr; renderNodes(); drawLines();
+                  nodes[0].next = newAddr; renderNodes(); renderMemoryGrid(); drawLines();
             }},
             { line: 6, msg: "Ολοκλήρωση.", action: () => {
-                  const newNode = nodes[1];
-                  newNode.y = 140;
-                  const gap = 240;
-                  for(let i=1; i<nodes.length; i++) nodes[i].x = nodes[i-1].x + gap;
-                  tailViz.x = nodes[nodes.length-1].x + 200;
-                  updateMemoryCell(newAddr, `[${val}]`, 'active');
-                  renderNodes(); drawLines();
+                  // MOVED UP: Y = 50 (was 140)
+                  nodes[1].y = 50; 
+                  updateMemoryCell(newAddr, null, 'active');
+                  renderNodes(); renderMemoryGrid(); drawLines();
             }}
         ];
     }
@@ -635,25 +642,56 @@
     function renderMemoryGrid() {
         const grid = document.getElementById('memGrid');
         grid.innerHTML = '';
+        
         memSlots.forEach(s => {
             const d = document.createElement('div');
             d.className = `mem-cell ${s.type}`;
             d.id = `mem-${s.addr}`;
+            
             let tag = '';
             if(s.type==='head') tag=`<div class="tag-mem tag-head">HEAD</div>`;
             if(s.type==='tail') tag=`<div class="tag-mem tag-tail">TAIL</div>`;
-            d.innerHTML = `<div class="mem-addr">${s.addr}</div><div class="mem-content">${s.val}</div>${tag}`;
+
+            // Search for a node at this address
+            const node = nodes.find(n => n.addr === s.addr);
+            let contentHtml = '';
+
+            if (node) {
+                // Detailed Node View
+                contentHtml = `
+                    <div class="mem-addr">${s.addr}</div>
+                    <div class="mini-node">
+                        <div class="mini-row mini-prev" title="Προηγούμενο">${node.prev === 'NULL' ? 'Ø' : node.prev}</div>
+                        <div class="mini-row mini-data" title="Δεδομένα">${node.val}</div>
+                        <div class="mini-row mini-next" title="Επόμενο">${node.next === 'NULL' ? 'Ø' : node.next}</div>
+                    </div>
+                `;
+            } else {
+                // Simple Value (HEAD/TAIL/Empty)
+                contentHtml = `
+                    <div class="mem-addr">${s.addr}</div>
+                    <div class="mem-simple-val">${s.val}</div>
+                `;
+            }
+
+            d.innerHTML = contentHtml + tag;
             grid.appendChild(d);
         });
+
         const isDark = document.body.classList.contains('dark-mode');
-        document.querySelector('#arrowNext polygon').setAttribute('fill', isDark?'#60a5fa':'#2563eb');
-        document.querySelector('#arrowPrev polygon').setAttribute('fill', isDark?'#fb923c':'#ea580c');
+        const nextColor = isDark ? '#60a5fa' : '#2563eb';
+        const prevColor = isDark ? '#fb923c' : '#ea580c';
+        
+        const polyNext = document.querySelector('#arrowNext polygon');
+        const polyPrev = document.querySelector('#arrowPrev polygon');
+        if(polyNext) polyNext.setAttribute('fill', nextColor);
+        if(polyPrev) polyPrev.setAttribute('fill', prevColor);
     }
 
     function updateMemoryCell(addr, val, type) {
         let idx = memSlots.findIndex(s=>s.addr===addr);
         if(idx!==-1) {
-            memSlots[idx].val = val; 
+            if(val !== null) memSlots[idx].val = val; 
             if(type) memSlots[idx].type = type;
             renderMemoryGrid();
             let c = document.getElementById(`mem-${addr}`);
@@ -689,11 +727,8 @@
 
     function drawLines() {
         const svg = document.getElementById('svgLayer');
-        svg.innerHTML = `
-        <defs>
-            <marker id="arrowNext" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="var(--arrow-next)" /></marker>
-            <marker id="arrowPrev" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="var(--arrow-prev)" /></marker>
-        </defs>`;
+        const defs = svg.innerHTML.match(/<defs>[\s\S]*?<\/defs>/)[0];
+        svg.innerHTML = defs;
 
         // Head -> First
         if(nodes.length>0) drawPath(headViz.x+60, headViz.y+30, nodes[0].x-5, nodes[0].y+30, 'next-arrow', 'arrowNext');
@@ -714,21 +749,20 @@
         });
     }
 
-    function drawPath(x1,y1,x2,y2, cls, marker) {
+    function drawPath(x1, y1, x2, y2, cls, marker) {
         const svg = document.getElementById('svgLayer');
         const path = document.createElementNS("http://www.w3.org/2000/svg", 'path');
         path.setAttribute('class', cls);
         
-        const dist = Math.abs(x2-x1);
-        if(Math.abs(y1-y2)<20 && dist < 300) {
+        // Straight line if on same level
+        if(Math.abs(y1 - y2) < 20) {
             path.setAttribute('d', `M${x1},${y1} L${x2},${y2}`);
         } else {
-            // Curve
-            const arc = (dist>300) ? 90 : 50;
-            // Arc direction depends on if we go right or left roughly
-            const dir = (y2>y1) ? 1 : -1; 
-            path.setAttribute('d', `M${x1},${y1} C${x1+50},${y1} ${x2-50},${y2} ${x2},${y2}`);
+            // Curve with correct direction
+            const signX = (x2 > x1) ? 1 : -1;
+            path.setAttribute('d', `M${x1},${y1} C${x1 + (signX * 60)},${y1} ${x2 - (signX * 60)},${y2} ${x2},${y2}`);
         }
+        
         path.setAttribute('marker-end', `url(#${marker})`);
         svg.appendChild(path);
     }

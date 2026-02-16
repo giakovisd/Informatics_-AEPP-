@@ -134,7 +134,14 @@
             font-family: 'Consolas', monospace; font-size: 0.8rem; line-height: 1.4;
             background-color: var(--panel-bg); color: var(--code-txt);
         }
-        .code-line { padding: 2px 6px; border-radius: 3px; white-space: pre; }
+        .code-line { 
+            padding: 8px; 
+            border-radius: 4px; 
+            white-space: pre-wrap; 
+            line-height: 1.4; 
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
         .code-line.active { background-color: var(--highlight-line); font-weight: bold; color: var(--text-color); }
         .kw { color: var(--code-kw); font-weight: bold; }
         .sym { color: var(--code-sym); font-weight: bold; }
@@ -159,35 +166,49 @@
             flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; overflow: auto;
         }
 
-        /* MEMORY GRID */
+        /* MEMORY GRID - UPDATED FOR DETAILED VIEW */
         .memory-wrapper { width: 100%; margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; }
         .mem-label { font-size: 0.8rem; font-weight: bold; margin-bottom: 4px; opacity: 0.8; }
+        
         .memory-grid {
             display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(3, auto);
             gap: 4px; background: var(--border-color); padding: 12px 4px 4px 4px; border-radius: 6px; width: 100%; max-width: 950px; 
         }
         .mem-cell {
-            background: var(--mem-bg); color: var(--mem-txt); font-family: monospace; 
+            background: var(--mem-bg); color: var(--mem-txt); font-family: 'Consolas', monospace; 
             border-radius: 3px; border: 1px solid var(--mem-cell-border);
-            display: flex; flex-direction: column; justify-content: space-between; height: 55px;
-            padding: 2px; position: relative; transition: all 0.3s;
-            overflow: visible !important; z-index: 1;
+            display: flex; flex-direction: column; 
+            height: 65px; /* Taller for 3 items */
+            position: relative; transition: all 0.3s;
+            overflow: visible !important; /* Allow tags to pop out */
+            z-index: 1;
+            box-shadow: 1px 1px 2px rgba(0,0,0,0.05);
         }
-        .mem-addr { font-size: 0.6rem; opacity: 0.7; text-align: left; letter-spacing: -0.5px; }
-        .mem-content { 
-            font-size: 0.65rem; font-weight: bold; text-align: center;
-            display: flex; justify-content: center; align-items: center; height: 100%; 
-            white-space: nowrap; overflow: hidden;
+        .mem-addr { 
+            font-size: 0.55rem; opacity: 0.8; text-align: center; 
+            background: rgba(0,0,0,0.05); width: 100%; border-bottom: 1px solid rgba(0,0,0,0.1);
         }
+        
+        /* Mini Node Structure inside Memory */
+        .mini-node { display: flex; flex-direction: column; flex: 1; width: 100%; }
+        .mini-row { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: bold; }
+        
+        .mini-prev { color: var(--arrow-prev); border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 0.55rem;}
+        .mini-data { background: rgba(255,255,255,0.3); font-size: 0.75rem; color: var(--text-color); }
+        .mini-next { color: var(--arrow-next); border-top: 1px solid rgba(0,0,0,0.05); font-size: 0.55rem;}
+
+        /* Fallback for simple values */
+        .mem-simple-val { flex: 1; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.7rem; }
+
         .mem-cell.active { background: var(--mem-active); border-color: #10b981; }
         .mem-cell.head { background: var(--mem-head); border-color: #8b5cf6; z-index: 10; }
         .mem-cell.tail { background: var(--mem-tail); border-color: #f97316; z-index: 10; }
-        .mem-cell.deleted { background: var(--mem-del); border-color: #ef4444; color: #b91c1c; }
+        .mem-cell.deleted { background: var(--mem-del); border-color: #ef4444; color: #b91c1c; opacity: 0.8; }
 
         .tag-mem { 
-            position: absolute; top: -10px; right: -5px; 
-            color: white; font-size: 0.7rem; padding: 1px 4px; 
-            border-radius: 3px; font-weight: bold; z-index: 10; 
+            position: absolute; top: -12px; right: -5px; 
+            color: white; font-size: 0.65rem; padding: 1px 5px; 
+            border-radius: 3px; font-weight: bold; z-index: 20; 
             box-shadow: 1px 1px 3px rgba(0,0,0,0.3); white-space: nowrap;
         }
         .tag-head { background: #7c3aed; }
@@ -267,21 +288,13 @@
         .log-item { border-bottom: 1px solid var(--border-color); padding: 2px 0; }
 
         .speak-btn.active { color: #ef4444; border-color: #ef4444; }
-.code-line { 
-            padding: 8px; 
-            border-radius: 4px; 
-            white-space: pre-wrap; /* Επιτρέπει την αναδίπλωση */
-            line-height: 1.4; 
-            margin-bottom: 8px;
-            font-size: 0.85rem;
-        }
     </style>
 </head>
 <body>
 
 <header>
     <div class="header-title">
-        <h1>Διαγραφή-Διπλά Συνδεδεμένη Λίστα. Τυχαίες θέσεις μνήμης</h1>
+        <h1>Διαγραφή σε Διπλά Συνδεδεμένη Λίστα. Τυχαίες θέσεις μνήμης</h1>
     </div>
     
     <div class="controls-area">
@@ -479,8 +492,6 @@
         memSlots[locs.n3Idx] = { ...memSlots[locs.n3Idx], val: `[${items[2]}]`, type: 'active' };
         memSlots[locs.n4Idx] = { ...memSlots[locs.n4Idx], val: `[${items[3]}]`, type: 'active' };
 
-        renderMemoryGrid();
-
         // Visual Setup
         headViz = { x: 20, y: 140, val: nAddr[0], title: 'HEAD', class:'box-head' };
         
@@ -499,6 +510,8 @@
         }
         
         tailViz = { x: nodes[3].x + 200, y: 140, val: nAddr[3], title: 'TAIL', class:'box-tail' };
+
+        renderMemoryGrid(); // Now renders detailed nodes
 
         // Labels
         nodes[delIdx].label = "Στόχος";
@@ -528,20 +541,20 @@
             { line: 1, msg: `Το HEAD αλλάζει και δείχνει στον επόμενο κόμβο (${nextNode.addr}).`, 
               action: () => {
                   headViz.val = nextNode.addr;
-                  let s = memSlots.find(s=>s.type==='head'); if(s) updateMemoryCell(s.addr, nextNode.addr, 'head');
-                  renderNodes(); drawLines();
+                  let s = memSlots.find(s=>s.type==='head'); if(s) s.val = nextNode.addr;
+                  renderNodes(); renderMemoryGrid(); drawLines();
               }},
               
             { line: 2, msg: `Το Προηγούμενο του νέου 1ου κόμβου γίνεται NULL.`, 
               action: () => {
                   nextNode.prev = 'NULL'; 
-                  renderNodes(); drawLines();
+                  renderNodes(); renderMemoryGrid(); drawLines();
               }},
               
             { line: 3, msg: `Ο παλιός κόμβος αποκολλάται.`,
               action: () => {
                   target.detached = true;
-                  updateMemoryCell(target.addr, `[${target.val}]`, 'deleted'); 
+                  updateMemoryCell(target.addr, null, 'deleted'); 
                   renderNodes(); drawLines();
               }},
               
@@ -550,7 +563,7 @@
                   target.y += 120; // Κίνηση προς τα κάτω
                   const gap = 200;
                   for(let i=1; i<nodes.length; i++) nodes[i].x -= gap; // Μετακίνηση λίστας αριστερά
-                  headViz.x = 20; // Reset Head viz positon fix logic if needed
+                  headViz.x = 20; 
                   tailViz.x -= gap; 
                   renderNodes(); drawLines();
               }}
@@ -568,20 +581,20 @@
             { line: 1, msg: `Το TAIL αλλάζει και δείχνει στον προηγούμενο κόμβο (${prevNode.addr}).`, 
               action: () => {
                   tailViz.val = prevNode.addr;
-                  let s = memSlots.find(s=>s.type==='tail'); if(s) updateMemoryCell(s.addr, prevNode.addr, 'tail');
-                  renderNodes(); drawLines();
+                  let s = memSlots.find(s=>s.type==='tail'); if(s) s.val = prevNode.addr;
+                  renderNodes(); renderMemoryGrid(); drawLines();
               }},
               
             { line: 2, msg: `Το Επόμενο του νέου Τελευταίου κόμβου γίνεται NULL.`, 
               action: () => {
                   prevNode.next = 'NULL'; 
-                  renderNodes(); drawLines();
+                  renderNodes(); renderMemoryGrid(); drawLines();
               }},
               
             { line: 3, msg: `Ο παλιός κόμβος αποκολλάται.`,
               action: () => {
                   target.detached = true;
-                  updateMemoryCell(target.addr, `[${target.val}]`, 'deleted');
+                  updateMemoryCell(target.addr, null, 'deleted');
                   renderNodes(); drawLines();
               }},
               
@@ -605,19 +618,19 @@
             { line: 1, msg: `Το Επόμενο του Προηγούμενου δείχνει στον Επόμενο του Στόχου (${nextNode.addr}).`, 
               action: () => {
                   prevNode.next = nextNode.addr; 
-                  renderNodes(); drawLines();
+                  renderNodes(); renderMemoryGrid(); drawLines();
               }},
               
             { line: 2, msg: `Το Προηγούμενο του Επόμενου δείχνει στον Προηγούμενο του Στόχου (${prevNode.addr}).`, 
               action: () => {
                   nextNode.prev = prevNode.addr; 
-                  renderNodes(); drawLines();
+                  renderNodes(); renderMemoryGrid(); drawLines();
               }},
               
             { line: 3, msg: `Ο Στόχος αποκολλάται από τη λίστα.`,
               action: () => {
                   target.detached = true;
-                  updateMemoryCell(target.addr, `[${target.val}]`, 'deleted');
+                  updateMemoryCell(target.addr, null, 'deleted');
                   renderNodes(); drawLines();
               }},
               
@@ -642,28 +655,63 @@
         return { headIdx: idxs[0], tailIdx: idxs[1], n1Idx: idxs[2], n2Idx: idxs[3], n3Idx: idxs[4], n4Idx: idxs[5] };
     }
 
+    // --- NEW RENDER MEMORY FUNCTION (Detailed View) ---
     function renderMemoryGrid() {
         const grid = document.getElementById('memGrid');
         grid.innerHTML = '';
+        
         memSlots.forEach(s => {
             const d = document.createElement('div');
             d.className = `mem-cell ${s.type}`;
             d.id = `mem-${s.addr}`;
+            
+            // 1. Tags
             let tag = '';
             if(s.type==='head') tag=`<div class="tag-mem tag-head">HEAD</div>`;
             if(s.type==='tail') tag=`<div class="tag-mem tag-tail">TAIL</div>`;
-            d.innerHTML = `<div class="mem-addr">${s.addr}</div><div class="mem-content">${s.val}</div>${tag}`;
+
+            // 2. Node lookup
+            const node = nodes.find(n => n.addr === s.addr);
+            let contentHtml = '';
+
+            if (node) {
+                // Detailed Node
+                contentHtml = `
+                    <div class="mem-addr">${s.addr}</div>
+                    <div class="mini-node">
+                        <div class="mini-row mini-prev" title="Προηγούμενο">${node.prev === 'NULL' ? 'Ø' : node.prev}</div>
+                        <div class="mini-row mini-data" title="Δεδομένα">${node.val}</div>
+                        <div class="mini-row mini-next" title="Επόμενο">${node.next === 'NULL' ? 'Ø' : node.next}</div>
+                    </div>
+                `;
+            } else {
+                // Simple Value
+                contentHtml = `
+                    <div class="mem-addr">${s.addr}</div>
+                    <div class="mem-simple-val">${s.val}</div>
+                `;
+            }
+
+            d.innerHTML = contentHtml + tag;
             grid.appendChild(d);
         });
+
         const isDark = document.body.classList.contains('dark-mode');
-        document.querySelector('#arrowNext polygon').setAttribute('fill', isDark?'#60a5fa':'#2563eb');
-        document.querySelector('#arrowPrev polygon').setAttribute('fill', isDark?'#fb923c':'#ea580c');
+        const nextColor = isDark ? '#60a5fa' : '#2563eb';
+        const prevColor = isDark ? '#fb923c' : '#ea580c';
+        
+        const polyNext = document.querySelector('#arrowNext polygon');
+        const polyPrev = document.querySelector('#arrowPrev polygon');
+        if(polyNext) polyNext.setAttribute('fill', nextColor);
+        if(polyPrev) polyPrev.setAttribute('fill', prevColor);
     }
 
     function updateMemoryCell(addr, val, type) {
         let idx = memSlots.findIndex(s=>s.addr===addr);
         if(idx!==-1) {
-            memSlots[idx].val = val; 
+            // For detailed view, we often update the node object itself, so val might be null here
+            // But we keep the function signature for compatibility
+            if(val !== null) memSlots[idx].val = val; 
             if(type) memSlots[idx].type = type;
             renderMemoryGrid();
             let c = document.getElementById(`mem-${addr}`);
@@ -700,11 +748,8 @@
 
     function drawLines() {
         const svg = document.getElementById('svgLayer');
-        svg.innerHTML = `
-        <defs>
-            <marker id="arrowNext" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="var(--arrow-next)" /></marker>
-            <marker id="arrowPrev" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="var(--arrow-prev)" /></marker>
-        </defs>`;
+        const defs = svg.innerHTML.match(/<defs>[\s\S]*?<\/defs>/)[0];
+        svg.innerHTML = defs;
 
         // Head -> First (find node with addr == headViz.val)
         let first = nodes.find(n => n.addr === headViz.val);
@@ -739,7 +784,6 @@
         // If distance is large (e.g. skipping a deleted node), curve it
         if(dist > 250) {
              const arc = 70;
-             // Up or Down arc depending on direction
              const dir = (y1 < 100) ? -1 : 1; 
              path.setAttribute('d', `M${x1},${y1} C${x1+50},${y1-arc} ${x2-50},${y2-arc} ${x2},${y2}`);
         } else {
