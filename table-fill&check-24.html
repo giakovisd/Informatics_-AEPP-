@@ -263,8 +263,11 @@
     function safeEval(expr) {
         let clean = expr.trim().toLowerCase();
         
-        clean = clean.replace(/<>/g, '!==');
+        // ΔΙΟΡΘΩΣΗ: Χρήση προσωρινού συμβόλου για να μη χαλάει το !== από το replace του =
+        clean = clean.replace(/<>/g, '###NEQ###'); 
         clean = clean.replace(/=/g, '==='); 
+        clean = clean.replace(/###NEQ###/g, '!==');
+
         clean = clean.replace(/mod/g, '%');
         clean = clean.replace(/div/g, '/'); 
         clean = clean.replace(/←/g, '='); 
