@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Μαύρο κουτί - Δημιουργία Σεναρίων Ελέγχου</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-main: #f8fafc;
+            --panel-bg: #ffffff;
+            --text-main: #1e293b;
+            --border-col: #e2e8f0;
+            
+            --primary: #0ea5e9; 
+            --primary-hover: #0284c7;
+            --secondary: #64748b;
+            
+            --success: #22c55e;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            
+            --term-bg: #ffffff;
+            --term-text: #334155;
+            --term-border: #cbd5e1;
+            
+            --machine-bg: #f1f5f9;
+        }
+
+        body.dark-mode {
+            --bg-main: #0f172a;
+            --panel-bg: #1e293b;
+            --text-main: #f1f5f9;
+            --border-col: #334155;
+            
+            --primary: #38bdf8;
+            --primary-hover: #0ea5e9;
+            --secondary: #94a3b8;
+            
+            --term-bg: #0f172a;
+            --term-text: #cbd5e1;
+            --term-border: #475569;
+            
+            --machine-bg: #1e293b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0; padding: 0; background-color: var(--bg-main); color: var(--text-main);
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* HEADER & TABS */
+        header { background: var(--panel-bg); border-bottom: 1px solid var(--border-col); height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); z-index: 10; }
+        .title-area { display: flex; align-items: center; gap: 15px; }
+        .main-title { font-weight: bold; font-size: 1.2rem; color: var(--primary); display: flex; align-items: center; gap: 8px;}
+        .sub-title { font-size: 0.8rem; color: var(--secondary); border-left: 2px solid var(--border-col); padding-left: 10px;}
+
+        .btn { padding: 8px 16px; border-radius: 6px; font-weight: 600; font-size: 0.9rem; cursor: pointer; border: 1px solid var(--border-col); background: var(--panel-bg); color: var(--text-main); display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; }
+        .btn:hover:not(:disabled) { background: var(--border-col); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: var(--primary); color: white; border: none; }
+        .btn-primary:hover:not(:disabled) { background: var(--primary-hover); color: white;}
+
+        .tabs { display: flex; border-bottom: 1px solid var(--border-col); background: var(--bg-main); }
+        .tab { flex: 1; padding: 12px; cursor: pointer; text-align: center; font-weight: bold; font-size: 0.95rem; border-bottom: 3px solid transparent; color: var(--secondary); transition: 0.2s;}
+        .tab:hover { background: var(--panel-bg); }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); background: var(--panel-bg);}
+
+        /* LAYOUT */
+        .main-content { display: flex; flex: 1; padding: 15px; gap: 15px; overflow: hidden; }
+        .panel-box { background: var(--panel-bg); border: 1px solid var(--border-col); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; box-shadow: 0 4px 6px rgba(0,0,0,0.02); overflow: hidden; }
+        
+        .left-panel { flex: 0 0 340px; overflow-y: auto;}
+        .center-panel { flex: 1; padding: 0; overflow-y: auto; display: flex; flex-direction: column;}
+        .right-panel { flex: 0 0 300px; background: transparent; border: none; padding: 0; display: flex; flex-direction: column; }
+
+        .scenario-selector { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-col); background: var(--bg-main); color: var(--text-main); font-weight: bold; margin-bottom: 15px; cursor: pointer; }
+        
+        .scenario-desc { 
+            background: rgba(14, 165, 233, 0.05); border-left: 3px solid var(--primary); 
+            padding: 12px; font-size: 0.85rem; margin-bottom: 15px; border-radius: 0 4px 4px 0; 
+            color: var(--text-main); line-height: 1.6; text-align: justify;
+        }
+
+        /* --- DIAGRAM CSS (Από την προηγούμενη εφαρμογή) --- */
+        .bb-diagram-area {
+            display: flex; flex-wrap: nowrap; justify-content: center; align-items: flex-start; gap: 4px;
+            background: var(--bg-main); border: 1px solid var(--border-col); border-radius: 8px; padding: 20px 10px;
+            margin-bottom: 15px; overflow-x: auto; min-height: 110px;
+        }
+        
+        .diag-wrapper { display: flex; align-items: center; gap: 4px; }
+        .diag-col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        
+        .diag-box { 
+            padding: 4px 8px; border-radius: 4px; border: 2px solid var(--warning); 
+            background: rgba(245, 158, 11, 0.1); color: var(--warning); font-size: 0.95rem; 
+            font-weight: bold; min-width: 35px; text-align: center; box-shadow: 0 0 10px rgba(245,158,11,0.2);
+        }
+        
+        .diag-out-box { font-size: 0.8rem; padding: 2px 4px; font-weight: bold; color: var(--text-main); text-align: center;}
+        
+        .diag-symbol { 
+            color: var(--primary); display: flex; align-items: center; justify-content: center;
+            width: 50px; flex-shrink: 0; 
+        }
+        .diag-symbol i { font-size: 1.2rem; transform: scaleX(2.8); }
+        
+        .diag-separator {
+            width: 2px; height: 60px; background-color: var(--text-main); margin: 0 15px; flex-shrink: 0; 
+        }
+
+        /* --- TAB 1: TABLE BUILDER --- */
+        .builder-area { padding: 20px; display: flex; flex-direction: column; gap: 15px; flex: 1; }
+        
+        .build-controls { display: flex; gap: 10px; background: var(--bg-main); padding: 15px; border-radius: 8px; border: 1px solid var(--border-col); align-items: flex-end; flex-wrap: wrap;}
+        .input-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 120px;}
+        .input-group label { font-size: 0.8rem; font-weight: bold; color: var(--secondary); }
+        .ctrl-input { padding: 8px; border-radius: 4px; border: 1px solid var(--border-col); background: var(--panel-bg); color: var(--text-main); font-weight: bold; outline: none;}
+        .ctrl-input:focus { border-color: var(--primary); }
+
+        .test-table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 0.9rem;}
+        .test-table th, .test-table td { border: 1px solid var(--border-col); padding: 10px; text-align: center; }
+        .test-table th { background: var(--primary); color: white; }
+        .test-table td { background: var(--panel-bg); color: var(--text-main); font-weight: 500;}
+        .row-new { animation: flashRow 0.5s; }
+        @keyframes flashRow { 0%{background: var(--success); color: white;} 100%{background: var(--panel-bg);} }
+
+        /* --- TAB 2: DETECTIVE MACHINES --- */
+        .detective-area { padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 30px; }
+        .global-input-area { display: flex; gap: 10px; background: var(--bg-main); padding: 15px 25px; border-radius: 8px; border: 2px dashed var(--border-col); align-items: center; }
+        .machines-container { display: flex; gap: 20px; width: 100%; justify-content: center; flex-wrap: wrap; }
+        .machine { width: 220px; background: var(--machine-bg); border: 2px solid var(--border-col); border-radius: 12px; padding: 15px; display: flex; flex-direction: column; align-items: center; gap: 15px; transition: 0.3s; position: relative;}
+        .machine.selected-correct { border-color: var(--success); box-shadow: 0 0 20px rgba(34, 197, 94, 0.4); transform: scale(1.05);}
+        .machine.selected-wrong { border-color: var(--error); opacity: 0.6; }
+        
+        .m-title { font-weight: bold; font-size: 1.1rem; color: var(--text-main); }
+        .m-screen { width: 100%; height: 60px; background: #000; border-radius: 6px; display: flex; justify-content: center; align-items: center; color: white; font-family: monospace; font-size: 1.1rem; border: 3px solid #334155; text-align:center;}
+        .m-screen.ok { color: #22c55e; text-shadow: 0 0 10px #22c55e; }
+        .m-screen.err { color: #ef4444; text-shadow: 0 0 10px #ef4444; }
+        
+        /* TERMINAL */
+        .terminal-container { flex: 1; background: var(--term-bg); border: 1px solid var(--term-border); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.02);}
+        .terminal-header { background: var(--bg-main); padding: 12px 15px; font-weight: bold; font-size: 0.95rem; border-bottom: 1px solid var(--term-border); color: var(--text-main); display: flex; align-items: center; gap: 8px;}
+        .terminal { flex: 1; padding: 15px; font-family: 'Consolas', monospace; font-size: 0.85rem; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; color: var(--term-text); }
+        .log-msg { border-bottom: 1px solid var(--border-col); padding-bottom: 6px; line-height: 1.4; }
+        .log-time { color: #94a3b8; font-size: 0.75rem; margin-right: 5px; }
+
+        /* MODAL */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
+        .modal-content { background: var(--panel-bg); width: 600px; max-width: 90%; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; animation: popIn 0.3s; }
+        @keyframes popIn { from {transform: scale(0.8); opacity: 0;} to {transform: scale(1); opacity: 1;} }
+        .modal-header { background: var(--primary); color: white; padding: 15px 20px; font-weight: bold; font-size: 1.1rem; display:flex; justify-content: space-between; align-items: center;}
+        .modal-body { padding: 20px; font-size: 0.95rem; line-height: 1.6; color: var(--text-main); }
+    </style>
+</head>
+<body>
+
+<div class="modal-overlay" id="helpModal" onclick="closeHelp(event)">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span><i class="fa-solid fa-graduation-cap"></i> Μελέτη τεχνικής Μαύρου κουτιού (δε βλέπω κώδικα)</span>
+            <button class="btn" style="padding: 2px 8px; background: transparent; border:none; color:white;" onclick="closeHelp(event, true)"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <p>Καλώς ήρθες στο τελικό στάδιο εκπαίδευσης Μηχανικού Διασφάλισης Ποιότητας Λογισμικού</p>
+            <ol>
+                <li><b style="color:var(--primary)">Δημιουργία Σεναρίων Ελέγχου:</b> Παρατήρησε το Σχήμα με τον <b>Καθορισμό Ακραίων Τιμών</b>. Βάλε μια από αυτές τις τιμές, επίλεξε το σωστό Αναμενόμενο Αποτέλεσμα και την Περίπτωση.</li>
+                <li><b style="color:var(--primary)">Ο Ανιχνευτής Σφαλμάτων:</b> Δοκίμασε ακραίες τιμές στα 3 μηχανήματα για να ανακαλύψεις ποιο είναι γραμμένο σωστά και ποια έχουν λογικά λάθη.</li>
+            </ol>
+            <button class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 10px;" onclick="closeHelp(event, true)">Αποδοχή Αποστολής!</button>
+        </div>
+    </div>
+</div>
+
+<header>
+    <div class="title-area">
+        <div class="main-title">
+            <i class="fa-solid fa-box"></i>
+            <span>Σενάρια Ελέγχου</span>
+        </div>
+        <div class="sub-title">Ενότητα 5: Πίνακες Ελέγχου & Εντοπισμός Bugs</div>
+    </div>
+    <div style="display:flex; gap: 10px;">
+        <button class="btn btn-primary" onclick="openHelp()"><i class="fa-solid fa-circle-question"></i> Οδηγίες</button>
+        <button class="btn" onclick="toggleTheme()"><i class="fa-solid fa-moon"></i></button>
+    </div>
+</header>
+
+<div class="tabs">
+    <div class="tab active" id="tab-table" onclick="switchTab('table')"><i class="fa-solid fa-table-list"></i> 1. Δημιουργία σεναρίων ελέγχου</div>
+    <div class="tab" id="tab-detective" onclick="switchTab('detective')"><i class="fa-solid fa-user-secret"></i> 2. Ανιχνευτής Λαθών</div>
+</div>
+
+<div class="main-content">
+
+    <div class="panel-box left-panel">
+        <select class="scenario-selector" id="scenSelect" onchange="loadScenario()">
+        </select>
+        
+        <div style="font-weight:bold; font-size: 0.85rem; color: var(--primary); margin-bottom: 5px;">Εκφώνηση:</div>
+        <div class="scenario-desc" id="scenDesc"></div>
+        
+        <div id="instruction-box" style="font-size: 0.8rem; color: var(--secondary); margin-top: 10px; padding: 10px; background: var(--bg-main); border-radius: 4px; border: 1px dashed var(--border-col);">
+        </div>
+    </div>
+
+    <div class="panel-box center-panel" id="center-area">
+        
+        <div class="builder-area" id="area-table">
+            <h3 style="margin:0; text-align:center;">Καθορισμός Ακραίων Τιμών & Πίνακας Ελέγχου</h3>
+            
+            <div id="boundaries-diagram" class="bb-diagram-area">
+                </div>
+            
+            <div class="build-controls">
+                <div class="input-group">
+                    <label>Οριακή Τιμή Εισόδου:</label>
+                    <input type="number" id="tbl-input" class="ctrl-input" placeholder="π.χ. 20">
+                </div>
+                <div class="input-group">
+                    <label>Αναμενόμενο Αποτέλεσμα:</label>
+                    <select id="tbl-output" class="ctrl-input"></select>
+                </div>
+                <div class="input-group">
+                    <label>Περίπτωση που ελέγχεται:</label>
+                    <select id="tbl-type" class="ctrl-input"></select>
+                </div>
+                <button class="btn btn-primary" onclick="addTableRow()"><i class="fa-solid fa-plus"></i> Προσθήκη</button>
+            </div>
+
+            <table class="test-table" id="test-table">
+                <thead>
+                    <tr>
+                        <th>Τιμή Εισόδου</th>
+                        <th>Αναμενόμενο Αποτέλεσμα</th>
+                        <th>Περίπτωση που ελέγχεται</th>
+                    </tr>
+                </thead>
+                <tbody id="test-tbody">
+                </tbody>
+            </table>
+        </div>
+
+        <div class="detective-area" id="area-detective" style="display:none;">
+            <div style="text-align:center;">
+                <h3 style="margin:0;">Βρες το Σωστό Μηχάνημα!</h3>
+                <p style="margin:5px 0 0 0; color:var(--secondary); font-size:0.9rem;">Μόνο ΕΝΑ μηχάνημα ακολουθεί 100% την εκφώνηση. Τα άλλα δύο κρύβουν λογικά λάθη.</p>
+            </div>
+
+            <div class="global-input-area">
+                <b style="color:var(--primary);">Δοκιμαστική Τιμή:</b>
+                <input type="number" id="det-input" class="ctrl-input" style="font-size:1.2rem; width:120px; text-align:center;" onkeypress="if(event.key==='Enter') testMachines()">
+                <button class="btn btn-primary" onclick="testMachines()"><i class="fa-solid fa-bolt"></i> Run Test</button>
+            </div>
+
+            <div class="machines-container">
+                <div class="machine" id="mach-A">
+                    <div class="m-title">Μηχάνημα Α</div>
+                    <div class="m-screen" id="scr-A">--</div>
+                    <button class="btn" onclick="guessMachine('A')" id="btn-A">Αυτό είναι Σωστό!</button>
+                </div>
+                <div class="machine" id="mach-B">
+                    <div class="m-title">Μηχάνημα Β</div>
+                    <div class="m-screen" id="scr-B">--</div>
+                    <button class="btn" onclick="guessMachine('B')" id="btn-B">Αυτό είναι Σωστό!</button>
+                </div>
+                <div class="machine" id="mach-C">
+                    <div class="m-title">Μηχάνημα Γ</div>
+                    <div class="m-screen" id="scr-C">--</div>
+                    <button class="btn" onclick="guessMachine('C')" id="btn-C">Αυτό είναι Σωστό!</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="right-panel">
+        <div class="terminal-container">
+            <div class="terminal-header">
+                <i class="fa-solid fa-terminal"></i> Οθόνη Επεξηγήσεων
+            </div>
+            <div class="terminal" id="terminal">
+                <div class="log-msg"><span class="log-time">[System]</span> Έναρξη Σεναρίων Ελέγχου. Σύστημα έτοιμο.</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- ΔΕΔΟΜΕΝΑ 100% ΑΠΟ ΤΟ ΒΙΒΛΙΟ/ΛΥΣΕΙΣ ΤΟΥ ΙΕΠ (+ ΔΙΑΓΡΑΜΜΑΤΑ) ---
+
+    const TABLE_DATA = {
+        '1': {
+            title: "1. Έλεγχος Βαθμού",
+            desc: "Η βαθμολογία στις γραπτές δοκιμασίες τετραμήνου στο Λύκειο δίνεται με ακέραιους αριθμούς στην κλίμακα από 0 έως και 20. Να αναπτύξετε πρόγραμμα σε ΓΛΩΣΣΑ που να διαβάζει τη βαθμολογία σε μια γραπτή δοκιμασία και στη συνέχεια να εμφανίζει μήνυμα «Επιτυχής εξέταση», αν η βαθμολογία είναι τουλάχιστον 10, και μήνυμα «Ανεπιτυχής εξέταση» αν η βαθμολογία είναι μικρότερη από 10. Σε περίπτωση που δοθεί τιμή εκτός του διαστήματος 0-20 να εμφανίζεται μήνυμα λάθους «Μη έγκυρη βαθμολογία».",
+            type: 'int', step: '1', 
+            outputs: ['Ανεπιτυχής εξέταση', 'Επιτυχής εξέταση', 'Μη έγκυρη βαθμολογία'],
+            conditions: ['Βαθμός < 0', '0 <= Βαθμός <= 9', '10 <= Βαθμός <= 20', 'Βαθμός > 20'],
+            diagram: [
+                { type: 'point', value: '-1', symbol: '->', output: 'Μη έγκυρη' },
+                { type: 'range', val1: '0', val2: '9', out1: 'Ανεπιτυχής', out2: 'Ανεπιτυχής' },
+                { type: 'range', val1: '10', val2: '20', out1: 'Επιτυχής', out2: 'Επιτυχής' },
+                { type: 'point', value: '21', symbol: '<-', output: 'Μη έγκυρη' }
+            ],
+            cases: {
+                '-1': { out: 'Μη έγκυρη βαθμολογία', type: 'Βαθμός < 0' },
+                '0': { out: 'Ανεπιτυχής εξέταση', type: '0 <= Βαθμός <= 9' },
+                '9': { out: 'Ανεπιτυχής εξέταση', type: '0 <= Βαθμός <= 9' },
+                '10': { out: 'Επιτυχής εξέταση', type: '10 <= Βαθμός <= 20' },
+                '20': { out: 'Επιτυχής εξέταση', type: '10 <= Βαθμός <= 20' },
+                '21': { out: 'Μη έγκυρη βαθμολογία', type: 'Βαθμός > 20' }
+            }
+        },
+        '2': {
+            title: "2. Ηλικία Εργαζομένου",
+            desc: "Η ηλικία ενός εργαζομένου θεωρείται έγκυρη (αποδεκτή) εφόσον ανήκει στο διάστημα 18 έως και 65 ετών. Να γράψετε τα σενάρια ελέγχου ακραίων τιμών για την αποδοχή της ηλικίας ενός εργαζομένου.",
+            type: 'int', step: '1', 
+            outputs: ['Έγκυρη / Αποδεκτή', 'Μη Έγκυρη / Μη Αποδεκτή'],
+            conditions: ['Ηλικία < 18', '18 <= Ηλικία <= 65', 'Ηλικία > 65'],
+            diagram: [
+                { type: 'point', value: '17', symbol: '->', output: 'Μη Έγκυρη' },
+                { type: 'range', val1: '18', val2: '65', out1: 'Έγκυρη', out2: 'Έγκυρη' },
+                { type: 'point', value: '66', symbol: '<-', output: 'Μη Έγκυρη' }
+            ],
+            cases: {
+                '17': { out: 'Μη Έγκυρη / Μη Αποδεκτή', type: 'Ηλικία < 18' },
+                '18': { out: 'Έγκυρη / Αποδεκτή', type: '18 <= Ηλικία <= 65' },
+                '65': { out: 'Έγκυρη / Αποδεκτή', type: '18 <= Ηλικία <= 65' },
+                '66': { out: 'Μη Έγκυρη / Μη Αποδεκτή', type: 'Ηλικία > 65' }
+            }
+        },
+        '3': {
+            title: "3. Σχετική Υγρασία",
+            desc: "Η σχετική υγρασία του αέρα λαμβάνει τιμές από 0.00 έως και 1.00. Ιδανική θεωρείται η σχετική υγρασία που κυμαίνεται από 0.30 έως και 0.60. Να δημιουργήσετε τον πίνακα με τα σενάρια ελέγχου ακραίων τιμών για το χαρακτηρισμό της υγρασίας (ανάλογα με την τιμή της) ως Ιδανική, Μη Ιδανική ή Μη έγκυρη.",
+            type: 'float', dec: 2, step: '0.01', 
+            outputs: ['Μη έγκυρη', 'Μη Ιδανική', 'Ιδανική'],
+            conditions: ['Υγρασία < 0.00 ή Υγρασία > 1.00', '0.00 <= Υγρασία <= 0.29', '0.30 <= Υγρασία <= 0.60', '0.61 <= Υγρασία <= 1.00'],
+            diagram: [
+                { type: 'point', value: '-0.01', symbol: '->', output: 'Μη έγκυρη' },
+                { type: 'range', val1: '0.00', val2: '0.29', out1: 'Μη Ιδανική', out2: 'Μη Ιδανική' },
+                { type: 'range', val1: '0.30', val2: '0.60', out1: 'Ιδανική', out2: 'Ιδανική' },
+                { type: 'range', val1: '0.61', val2: '1.00', out1: 'Μη Ιδανική', out2: 'Μη Ιδανική' },
+                { type: 'point', value: '1.01', symbol: '<-', output: 'Μη έγκυρη' }
+            ],
+            cases: {
+                '-0.01': { out: 'Μη έγκυρη', type: 'Υγρασία < 0.00 ή Υγρασία > 1.00' },
+                '0.00': { out: 'Μη Ιδανική', type: '0.00 <= Υγρασία <= 0.29' },
+                '0.29': { out: 'Μη Ιδανική', type: '0.00 <= Υγρασία <= 0.29' },
+                '0.30': { out: 'Ιδανική', type: '0.30 <= Υγρασία <= 0.60' },
+                '0.60': { out: 'Ιδανική', type: '0.30 <= Υγρασία <= 0.60' },
+                '0.61': { out: 'Μη Ιδανική', type: '0.61 <= Υγρασία <= 1.00' },
+                '1.00': { out: 'Μη Ιδανική', type: '0.61 <= Υγρασία <= 1.00' },
+                '1.01': { out: 'Μη έγκυρη', type: 'Υγρασία < 0.00 ή Υγρασία > 1.00' }
+            }
+        },
+        '4': {
+            title: "4. Γενικός Μέσος Όρος",
+            desc: "Ο Γενικός Μέσος Όρος (Γ.Μ.Ο.) ενός μαθητή δίνεται με προσέγγιση ενός δεκαδικού ψηφίου. Για να προαχθεί ο μαθητής, ο Γ.Μ.Ο. του πρέπει να είναι τουλάχιστον 9,5. Να γράψετε τα σενάρια ελέγχου ακραίων τιμών ώστε να εμφανίζεται το μήνυμα «Προάγεται» ή «Παραπέμπεται» ή «Μη αποδεκτή τιμή», δεδομένου ότι ο μικρότερος βαθμός που μπορεί να έχει ένας μαθητής είναι 0 και ο μεγαλύτερος 20.",
+            type: 'float', dec: 1, step: '0.1', 
+            outputs: ['Μη αποδεκτή τιμή', 'Παραπέμπεται', 'Προάγεται'],
+            conditions: ['ΓΜΟ < 0.0 ή ΓΜΟ > 20.0', '0.0 <= ΓΜΟ <= 9.4', '9.5 <= ΓΜΟ <= 20.0'],
+            diagram: [
+                { type: 'point', value: '-0.1', symbol: '->', output: 'Μη αποδεκτή' },
+                { type: 'range', val1: '0.0', val2: '9.4', out1: 'Παραπέμπεται', out2: 'Παραπέμπεται' },
+                { type: 'range', val1: '9.5', val2: '20.0', out1: 'Προάγεται', out2: 'Προάγεται' },
+                { type: 'point', value: '20.1', symbol: '<-', output: 'Μη αποδεκτή' }
+            ],
+            cases: {
+                '-0.1': { out: 'Μη αποδεκτή τιμή', type: 'ΓΜΟ < 0.0 ή ΓΜΟ > 20.0' },
+                '0.0': { out: 'Παραπέμπεται', type: '0.0 <= ΓΜΟ <= 9.4' },
+                '9.4': { out: 'Παραπέμπεται', type: '0.0 <= ΓΜΟ <= 9.4' },
+                '9.5': { out: 'Προάγεται', type: '9.5 <= ΓΜΟ <= 20.0' },
+                '20.0': { out: 'Προάγεται', type: '9.5 <= ΓΜΟ <= 20.0' },
+                '20.1': { out: 'Μη αποδεκτή τιμή', type: 'ΓΜΟ < 0.0 ή ΓΜΟ > 20.0' }
+            }
+        },
+        '5': {
+            title: "5. Μίσθωση Διαμερίσματος",
+            desc: "Ένα διαμέρισμα διατίθεται για βραχυχρόνια μίσθωση για διάστημα από 1 έως 20 ημέρες. Το κόστος ενοικίασης ανά ημέρα μειώνεται, καθώς αυξάνονται οι ημέρες διαμονής, σύμφωνα με τον παρακάτω πίνακα:<br>• 1 – 3 ημέρες: 50€/ημέρα<br>• 4 – 7 ημέρες: 47€/ημέρα<br>• 8 – 20 ημέρες: 45€/ημέρα<br>Να γράψετε τα σενάρια ελέγχου ακραίων τιμών για τον υπολογισμό του κόστους ενοικίασης του διαμερίσματος.",
+            type: 'int', step: '1', 
+            outputs: ['Μη αποδεκτή τιμή / Λάθος', '50€', '150€', '188€', '329€', '360€', '900€'],
+            conditions: ['Ημέρες < 1 ή Ημέρες > 20', '1 <= Ημέρες <= 3', '4 <= Ημέρες <= 7', '8 <= Ημέρες <= 20'],
+            diagram: [
+                { type: 'point', value: '0', symbol: '->', output: 'Λάθος' },
+                { type: 'range', val1: '1', val2: '3', out1: '50€', out2: '150€' },
+                { type: 'range', val1: '4', val2: '7', out1: '188€', out2: '329€' },
+                { type: 'range', val1: '8', val2: '20', out1: '360€', out2: '900€' },
+                { type: 'point', value: '21', symbol: '<-', output: 'Λάθος' }
+            ],
+            cases: {
+                '0': { out: 'Μη αποδεκτή τιμή / Λάθος', type: 'Ημέρες < 1 ή Ημέρες > 20' },
+                '1': { out: '50€', type: '1 <= Ημέρες <= 3' },
+                '3': { out: '150€', type: '1 <= Ημέρες <= 3' },
+                '4': { out: '188€', type: '4 <= Ημέρες <= 7' },
+                '7': { out: '329€', type: '4 <= Ημέρες <= 7' },
+                '8': { out: '360€', type: '8 <= Ημέρες <= 20' },
+                '20': { out: '900€', type: '8 <= Ημέρες <= 20' },
+                '21': { out: 'Μη αποδεκτή τιμή / Λάθος', type: 'Ημέρες < 1 ή Ημέρες > 20' }
+            }
+        }
+    };
+
+    const DETECTIVE_DATA = {
+        '1': {
+            title: "1. Έλεγχος Βαθμού",
+            desc: "Η βαθμολογία στις γραπτές δοκιμασίες τετραμήνου στο Λύκειο δίνεται με ακέραιους αριθμούς στην κλίμακα από 0 έως και 20. Να αναπτύξετε πρόγραμμα σε ΓΛΩΣΣΑ που να διαβάζει τη βαθμολογία σε μια γραπτή δοκιμασία και στη συνέχεια να εμφανίζει μήνυμα «Επιτυχής εξέταση», αν η βαθμολογία είναι τουλάχιστον 10, και μήνυμα «Ανεπιτυχής εξέταση» αν η βαθμολογία είναι μικρότερη από 10. Σε περίπτωση που δοθεί τιμή εκτός του διαστήματος 0-20 να εμφανίζεται μήνυμα λάθους «Μη έγκυρη βαθμολογία».<br><br><b>Βρες το μηχάνημα που υλοποιεί σωστά αυτή την εκφώνηση!</b>",
+            type: 'int', correctMachine: 'A',
+            eval: function(v) {
+                let checkA, checkB, checkC;
+                if (v < 0 || v > 20) checkA = 'Μη έγκυρη βαθμολογία'; else if (v >= 10) checkA = 'Επιτυχής εξέταση'; else checkA = 'Ανεπιτυχής εξέταση';
+                if (v < 0 || v > 20) checkB = 'Μη έγκυρη βαθμολογία'; else if (v > 10) checkB = 'Επιτυχής εξέταση'; else checkB = 'Ανεπιτυχής εξέταση';
+                if (v < 0 || v >= 20) checkC = 'Μη έγκυρη βαθμολογία'; else if (v >= 10) checkC = 'Επιτυχής εξέταση'; else checkC = 'Ανεπιτυχής εξέταση';
+                return {
+                    'A': { status: checkA==='Μη έγκυρη βαθμολογία' ? 'err' : 'ok', msg: checkA },
+                    'B': { status: checkB==='Μη έγκυρη βαθμολογία' ? 'err' : 'ok', msg: checkB },
+                    'C': { status: checkC==='Μη έγκυρη βαθμολογία' ? 'err' : 'ok', msg: checkC }
+                };
+            }
+        },
+        '2': {
+            title: "2. Ηλικία Εργαζομένου",
+            desc: "Η ηλικία ενός εργαζομένου θεωρείται έγκυρη (αποδεκτή) εφόσον ανήκει στο διάστημα 18 έως και 65 ετών. Να γράψετε τα σενάρια ελέγχου ακραίων τιμών για την αποδοχή της ηλικίας ενός εργαζομένου.<br><br><b>Βρες το μηχάνημα που ελέγχει σωστά το διάστημα!</b>",
+            type: 'int', correctMachine: 'C',
+            eval: function(v) {
+                let checkA = (v >= 18 && v <= 66) ? 'Έγκυρη' : 'Μη Έγκυρη'; 
+                let checkB = (v > 18 && v <= 65) ? 'Έγκυρη' : 'Μη Έγκυρη';  
+                let checkC = (v >= 18 && v <= 65) ? 'Έγκυρη' : 'Μη Έγκυρη'; 
+                return {
+                    'A': { status: checkA==='Έγκυρη' ? 'ok' : 'err', msg: checkA },
+                    'B': { status: checkB==='Έγκυρη' ? 'ok' : 'err', msg: checkB },
+                    'C': { status: checkC==='Έγκυρη' ? 'ok' : 'err', msg: checkC }
+                };
+            }
+        },
+        '3': {
+            title: "3. Σχετική Υγρασία",
+            desc: "Η σχετική υγρασία του αέρα λαμβάνει τιμές από 0.00 έως και 1.00. Ιδανική θεωρείται η σχετική υγρασία που κυμαίνεται από 0.30 έως και 0.60. Να δημιουργήσετε τον πίνακα με τα σενάρια ελέγχου ακραίων τιμών για το χαρακτηρισμό της υγρασίας (ανάλογα με την τιμή της) ως Ιδανική, Μη Ιδανική ή Μη έγκυρη.<br><br><b>Ποιο μηχάνημα υλοποιεί σωστά τον έλεγχο;</b>",
+            type: 'float', correctMachine: 'B',
+            eval: function(v) {
+                let checkA, checkB, checkC;
+                if (v < 0.00 || v > 1.00) checkA = 'Μη έγκυρη'; else if (v >= 0.30 && v < 0.60) checkA = 'Ιδανική'; else checkA = 'Μη Ιδανική';
+                if (v < 0.00 || v > 1.00) checkB = 'Μη έγκυρη'; else if (v >= 0.30 && v <= 0.60) checkB = 'Ιδανική'; else checkB = 'Μη Ιδανική';
+                if (v < 0.00 || v > 1.00) checkC = 'Μη έγκυρη'; else if (v > 0.30 && v <= 0.60) checkC = 'Ιδανική'; else checkC = 'Μη Ιδανική';
+                return {
+                    'A': { status: checkA==='Ιδανική' ? 'ok' : 'err', msg: checkA },
+                    'B': { status: checkB==='Ιδανική' ? 'ok' : 'err', msg: checkB },
+                    'C': { status: checkC==='Ιδανική' ? 'ok' : 'err', msg: checkC }
+                };
+            }
+        },
+        '4': {
+            title: "4. Γενικός Μέσος Όρος",
+            desc: "Ο Γενικός Μέσος Όρος (Γ.Μ.Ο.) ενός μαθητή δίνεται με προσέγγιση ενός δεκαδικού ψηφίου. Για να προαχθεί ο μαθητής, ο Γ.Μ.Ο. του πρέπει να είναι τουλάχιστον 9,5. Να γράψετε τα σενάρια ελέγχου ακραίων τιμών ώστε να εμφανίζεται το μήνυμα «Προάγεται» ή «Παραπέμπεται» ή «Μη αποδεκτή τιμή», δεδομένου ότι ο μικρότερος βαθμός που μπορεί να έχει ένας μαθητής είναι 0 και ο μεγαλύτερος 20.<br><br><b>Βρες το μηχάνημα που υπολογίζει σωστά την προαγωγή!</b>",
+            type: 'float', correctMachine: 'A',
+            eval: function(v) {
+                let outA, outB, outC;
+                if (v < 0.0 || v > 20.0) outA = 'Μη αποδεκτή'; else if (v >= 9.5) outA = 'Προάγεται'; else outA = 'Παραπέμπεται';
+                if (v < 0.0 || v > 20.0) outB = 'Μη αποδεκτή'; else if (v > 9.5) outB = 'Προάγεται'; else outB = 'Παραπέμπεται';
+                if (v < 0.0 || v > 20.0) outC = 'Μη αποδεκτή'; else if (v >= 9.4) outC = 'Προάγεται'; else outC = 'Παραπέμπεται';
+                return {
+                    'A': { status: outA==='Προάγεται' ? 'ok' : 'err', msg: outA },
+                    'B': { status: outB==='Προάγεται' ? 'ok' : 'err', msg: outB },
+                    'C': { status: outC==='Προάγεται' ? 'ok' : 'err', msg: outC }
+                };
+            }
+        },
+        '5': {
+            title: "5. Μίσθωση Διαμερίσματος",
+            desc: "Ένα διαμέρισμα διατίθεται για βραχυχρόνια μίσθωση για διάστημα από 1 έως 20 ημέρες. Το κόστος ενοικίασης ανά ημέρα μειώνεται, καθώς αυξάνονται οι ημέρες διαμονής, σύμφωνα με τον παρακάτω πίνακα:<br>• 1 – 3 ημέρες: 50€/ημέρα<br>• 4 – 7 ημέρες: 47€/ημέρα<br>• 8 – 20 ημέρες: 45€/ημέρα<br><br><b>Βρες το μηχάνημα που υπολογίζει σωστά το τελικό κόστος ενοικίασης!</b>",
+            type: 'int', correctMachine: 'C',
+            eval: function(v) {
+                let outA, outB, outC;
+                if (v < 1 || v > 20) outA = 'Λάθος'; else if (v <= 3) outA = (v*50)+'€'; else if (v < 7) outA = (v*47)+'€'; else outA = (v*45)+'€';
+                if (v < 1 || v > 20) outB = 'Λάθος'; else if (v < 3) outB = (v*50)+'€'; else if (v <= 7) outB = (v*47)+'€'; else outB = (v*45)+'€';
+                if (v < 1 || v > 20) outC = 'Λάθος'; else if (v <= 3) outC = (v*50)+'€'; else if (v <= 7) outC = (v*47)+'€'; else outC = (v*45)+'€';
+                return {
+                    'A': { status: outA==='Λάθος' ? 'err' : 'ok', msg: outA },
+                    'B': { status: outB==='Λάθος' ? 'err' : 'ok', msg: outB },
+                    'C': { status: outC==='Λάθος' ? 'err' : 'ok', msg: outC }
+                };
+            }
+        }
+    };
+
+    // --- GLOBAL VARIABLES ---
+    let currentTab = 'table';
+    let currentScenId = '1';
+    let foundTableCases = [];
+    let testsRunInDetective = 0;
+
+    function switchTab(tab) {
+        currentTab = tab;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(`tab-${tab}`).classList.add('active');
+        
+        document.getElementById('area-table').style.display = tab==='table' ? 'flex' : 'none';
+        document.getElementById('area-detective').style.display = tab==='detective' ? 'flex' : 'none';
+
+        log(`Μετάβαση: <b>${tab === 'table' ? 'Κατασκευαστής Πίνακα' : 'Ανιχνευτής Bugs'}</b>`, 'var(--primary)');
+        
+        populateScenarios();
+    }
+
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+    function openHelp() { document.getElementById('helpModal').style.display = 'flex'; }
+    function closeHelp(e, force=false) { 
+        if(force || e.target.id === 'helpModal') document.getElementById('helpModal').style.display = 'none'; 
+    }
+
+    function log(msg, color = 'var(--text-main)') {
+        const term = document.getElementById('terminal');
+        const now = new Date();
+        const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+        term.innerHTML += `<div class="log-msg"><span class="log-time">[${timeStr}]</span> <span style="color:${color}">${msg}</span></div>`;
+        term.scrollTop = term.scrollHeight;
+    }
+
+    function populateScenarios() {
+        const sel = document.getElementById('scenSelect');
+        sel.innerHTML = '';
+        const dataSet = currentTab === 'table' ? TABLE_DATA : DETECTIVE_DATA;
+        
+        for(let key in dataSet) {
+            sel.innerHTML += `<option value="${key}">${dataSet[key].title}</option>`;
+        }
+        
+        loadScenario();
+    }
+
+    // --- ΔΗΜΙΟΥΡΓΙΑ ΤΟΥ ΔΙΑΓΡΑΜΜΑΤΟΣ ---
+    function buildDiagram(scen) {
+        const container = document.getElementById('boundaries-diagram');
+        if(!scen.diagram) { container.innerHTML = ''; return; }
+        
+        let html = '';
+        let prevRightVal = null;
+        
+        scen.diagram.forEach(item => {
+            let currLeftVal = item.type === 'point' ? item.value : item.val1;
+            
+            if (prevRightVal !== null) {
+                html += `<div class="diag-separator"></div>`;
+            }
+            
+            if(item.type === 'point') {
+                html += `<div class="diag-wrapper">`;
+                if(item.symbol === '->') html += `<div class="diag-symbol"><i class="fa-solid fa-arrow-right-long"></i></div>`;
+                
+                html += `<div class="diag-col">
+                            <div class="diag-box">${item.value}</div>
+                            <div class="diag-out-box">${item.output}</div>
+                         </div>`;
+                         
+                if(item.symbol === '<-') html += `<div class="diag-symbol"><i class="fa-solid fa-arrow-left-long"></i></div>`;
+                html += `</div>`;
+                prevRightVal = item.value;
+            } else if(item.type === 'range') {
+                html += `<div class="diag-wrapper">
+                            <div class="diag-col">
+                                <div class="diag-box">${item.val1}</div>
+                                <div class="diag-out-box">${item.out1}</div>
+                            </div>
+                            <div class="diag-symbol"><i class="fa-solid fa-arrows-left-right"></i></div>
+                            <div class="diag-col">
+                                <div class="diag-box">${item.val2}</div>
+                                <div class="diag-out-box">${item.out2}</div>
+                            </div>
+                         </div>`;
+                prevRightVal = item.val2;
+            }
+        });
+        
+        container.innerHTML = html;
+    }
+
+    function loadScenario() {
+        currentScenId = document.getElementById('scenSelect').value;
+        const dataSet = currentTab === 'table' ? TABLE_DATA : DETECTIVE_DATA;
+        const scen = dataSet[currentScenId];
+        
+        document.getElementById('scenDesc').innerHTML = scen.desc;
+
+        if (currentTab === 'table') {
+            document.getElementById('instruction-box').innerHTML = `<i class="fa-solid fa-pen-to-square"></i> <b>Οδηγία:</b> Χρησιμοποίησε το παραπάνω διάγραμμα ακραίων τιμών για να συμπληρώσεις τον Πίνακα.`;
+            
+            document.getElementById('test-tbody').innerHTML = '';
+            foundTableCases = [];
+            
+            // Φορτώνει το Οπτικό Διάγραμμα
+            buildDiagram(scen);
+            
+            const outSel = document.getElementById('tbl-output');
+            outSel.innerHTML = '';
+            scen.outputs.forEach(o => outSel.innerHTML += `<option value="${o}">${o}</option>`);
+
+            const typeSel = document.getElementById('tbl-type');
+            typeSel.innerHTML = '';
+            scen.conditions.forEach(c => typeSel.innerHTML += `<option value="${c}">${c}</option>`);
+            
+            document.getElementById('tbl-input').step = scen.step;
+            document.getElementById('tbl-input').value = '';
+            
+        } else {
+            document.getElementById('instruction-box').innerHTML = `<i class="fa-solid fa-eye"></i> <b>Οδηγία:</b> Δώσε τιμές στο πεδίο ελέγχου. Παρατήρησε τα αποτελέσματα. Βρες με ποια τιμή διαφωνούν τα μηχανήματα, για να πιάσεις τα ελαττωματικά!`;
+            
+            document.getElementById('det-input').step = scen.step || '1';
+            testsRunInDetective = 0;
+            document.getElementById('det-input').value = '';
+            resetMachines();
+        }
+    }
+
+    // --- ΛΟΓΙΚΗ: TAB 1 (ΠΙΝΑΚΑΣ) ---
+    function addTableRow() {
+        const rawVal = document.getElementById('tbl-input').value;
+        if(rawVal === '') return;
+        
+        const scen = TABLE_DATA[currentScenId];
+        
+        const numVal = scen.type === 'float' ? parseFloat(rawVal) : parseInt(rawVal);
+        const inp = scen.type === 'float' ? numVal.toFixed(scen.dec) : numVal.toString();
+        
+        const outVal = document.getElementById('tbl-output').value;
+        const typeVal = document.getElementById('tbl-type').value;
+
+        if (!scen.cases.hasOwnProperty(inp)) {
+            log(`Η τιμή <b>${inp}</b> ΔΕΝ είναι ακραία (οριακή) τιμή για αυτό το πρόβλημα!`, 'var(--error)');
+            return;
+        }
+        if (foundTableCases.includes(inp)) {
+            log(`Έχεις ήδη καταχωρήσει το σενάριο για την τιμή <b>${inp}</b>.`, 'var(--warning)');
+            return;
+        }
+
+        const correctData = scen.cases[inp];
+
+        if (outVal !== correctData.out) {
+            log(`Λάθος! Για είσοδο ${inp}, το αναμενόμενο αποτέλεσμα ΔΕΝ είναι "${outVal}".`, 'var(--error)');
+            return;
+        }
+        if (typeVal !== correctData.type) {
+            log(`Λάθος! Η τιμή ${inp} δεν ελέγχει την περίπτωση "${typeVal}".`, 'var(--error)');
+            return;
+        }
+
+        foundTableCases.push(inp);
+        const tbody = document.getElementById('test-tbody');
+        const tr = document.createElement('tr');
+        tr.className = 'row-new';
+        tr.innerHTML = `
+            <td><b>${inp}</b></td>
+            <td>${outVal}</td>
+            <td>${typeVal}</td>
+        `;
+        tbody.appendChild(tr);
+
+        log(`Επιτυχία! Το σενάριο για είσοδο <b>${inp}</b> προστέθηκε σωστά.`, 'var(--success)');
+        document.getElementById('tbl-input').value = '';
+
+        if(foundTableCases.length === Object.keys(scen.cases).length) {
+            setTimeout(() => {
+                alert("ΑΡΙΣΤΑ!\n\nΜεταφέροντας σωστά τις τιμές από το Διάγραμμα στον Πίνακα, ολοκλήρωσες τη μεθοδολογία του ΙΕΠ!");
+                log("Ο Πίνακας ολοκληρώθηκε επιτυχώς!", "var(--success)");
+            }, 500);
+        }
+    }
+
+    // --- ΛΟΓΙΚΗ: TAB 2 (ΑΝΙΧΝΕΥΤΗΣ) ---
+    function resetMachines() {
+        ['A', 'B', 'C'].forEach(id => {
+            document.getElementById(`mach-${id}`).className = 'machine';
+            const scr = document.getElementById(`scr-${id}`);
+            scr.className = 'm-screen';
+            scr.innerText = '--';
+            document.getElementById(`btn-${id}`).disabled = false;
+        });
+    }
+
+    function testMachines() {
+        const inpStr = document.getElementById('det-input').value;
+        if(inpStr === '') { log('Δώσε μια τιμή για δοκιμή!', 'var(--warning)'); return; }
+        
+        currentScenId = document.getElementById('scenSelect').value;
+        const scen = DETECTIVE_DATA[currentScenId];
+        
+        const val = scen.type === 'float' ? parseFloat(inpStr) : parseInt(inpStr);
+        const results = scen.eval(val);
+        
+        testsRunInDetective++;
+        resetMachines(); 
+
+        let allSame = true;
+        const firstMsg = results['A'].msg;
+
+        ['A', 'B', 'C'].forEach(id => {
+            const res = results[id];
+            const scr = document.getElementById(`scr-${id}`);
+            scr.innerText = res.msg;
+            scr.className = `m-screen ${res.status}`;
+            if(res.msg !== firstMsg) allSame = false;
+        });
+
+        if (allSame) {
+            log(`Δοκιμή με ${val}: Όλα έβγαλαν "${firstMsg}". <b>Δεν μπορείς να βρεις το λάθος με αυτή την τιμή! Δοκίμασε τα άκρα.</b>`, 'var(--warning)');
+        } else {
+            log(`Δοκιμή με ${val}: <b>ΠΡΟΣΟΧΗ!</b> Τα μηχανήματα διαφωνούν! Βρήκες το "τυφλό σημείο" του λάθος κώδικα!`, 'var(--success)');
+        }
+    }
+
+    function guessMachine(machineId) {
+        if (testsRunInDetective === 0) {
+            alert("Πρέπει πρώτα να κάνεις δοκιμές με αριθμούς πριν μαντέψεις!");
+            return;
+        }
+        const scen = DETECTIVE_DATA[currentScenId];
+        
+        if (machineId === scen.correctMachine) {
+            document.getElementById(`mach-${machineId}`).classList.add('selected-correct');
+            ['A', 'B', 'C'].forEach(id => {
+                if(id !== machineId) document.getElementById(`mach-${id}`).classList.add('selected-wrong');
+                document.getElementById(`btn-${id}`).disabled = true;
+            });
+            log(`ΣΥΓΧΑΡΗΤΗΡΙΑ! Το Μηχάνημα ${machineId} είναι το μόνο σωστό. Εντόπισες τα Bugs στα άλλα δύο!`, 'var(--success)');
+            setTimeout(() => alert("Είσαι πραγματικός QA Detective! Βρήκες το σωστό πρόγραμμα."), 300);
+        } else {
+            document.getElementById(`mach-${machineId}`).classList.add('selected-wrong');
+            log(`Το Μηχάνημα ${machineId} έχει κρυφό λογικό λάθος! Δοκίμασε ξανά την οριακή τιμή.`, 'var(--error)');
+        }
+    }
+
+    window.onload = () => {
+        openHelp();
+        populateScenarios();
+    };
+</script>
+</body>
+</html>

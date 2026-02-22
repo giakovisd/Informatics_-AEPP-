@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Βρες το λάθος - Μαύρο κουτί</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-main: #f8fafc;
+            --panel-bg: #ffffff;
+            --text-main: #1e293b;
+            --border-col: #e2e8f0;
+            
+            --primary: #0ea5e9; 
+            --primary-hover: #0284c7;
+            --secondary: #64748b;
+            
+            --highlight-code: #fef08a;
+            --code-text: #0f172a;
+            
+            --success: #22c55e;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            
+            --term-bg: #ffffff;
+            --term-text: #334155;
+            --term-border: #cbd5e1;
+        }
+
+        body.dark-mode {
+            --bg-main: #0f172a;
+            --panel-bg: #1e293b;
+            --text-main: #f1f5f9;
+            --border-col: #334155;
+            
+            --primary: #38bdf8;
+            --primary-hover: #0ea5e9;
+            --secondary: #94a3b8;
+            
+            --code-text: #e2e8f0;
+            
+            --term-bg: #0f172a;
+            --term-text: #cbd5e1;
+            --term-border: #475569;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0; padding: 0; background-color: var(--bg-main); color: var(--text-main);
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* HEADER */
+        header {
+            background: var(--panel-bg); border-bottom: 1px solid var(--border-col); height: 70px;
+            display: flex; align-items: center; justify-content: space-between; padding: 0 20px; flex-shrink: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); z-index: 10;
+        }
+        .title-area { display: flex; align-items: center; gap: 15px; }
+        .main-title { font-weight: bold; font-size: 1.2rem; color: var(--primary); display: flex; align-items: center; gap: 8px;}
+        .sub-title { font-size: 0.8rem; color: var(--secondary); border-left: 2px solid var(--border-col); padding-left: 10px;}
+
+        .btn {
+            padding: 8px 16px; border-radius: 6px; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+            border: 1px solid var(--border-col); background: var(--panel-bg); color: var(--text-main);
+            display: flex; align-items: center; gap: 8px; transition: all 0.2s;
+        }
+        .btn:hover:not(:disabled) { background: var(--border-col); }
+        .btn-primary { background: var(--primary); color: white; border: none; }
+        .btn-primary:hover:not(:disabled) { background: var(--primary-hover); color: white;}
+
+        /* TABS */
+        .tabs { display: flex; border-bottom: 1px solid var(--border-col); background: var(--bg-main); }
+        .tab { flex: 1; padding: 12px; cursor: pointer; text-align: center; font-weight: bold; font-size: 0.95rem; border-bottom: 3px solid transparent; color: var(--secondary); transition: 0.2s;}
+        .tab:hover { background: var(--panel-bg); }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); background: var(--panel-bg);}
+
+        /* 3-COLUMN LAYOUT */
+        .main-content { display: flex; flex: 1; padding: 15px; gap: 15px; overflow: hidden; }
+
+        .panel-box {
+            background: var(--panel-bg); border: 1px solid var(--border-col); border-radius: 8px; 
+            padding: 15px; display: flex; flex-direction: column; box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            overflow: hidden; position: relative;
+        }
+
+        .left-panel { flex: 0 0 340px; overflow-y: auto;}
+        .center-panel { flex: 1; padding: 0; position: relative;}
+        .right-panel { flex: 0 0 300px; background: transparent; border: none; box-shadow: none; padding: 0; display: flex; flex-direction: column; }
+
+        /* SCENARIO SELECTOR & DESCRIPTION */
+        .scenario-selector { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-col); background: var(--bg-main); color: var(--text-main); font-weight: bold; margin-bottom: 15px; cursor: pointer; }
+        
+        .scenario-desc {
+            background: rgba(14, 165, 233, 0.05); border-left: 3px solid var(--primary);
+            padding: 12px; font-size: 0.85rem; margin-bottom: 15px; border-radius: 0 4px 4px 0;
+            color: var(--text-main); line-height: 1.5; 
+        }
+
+        /* --- WHITE BOX: CODE INSPECTOR --- */
+        .code-header { background: var(--bg-main); padding: 10px 15px; border-bottom: 1px solid var(--border-col); font-weight: bold; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;}
+        
+        .code-wrapper {
+            flex: 1; background: var(--panel-bg); 
+            padding: 15px 5px; font-family: 'Consolas', monospace; font-size: 0.9rem; 
+            line-height: 1.05; 
+            color: var(--code-text); overflow-y: auto; overflow-x: auto; white-space: pre; 
+            counter-reset: line; 
+        }
+        
+        .code-line { 
+            padding: 1px 4px; border-radius: 4px; display: block; 
+            border-left: 3px solid transparent; margin-bottom: 0px; 
+            cursor: pointer; transition: 0.1s;
+        }
+        .code-line:hover { background: rgba(14, 165, 233, 0.1); border-left-color: var(--primary); }
+        
+        .code-line::before {
+            counter-increment: line; content: counter(line); display: inline-block;
+            width: 20px; color: var(--secondary); text-align: right; margin-right: 10px;
+            border-right: 1px solid var(--border-col); padding-right: 6px; user-select: none;
+        }
+        
+        .code-line.error-shake { animation: shake 0.4s; background: rgba(239, 68, 68, 0.1); border-left-color: var(--error); }
+        .code-line.success-flash { animation: flashGreen 1s; }
+        
+        @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-5px);} 75% {transform: translateX(5px);} }
+        @keyframes flashGreen { 0%{background: var(--success); color: white;} 100%{background: transparent;} }
+
+        .kw { color: #d946ef; font-weight: bold; } 
+        .var { color: #0ea5e9; font-weight: bold; } 
+        .num { color: #16a34a; } 
+        .str { color: #f59e0b; }
+
+        .fix-menu {
+            position: absolute; background: var(--panel-bg); border: 1px solid var(--border-col); border-radius: 6px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15); z-index: 100; display: none; flex-direction: column; min-width: 250px;
+            overflow: hidden;
+        }
+        .fix-menu-header { background: var(--bg-main); padding: 8px 10px; font-size: 0.8rem; color: var(--secondary); font-weight:bold; border-bottom: 1px solid var(--border-col);}
+        .fix-opt { padding: 10px 15px; cursor: pointer; font-family: monospace; font-size: 0.9rem; border-bottom: 1px solid var(--border-col); transition: 0.2s; color: var(--text-main);}
+        .fix-opt:hover { background: var(--primary); color: white; }
+        .fix-opt:last-child { border-bottom: none; }
+
+       /* --- BLACK BOX: INTERVAL DIAGRAM (Βιβλίο ΙΕΠ) --- */
+        .mapper-area { flex: 1; display: flex; flex-direction: column; background: var(--panel-bg); padding: 20px;}
+        
+        .bb-diagram-area {
+            flex: 1; display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; gap: 4px;
+            background: var(--bg-main); border: 1px solid var(--border-col); border-radius: 8px; padding: 15px;
+            margin-bottom: 20px; min-height: 120px; overflow-x: auto;
+        }
+        
+        .diag-wrapper { display: flex; align-items: center; gap: 4px; }
+        .diag-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        
+        /* Μικρότερα, πιο κομψά κουτάκια */
+        .diag-box { 
+            padding: 4px 8px; border-radius: 4px; border: 2px solid var(--border-col); 
+            background: var(--panel-bg); color: var(--text-main); font-size: 0.95rem; 
+            font-weight: bold; min-width: 35px; text-align: center; transition: 0.3s; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .diag-box.locked { background: var(--bg-main); color: var(--secondary); border-style: dashed; }
+        .diag-box.unlocked { 
+            border-color: var(--warning); background: rgba(245, 158, 11, 0.1); 
+            color: var(--warning); box-shadow: 0 0 10px rgba(245,158,11,0.2); 
+            animation: popIn 0.3s; 
+        }
+        
+        .diag-out-box { font-size: 0.8rem; padding: 2px 4px; font-weight: bold; color: var(--text-main); transition: 0.3s; }
+        .diag-out-box.locked { opacity: 0; transform: translateY(-10px); }
+        
+        .diag-symbol { color: var(--primary); font-size: 1.2rem; margin: 0 25px; }
+
+      .diag-symbol { 
+            color: var(--primary); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            width: 50px; 
+            flex-shrink: 0; 
+        }
+        
+        .diag-symbol i {
+            font-size: 1.2rem;
+            transform: scaleX(2.8); 
+            transition: 0.3s;
+        }
+
+        .diag-separator {
+            width: 2px; 
+            height: 60px; 
+            background-color: var(--text-main); 
+            margin: 0 15px; 
+            transition: 0.4s ease; 
+            opacity: 1; 
+            transform: scaleY(1);
+            flex-shrink: 0; 
+        }
+        .diag-separator.hidden { opacity: 0; transform: scaleY(0); width: 0; margin: 0; }
+
+        .test-input-area { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
+        .bb-input { background: var(--bg-main); border: 2px solid var(--border-col); padding: 10px 15px; border-radius: 8px; color: var(--text-main); font-size: 1.1rem; font-weight: bold; width: 180px; text-align: center; outline: none; transition: 0.3s;}
+        .bb-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2); }
+
+        .checklist-bb { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+        .chk-badge { background: var(--bg-main); border: 1px solid var(--border-col); padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; color: var(--secondary); transition: 0.3s; display: flex; align-items: center; gap: 6px;}
+        .chk-badge.found { background: rgba(245, 158, 11, 0.1); border-color: var(--warning); color: var(--warning); font-weight: bold;}
+
+
+        /* TERMINAL */
+        .terminal-container { flex: 1; background: var(--term-bg); border: 1px solid var(--term-border); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.02);}
+        .terminal-header { background: var(--bg-main); padding: 12px 15px; font-weight: bold; font-size: 0.95rem; border-bottom: 1px solid var(--term-border); color: var(--text-main); display: flex; align-items: center; gap: 8px;}
+        .terminal { flex: 1; padding: 15px; font-family: 'Consolas', monospace; font-size: 0.85rem; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; color: var(--term-text); }
+        .log-msg { border-bottom: 1px solid var(--border-col); padding-bottom: 6px; line-height: 1.4; }
+        .log-time { color: #94a3b8; font-size: 0.75rem; margin-right: 5px; }
+
+        /* MODALS */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
+        .modal-content { background: var(--panel-bg); width: 550px; max-width: 90%; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; animation: popIn 0.3s; }
+        @keyframes popIn { from {transform: scale(0.8); opacity: 0;} to {transform: scale(1); opacity: 1;} }
+        .modal-header { background: var(--primary); color: white; padding: 15px 20px; font-weight: bold; font-size: 1.1rem; display:flex; justify-content: space-between; align-items: center;}
+        .modal-body { padding: 20px; font-size: 0.95rem; line-height: 1.6; color: var(--text-main); }
+    </style>
+</head>
+<body>
+
+<div class="modal-overlay" id="helpModal" onclick="closeHelp(event)">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span><i class="fa-solid fa-bug"></i> Οδηγίες: Εκσφαλμάτωση & Testing</span>
+            <button class="btn" style="padding: 2px 8px; background: transparent; border:none; color:white;" onclick="closeHelp(event, true)"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <p>Καλώς ήρθες στο Εργαστήριο του Μηχανικoύ Διασφάλισης Ποιότητας! Εδώ θα μάθεις να βρίσκεις τα λάθη.</p>
+            <ol>
+                <li><b style="color:var(--primary)">Λευκό Κουτί (βλέπω τον κώδικα):</b> Διάβασε προσεκτικά την εκφώνηση. Ο κώδικας δεξιά κρύβει ένα λογικό λάθος. <b>Όλες οι γραμμές</b> φαίνονται φυσιολογικές. Κάνε κλικ στη γραμμή που πιστεύεις ότι περιέχει το λάθος. Αν βρεις τη σωστή, θα σου εμφανιστούν επιλογές επιδιόρθωσης!</li>
+                <li><b style="color:var(--primary)">Μαύρο Κουτί (Δημιουργία ισοδύναμων διαστημάτων):</b> Το διάγραμμα ισοδύναμων διαστημάτων είναι κρυφό [ ? ]. Εισάγοντας τιμές ελέγχου, το πρόγραμμα ελέγχει αν πέτυχες κάποια από τις ακραίες τιμές. Αν βρεις την ακραία τιμή, το ερωτηματικό ξεκλειδώνει και εμφανίζεται το αποτέλεσμά του!</li>
+            </ol>
+            <button class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 10px;" onclick="closeHelp(event, true)">Ξεκινάμε!</button>
+        </div>
+    </div>
+</div>
+
+<header>
+    <div class="title-area">
+        <div class="main-title">
+            <i class="fa-solid fa-stethoscope"></i>
+            <span>Λευκό και Μαύρο κουτί</span>
+        </div>
+        <div class="sub-title">
+            Ενότητα 5: Ανίχνευση λαθών και Δημιουργία ισοδύναμων διαστημάτων και καθορισμός ακραίων τιμών
+        </div>
+    </div>
+    <div style="display:flex; gap: 10px;">
+        <button class="btn btn-primary" onclick="openHelp()"><i class="fa-solid fa-circle-question"></i> Οδηγίες</button>
+        <button class="btn" onclick="toggleTheme()"><i class="fa-solid fa-moon"></i></button>
+    </div>
+</header>
+
+<div class="tabs">
+    <div class="tab active" id="tab-wb" onclick="switchTab('wb')"><i class="fa-solid fa-code"></i> Λευκό Κουτί (βλέπω κώδικα)</div>
+    <div class="tab" id="tab-bb" onclick="switchTab('bb')"><i class="fa-solid fa-code-branch"></i> Μαύρο Κουτί (δεν βλέπω κώδικα - βλέπω εκφώνηση)</div>
+</div>
+
+<div class="main-content">
+
+    <div class="panel-box left-panel">
+        
+        <div id="wb-left" style="display: flex; flex-direction: column;">
+            <select class="scenario-selector" id="wbSelect" onchange="loadWb()">
+                <option value="1">1. Υπολογισμός Γινομένου</option>
+                <option value="2">2. Έλεγχος Εσόδων Υποκαταστημάτων</option>
+                <option value="3">3. Έλεγχος Εγκυρότητας Βαθμού</option>
+                <option value="4">4. Άθροισμα Θετικών Αριθμών</option>
+                <option value="5">5. Αγορά Τετραδίων</option>
+                <option value="6">6. Ετήσια Έσοδα Υποκαταστημάτων</option>
+                <option value="7">7. Έλεγχος Ζημίας</option>
+                <option value="8">8. Υπολογισμός Παραγοντικού</option>
+            </select>
+            
+            <div style="font-weight:bold; font-size: 0.85rem; color: var(--primary); margin-bottom: 5px;">Εκφώνηση:</div>
+            <div class="scenario-desc" id="wbDesc">
+                </div>
+            <div style="font-size: 0.8rem; color: var(--secondary); margin-top: 10px; padding: 10px; background: var(--bg-main); border-radius: 4px; border: 1px dashed var(--border-col);">
+                <i class="fa-solid fa-hand-pointer"></i> <b>Οδηγία:</b> Διάβασε τον κώδικα δεξιά. Όταν εντοπίσεις το λάθος, κάνε κλικ <b>πάνω στη γραμμή</b> για να το διορθώσεις.
+            </div>
+        </div>
+
+        <div id="bb-left" style="display: none; flex-direction: column;">
+            <select class="scenario-selector" id="bbSelect" onchange="loadBb()">
+                <option value="1">1. Βαθμολογία (0 έως 20)</option>
+                <option value="2">2. Ηλικία Εργαζομένου (18 έως 65)</option>
+                <option value="3">3. Χώρος Στάθμευσης (1 έως 8 ώρες)</option>
+                <option value="4">4. Σχετική Υγρασία Αέρα (0.00 έως 1.00)</option>
+                <option value="5">5. Γενικός Μέσος Όρος (0.0 έως 20.0)</option>
+                <option value="6">6. Μίσθωση Διαμερίσματος (1 έως 20 ημ.)</option>
+            </select>
+            
+            <div style="font-weight:bold; font-size: 0.85rem; color: var(--primary); margin-bottom: 5px;">Προδιαγραφές:</div>
+            <div class="scenario-desc" id="bbDesc">
+                </div>
+            <div style="font-size: 0.8rem; color: var(--secondary); margin-top: 10px; padding: 10px; background: var(--bg-main); border-radius: 4px; border: 1px dashed var(--border-col);">
+                <i class="fa-solid fa-unlock-keyhole"></i> <b>Οδηγία:</b> Το διάγραμμα είναι κλειδωμένο. Δώσε τιμές για να ανακαλύψεις τα όρια των διαστημάτων!
+            </div>
+        </div>
+
+    </div>
+
+    <div class="panel-box center-panel" style="padding:0; overflow:hidden;">
+        
+        <div id="wb-area" style="display:flex; flex-direction: column; height: 100%;">
+            <div class="code-header">
+                <span><i class="fa-solid fa-file-code"></i> main.gl</span>
+                <span id="wb-status" style="color: var(--secondary);"><i class="fa-solid fa-magnifying-glass"></i> Inspecting File...</span>
+            </div>
+            <div class="code-wrapper" id="editor">
+                </div>
+            <div class="fix-menu" id="ctxMenu"></div>
+        </div>
+
+        <div id="bb-area" class="mapper-area" style="display:none;">
+            <div style="text-align: center; margin-bottom: 10px;">
+                <h3 style="margin:0; color:var(--text-main);">Αναπαράσταση Ισοδύναμων Διαστημάτων και καθορισμός ακραίων τιμών</h3>
+            </div>
+
+            <div class="bb-diagram-area" id="bb-diagram-area">
+                </div>
+
+            <div class="test-input-area">
+                <input type="number" id="testVal" class="bb-input" placeholder="Τιμή Ελέγχου..." onkeypress="if(event.key==='Enter') testValue()">
+                <button class="btn btn-primary" onclick="testValue()"><i class="fa-solid fa-check-double"></i> Έλεγχος</button>
+            </div>
+
+            <div class="checklist-bb" id="bb-checklist">
+                </div>
+        </div>
+
+    </div>
+
+    <div class="right-panel">
+        <div class="terminal-container">
+            <div class="terminal-header">
+                <i class="fa-solid fa-terminal"></i> Οθόνη Επεξηγήσεων
+            </div>
+            <div class="terminal" id="terminal">
+                <div class="log-msg"><span class="log-time">[System]</span> Έναρξη Εργαστηρίου Μηχανικoύ Διασφάλισης Ποιότητας. Σύστημα έτοιμο.</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- SCENARIO DATA ---
+
+    // WHITE BOX: Static Analysis (8 Scenarios) - ΑΜΕΤΑΒΛΗΤΟ
+    const WB_DATA = {
+        '1': {
+            desc: "Να γραφεί πρόγραμμα που θα διαβάζει 3 αριθμούς και θα υπολογίζει το <b>γινόμενο</b> όσων είναι διάφοροι του μηδενός.",
+            codeLines: [
+                { html: `<span class="var">P</span> &lt;- <span class="num">0</span>`, isBug: true, fixes: ["P <- 0", "P <- 1", "P <- P + 1"], correctIdx: 1, fixedHtml: `<span class="var">P</span> &lt;- <span class="num">1</span>` },
+                { html: `<span class="kw">ΓΙΑ</span> <span class="var">i</span> <span class="kw">ΑΠΟ</span> <span class="num">1</span> <span class="kw">ΜΕΧΡΙ</span> <span class="num">3</span>`, isBug: false },
+                { html: `  <span class="kw">ΔΙΑΒΑΣΕ</span> <span class="var">x</span>`, isBug: false },
+                { html: `  <span class="kw">ΑΝ</span> <span class="var">x</span> &lt;&gt; <span class="num">0</span> <span class="kw">ΤΟΤΕ</span>`, isBug: false },
+                { html: `    <span class="var">P</span> &lt;- <span class="var">P</span> * <span class="var">x</span>`, isBug: false },
+                { html: `  <span class="kw">ΤΕΛΟΣ_ΑΝ</span>`, isBug: false },
+                { html: `<span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span>`, isBug: false },
+                { html: `<span class="kw">ΓΡΑΨΕ</span> <span class="var">P</span>`, isBug: false }
+            ],
+            solMsg: "Άριστα! Εφόσον υπολογίζουμε γινόμενο, η μεταβλητή πρέπει να αρχικοποιείται στο 1 (ουδέτερο στοιχείο πολλαπλασιασμού), αλλιώς το αποτέλεσμα θα είναι πάντα μηδέν!"
+        },
+        '2': {
+            desc: "Δίνεται πίνακας ΕΣΟΔΑ[6]. Να ελέγξετε αν τα έσοδα κάθε υποκαταστήματος είναι μικρότερα ή ίσα με τα έσοδα του επόμενου στη σειρά.",
+            codeLines: [
+                { html: `<span class="kw">ΓΙΑ</span> <span class="var">i</span> <span class="kw">ΑΠΟ</span> <span class="num">1</span> <span class="kw">ΜΕΧΡΙ</span> <span class="num">6</span>`, isBug: true, fixes: ["ΓΙΑ i ΑΠΟ 1 ΜΕΧΡΙ 5", "ΓΙΑ i ΑΠΟ 1 ΜΕΧΡΙ 6", "ΓΙΑ i ΑΠΟ 1 ΜΕΧΡΙ 7"], correctIdx: 0, fixedHtml: `<span class="kw">ΓΙΑ</span> <span class="var">i</span> <span class="kw">ΑΠΟ</span> <span class="num">1</span> <span class="kw">ΜΕΧΡΙ</span> <span class="num">5</span>` },
+                { html: `  <span class="kw">ΑΝ</span> ΕΣΟΔΑ[i] &lt;= ΕΣΟΔΑ[i+1] <span class="kw">ΤΟΤΕ</span>`, isBug: false },
+                { html: `    <span class="kw">ΓΡΑΨΕ</span> <span class="str">"ΑΥΞΗΣΗ"</span>`, isBug: false },
+                { html: `  <span class="kw">ΤΕΛΟΣ_ΑΝ</span>`, isBug: false },
+                { html: `<span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span>`, isBug: false }
+            ],
+            solMsg: "Σωστά! Αφού μέσα στη λούπα συγκρίνουμε το i με το i+1, αν το i φτάσει στο 6, το πρόγραμμα θα ψάξει το ΕΣΟΔΑ[7]. Εφόσον ο πίνακας έχει 6 θέσεις, αυτό προκαλεί Υπέρβαση Ορίων (Out of bounds)."
+        },
+        '3': {
+            desc: "Να διαβάζεται ένας βαθμός. Όσο ο βαθμός δεν είναι έγκυρος (δεν ανήκει στο [0, 20]), να ζητείται ξανά η εισαγωγή του, αλλιώς να προχωράει.",
+            codeLines: [
+                { html: `<span class="kw">ΔΙΑΒΑΣΕ</span> Βαθμός`, isBug: false },
+                { html: `<span class="kw">ΟΣΟ</span> Βαθμός &lt; <span class="num">0</span> <span class="kw">ΚΑΙ</span> Βαθμός &gt; <span class="num">20</span> <span class="kw">ΕΠΑΝΑΛΑΒΕ</span>`, isBug: true, fixes: ["ΟΣΟ Βαθμός > 0 ΚΑΙ Βαθμός < 20", "ΟΣΟ Βαθμός < 0 Η Βαθμός > 20"], correctIdx: 1, fixedHtml: `<span class="kw">ΟΣΟ</span> Βαθμός &lt; <span class="num">0</span> <span class="kw">Η</span> Βαθμός &gt; <span class="num">20</span> <span class="kw">ΕΠΑΝΑΛΑΒΕ</span>` },
+                { html: `  <span class="kw">ΓΡΑΨΕ</span> <span class="str">"Μη αποδεκτή τιμή!"</span>`, isBug: false },
+                { html: `  <span class="kw">ΔΙΑΒΑΣΕ</span> Βαθμός`, isBug: false },
+                { html: `<span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span>`, isBug: false }
+            ],
+            solMsg: "Ακριβώς! Κανένας αριθμός δεν μπορεί να είναι ταυτόχρονα μικρότερος του μηδενός ΚΑΙ μεγαλύτερος του 20. Ο λογικός τελεστής 'Η' ενώνει τα δύο μη αποδεκτά διαστήματα σωστά."
+        },
+        '4': {
+            desc: "Να διαβάζονται αριθμοί και να υπολογίζεται το άθροισμα των θετικών. Η διαδικασία τερματίζεται όταν δοθεί αρνητικός αριθμός. <i>(Προσοχή στο μηδέν!)</i>",
+            codeLines: [
+                { html: `Σ &lt;- <span class="num">0</span>`, isBug: false },
+                { html: `<span class="kw">ΔΙΑΒΑΣΕ</span> Χ`, isBug: false },
+                { html: `<span class="kw">ΟΣΟ</span> Χ &gt;= <span class="num">0</span> <span class="kw">ΕΠΑΝΑΛΑΒΕ</span>`, isBug: true, fixes: ["ΟΣΟ Χ >= 0 ΕΠΑΝΑΛΑΒΕ", "ΟΣΟ Χ > 0 ΕΠΑΝΑΛΑΒΕ"], correctIdx: 1, fixedHtml: `<span class="kw">ΟΣΟ</span> Χ &gt; <span class="num">0</span> <span class="kw">ΕΠΑΝΑΛΑΒΕ</span>` },
+                { html: `  Σ &lt;- Σ + Χ`, isBug: false },
+                { html: `  <span class="kw">ΔΙΑΒΑΣΕ</span> Χ`, isBug: false },
+                { html: `<span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span>`, isBug: false },
+                { html: `<span class="kw">ΓΡΑΨΕ</span> Σ`, isBug: false }
+            ],
+            solMsg: "Πολύ σωστά! Αν είχαμε >= 0, αν ο χρήστης έδινε 0, η λούπα θα συνεχιζόταν άσκοπα (αφού το 0 δεν επηρεάζει το άθροισμα, ούτε είναι αρνητικός για να τερματίσει τη διαδικασία)."
+        },
+        '5': {
+            desc: "Αγορά Τετραδίων: Να διαβάζεται η τιμή του κάθε τετραδίου και το πλήθος των τετραδίων που αγόρασε ένας πελάτης, και να υπολογίζεται το συνολικό οφειλόμενο ποσό.",
+            codeLines: [
+                { html: `<span class="kw">ΔΙΑΒΑΣΕ</span> Τιμή, Πλήθος`, isBug: false },
+                { html: `<span class="var">Οφειλόμενο_Ποσό</span> &lt;- Τιμή + Πλήθος`, isBug: true, fixes: ["Οφειλόμενο_Ποσό <- Τιμή * Πλήθος", "Οφειλόμενο_Ποσό <- Τιμή / Πλήθος"], correctIdx: 0, fixedHtml: `<span class="var">Οφειλόμενο_Ποσό</span> &lt;- Τιμή * Πλήθος` },
+                { html: `<span class="kw">ΓΡΑΨΕ</span> <span class="var">Οφειλόμενο_Ποσό</span>`, isBug: false }
+            ],
+            solMsg: "Πολύ ωραία! Ένα συχνό λογικό λάθος είναι η χρήση λανθασμένου μαθηματικού τελεστή. Το συνολικό ποσό υπολογίζεται με πολλαπλασιασμό, όχι με πρόσθεση."
+        },
+        '6': {
+            desc: "Δίνεται πίνακας ΕΣΟΔΑ[5, 12] με τα έσοδα 5 υποκαταστημάτων για 12 μήνες. Να υπολογιστεί το ετήσιο άθροισμα εσόδων ΓΙΑ ΚΑΘΕ υποκατάστημα (ανά γραμμή).",
+            codeLines: [
+                { html: `<span class="var">Άθροισμα</span> &lt;- <span class="num">0</span>`, isBug: true, fixes: ["Αφαίρεση της εντολής (πρέπει να μπει μέσα στην 1η λούπα)", "Αλλαγή σε Άθροισμα <- 1"], correctIdx: 0, fixedHtml: `<span style="color:var(--secondary)">! Η εντολή μεταφέρθηκε εσωτερικά!</span>` },
+                { html: `<span class="kw">ΓΙΑ</span> <span class="var">i</span> <span class="kw">ΑΠΟ</span> <span class="num">1</span> <span class="kw">ΜΕΧΡΙ</span> <span class="num">5</span>`, isBug: false },
+                { html: `  <span class="kw">ΓΙΑ</span> <span class="var">j</span> <span class="kw">ΑΠΟ</span> <span class="num">1</span> <span class="kw">ΜΕΧΡΙ</span> <span class="num">12</span>`, isBug: false },
+                { html: `    <span class="var">Άθροισμα</span> &lt;- <span class="var">Άθροισμα</span> + ΕΣΟΔΑ[i, j]`, isBug: false },
+                { html: `  <span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span>`, isBug: false },
+                { html: `  <span class="kw">ΓΡΑΨΕ</span> <span class="var">Άθροισμα</span>`, isBug: false },
+                { html: `<span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span>`, isBug: false }
+            ],
+            solMsg: "Μπράβο! Όταν υπολογίζουμε αθροίσματα ανά γραμμή ενός πίνακα (ή για κάθε στοιχείο ξεχωριστά), η αρχικοποίηση πρέπει να γίνεται ακριβώς πριν την εσωτερική λούπα. Έτσι όπως ήταν, υπολόγιζε το γενικό σύνολο όλων!"
+        },
+        '7': {
+            desc: "Το τμήμα αλγορίθμου διαβάζει τα ΕΣΟΔΑ και τα ΕΞΟΔΑ μιας εταιρείας και τυπώνει 'ΖΗΜΙΑ' αν τα έξοδα είναι περισσότερα από τα έσοδα.",
+            codeLines: [
+                { html: `<span class="kw">Διάβασε</span> ΕΣΟΔΑ, ΕΞΟΔΑ`, isBug: false },
+                { html: `<span class="kw">ΑΝ</span> ΕΣΟΔΑ &gt; ΕΞΟΔΑ <span class="kw">ΤΟΤΕ</span>`, isBug: true, fixes: ["ΑΝ ΕΣΟΔΑ < ΕΞΟΔΑ ΤΟΤΕ", "ΑΝ ΕΣΟΔΑ = ΕΞΟΔΑ ΤΟΤΕ"], correctIdx: 0, fixedHtml: `<span class="kw">ΑΝ</span> ΕΣΟΔΑ &lt; ΕΞΟΔΑ <span class="kw">ΤΟΤΕ</span>` },
+                { html: `  <span class="kw">ΓΡΑΨΕ</span> <span class="str">"ΖΗΜΙΑ"</span>`, isBug: false },
+                { html: `<span class="kw">ΤΕΛΟΣ_ΑΝ</span>`, isBug: false },
+                { html: `<span class="kw">ΤΕΛΟΣ_ΔΙΑΔΙΚΑΣΙΑΣ</span>`, isBug: false }
+            ],
+            solMsg: "Σωστά! Η συνθήκη ήταν ανάποδα. Ζημία έχουμε όταν τα Έσοδα είναι ΜΙΚΡΟΤΕΡΑ από τα Έξοδα. Αυτό είναι ένα τυπικό λογικό λάθος συνθήκης."
+        },
+        '8': {
+            desc: "Να υπολογίζεται και να επιστρέφεται το Παραγοντικό ενός θετικού ακεραίου Ν (1 * 2 * ... * Ν).",
+            codeLines: [
+                { html: `<span class="kw">ΣΥΝΑΡΤΗΣΗ</span> Παραγοντικό(Ν): <span class="kw">ΑΚΕΡΑΙΑ</span>`, isBug: false },
+                { html: `<span class="kw">ΜΕΤΑΒΛΗΤΕΣ</span>`, isBug: false },
+                { html: `  <span class="kw">ΑΚΕΡΑΙΕΣ</span>: i, P`, isBug: false },
+                { html: `<span class="kw">ΑΡΧΗ</span>`, isBug: false },
+                { html: `  <span class="var">P</span> &lt;- <span class="num">0</span>`, isBug: true, fixes: ["P <- 0", "P <- 1", "P <- N"], correctIdx: 1, fixedHtml: `  <span class="var">P</span> &lt;- <span class="num">1</span>` },
+                { html: `  <span class="kw">ΓΙΑ</span> <span class="var">i</span> <span class="kw">ΑΠΟ</span> <span class="num">1</span> <span class="kw">ΜΕΧΡΙ</span> Ν`, isBug: false },
+                { html: `    <span class="var">P</span> &lt;- <span class="var">P</span> * i`, isBug: false },
+                { html: `  <span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span>`, isBug: false },
+                { html: `  Παραγοντικό &lt;- <span class="var">P</span>`, isBug: false },
+                { html: `<span class="kw">ΤΕΛΟΣ_ΣΥΝΑΡΤΗΣΗΣ</span>`, isBug: false }
+            ],
+            solMsg: "Τέλεια! Το παραγοντικό είναι μια μορφή συνεχούς γινομένου. Άρα, όπως και στο γινόμενο, η αρχικοποίηση πρέπει να γίνεται πάντα στο 1 (ουδέτερο στοιχείο), αλλιώς η συνάρτηση θα επιστρέφει πάντα 0!"
+        }
+    };
+
+    // BLACK BOX: Νέα μορφή Διαγραμμάτων (Με βελάκια και διαστήματα όπως το βιβλίο)
+    const BB_DATA = {
+        '1': {
+            desc: "Η βαθμολογία στις γραπτές δοκιμασίες τετραμήνου στο Λύκειο δίνεται με ακέραιους αριθμούς στην κλίμακα από 0 έως και 20. Να αναπτύξετε πρόγραμμα σε ΓΛΩΣΣΑ που να διαβάζει τη βαθμολογία σε μια γραπτή δοκιμασία και στη συνέχεια να εμφανίζει μήνυμα «Επιτυχής εξέταση», αν η βαθμολογία είναι τουλάχιστον 10, και μήνυμα «Ανεπιτυχής εξέταση» αν η βαθμολογία είναι μικρότερη από 10. Σε περίπτωση που δοθεί τιμή εκτός του διαστήματος 0-20 να εμφανίζεται μήνυμα λάθους «Μη έγκυρη βαθμολογία».<br><br>Με βάση τις παραπάνω προδιαγραφές, προσπαθήστε να δημιουργήσετε ισοδύναμα διαστήματα με ακραίες τιμές.",
+            type: "int", step: "1",
+            boundaries: ['-1', '0', '9', '10', '20', '21'],
+            diagram: [
+                { type: 'point', value: '-1', symbol: '->', output: 'Λάθος' },
+                { type: 'range', val1: '0', val2: '9', out1: 'Απορρ.', out2: 'Απορρ.' },
+                { type: 'range', val1: '10', val2: '20', out1: 'Εγκρίν.', out2: 'Εγκρίν.' },
+                { type: 'point', value: '21', symbol: '<-', output: 'Λάθος' }
+            ]
+        },
+        '2': {
+            desc: "Επιτρεπτή Ηλικία εργασίας από 18 έως και 65 ετών (Ακέραιος). Εντόπισε τις Ακραίες Τιμές διαστημάτων.",
+            type: "int", step: "1",
+            boundaries: ['17', '18', '65', '66'],
+            diagram: [
+                { type: 'point', value: '17', symbol: '->', output: 'Άκυρο' },
+                { type: 'range', val1: '18', val2: '65', out1: 'Αποδεκτή', out2: 'Αποδεκτή' },
+                { type: 'point', value: '66', symbol: '<-', output: 'Άκυρο' }
+            ]
+        },
+        '3': {
+            desc: "Ένα πάρκινγκ στο κέντρο της πόλης έχει την ακόλουθη τιμολογιακή πολιτική: για στάθμευση έως και 3 ώρες σταθερή χρέωση 6 ευρώ, κάθε επιπλέον ώρα χρεώνεται 1,5 € με μέγιστο συνολικό χρόνο παραμονής τις 8 ώρες. Η χρέωση γίνεται για ολόκληρες ώρες. Να αναπτύξετε πρόγραμμα σε ΓΛΩΣΣΑ, το οποίο να διαβάζει έναν ακέραιο αριθμό που αντιστοιχεί στις ώρες στάθμευσης ενός οχήματος. Στη συνέχεια να υπολογίζει και να εμφανίζει τη συνολική χρέωση. Αν δοθεί ως χρόνος στάθμευσης τιμή εκτός του διαστήματος 1-8, να εμφανίζεται μήνυμα λάθους «Μη έγκυρος χρόνος».<br><br>Με βάση τις παραπάνω προδιαγραφές, προσπαθήστε να δημιουργήσετε ισοδύναμα διαστήματα με ακραίες τιμές.",
+            type: "int", step: "1",
+            type: "int", step: "1",
+            boundaries: ['0', '1', '3', '4', '8', '9'],
+            diagram: [
+                { type: 'point', value: '0', symbol: '->', output: 'Λάθος' },
+                { type: 'range', val1: '1', val2: '3', out1: '6€', out2: '6€' },
+                { type: 'range', val1: '4', val2: '8', out1: '7.5€', out2: '13.5€' },
+                { type: 'point', value: '9', symbol: '<-', output: 'Λάθος' }
+            ]
+        },
+        '4': {
+            desc: "Η σχετική υγρασία του αέρα είναι ένας δείκτης της ποσότητας υδρατμών που περιέχει ο αέρας και εκφράζεται ως ποσοστό. Για εσωτερικούς χώρους, το ιδανικό επίπεδο σχετικής υγρασίας για τον άνθρωπο είναι από 30% έως 60%, με τιμές εκτός αυτών των ορίων να προκαλούν δυσφορία. Να αναπτύξετε διαδικασία σε ΓΛΩΣΣΑ, η οποία να δέχεται ως είσοδο μια πραγματική τιμή από 0 έως και 1 που αντιστοιχεί στη σχετική υγρασία του αέρα. Στη συνέχεια να εμφανίζει μήνυμα «Ιδανική υγρασία» αν η σχετική υγρασία είναι από 0,3 έως και 0,6. Αν η σχετική υγρασία είναι χαμηλότερη από 0,3 να εμφανίζει μήνυμα «Ξηρός αέρας», ενώ αν είναι μεγαλύτερη από 0,6 να εμφανίζει μήνυμα «Υγρός αέρας». Σε περίπτωση που δοθεί τιμή εκτός του διαστήματος 0-1, να εμφανίζεται μήνυμα λάθους «Μη έγκυρη τιμή». Ο έλεγχος της σχετικής υγρασίας να γίνει με ακρίβεια 2 δεκαδικών ψηφίων.<br><br>Με βάση τις παραπάνω προδιαγραφές, προσπαθήστε να δημιουργήσετε ισοδύναμα διαστήματα με ακραίες τιμές.",
+            type: "float", dec: 2, step: "0.01",
+            boundaries: ['-0.01', '0.00', '0.29', '0.30', '0.60', '0.61', '1.00', '1.01'],
+            diagram: [
+                { type: 'point', value: '-0.01', symbol: '->', output: 'Λάθος' },
+                { type: 'range', val1: '0.00', val2: '0.29', out1: 'Μη Ιδαν.', out2: 'Μη Ιδαν.' },
+                { type: 'range', val1: '0.30', val2: '0.60', out1: 'Ιδανική', out2: 'Ιδανική' },
+                { type: 'range', val1: '0.61', val2: '1.00', out1: 'Μη Ιδαν.', out2: 'Μη Ιδαν.' },
+                { type: 'point', value: '1.01', symbol: '<-', output: 'Λάθος' }
+            ]
+        },
+        '5': {
+            desc: "Στο Λύκειο, για την ετήσια επίδοση των μαθητών και μαθητριών χρησιμοποιείται ο γενικός μέσος όρος (Γ.Μ.Ο.) που είναι πραγματικός αριθμός από 0 μέχρι και 20 με ακρίβεια ενός δεκαδικού ψηφίου. Να αναπτύξετε πρόγραμμα σε ΓΛΩΣΣΑ, το οποίο να διαβάζει έναν πραγματικό αριθμό που να αντιστοιχεί στον Γ.Μ.Ο. ενός μαθητή ή μιας μαθήτριας. Αν ο Γ.Μ.Ο. είναι τουλάχιστον 9,5 να εμφανίζεται μήνυμα «Προάγεται», διαφορετικά να εμφανίζεται μήνυμα «Παραπέμπεται σε επανεξέταση». Αν δοθεί τιμή εκτός του διαστήματος 0-20, να εμφανίζεται μήνυμα «Μη έγκυρος Γ.Μ.Ο.».<br><br>Με βάση τις παραπάνω προδιαγραφές, προσπαθήστε να δημιουργήσετε ισοδύναμα διαστήματα με ακραίες τιμές.",
+            type: "float", dec: 1, step: "0.1",
+            boundaries: ['-0.1', '0.0', '9.4', '9.5', '20.0', '20.1'],
+            diagram: [
+                { type: 'point', value: '-0.1', symbol: '->', output: 'Λάθος' },
+                { type: 'range', val1: '0.0', val2: '9.4', out1: 'Παραπ.', out2: 'Παραπ.' },
+                { type: 'range', val1: '9.5', val2: '20.0', out1: 'Προάγ.', out2: 'Προάγ.' },
+                { type: 'point', value: '20.1', symbol: '<-', output: 'Λάθος' }
+            ]
+        },
+        '6': {
+            desc: "Μια τουριστική επιχείρηση διαθέτει διαμερίσματα για βραχυχρόνια μίσθωση σύμφωνα με την ακόλουθη τιμολογιακή πολιτική: για διαμονή έως και 3 ημέρες 50€/ημέρα, για διαμονή έως και 7 ημέρες 47€/ημέρα, για διαμονή έως και 20 ημέρες 42€/ημέρα. Ο μέγιστος χρόνος μίσθωσης κάθε διαμερίσματος είναι 20 ημέρες. Να αναπτύξετε συνάρτηση σε ΓΛΩΣΣΑ, η οποία να δέχεται ως είσοδο το πλήθος των ημερών διαμονής και να επιστρέφει τη συνολική χρέωση. Σε περίπτωση που δοθεί είσοδος εκτός του διαστήματος 1-20 η συνάρτηση να επιστρέφει την τιμή -1.<br><br>Με βάση τις παραπάνω προδιαγραφές, προσπαθήστε να δημιουργήσετε ισοδύναμα διαστήματα με ακραίες τιμές.",
+            type: "int", step: "1",
+            boundaries: ['0', '1', '3', '4', '7', '8', '20', '21'],
+            diagram: [
+                { type: 'point', value: '0', symbol: '->', output: '-1' },
+                { type: 'range', val1: '1', val2: '3', out1: '50€', out2: '150€' },
+                { type: 'range', val1: '4', val2: '7', out1: '188€', out2: '329€' },
+                { type: 'range', val1: '8', val2: '20', out1: '336€', out2: '840€' },
+                { type: 'point', value: '21', symbol: '<-', output: '-1' }
+            ]
+        }
+    };
+
+    // --- GLOBAL LOGIC ---
+    let currentTab = 'wb';
+    let activeWbId = null;
+    let activeBbId = null;
+    let bbFound = [];
+    let bbOutputs = {}; // Αποθηκεύει τις εξόδους για κάθε όριο
+
+    function switchTab(tab) {
+        currentTab = tab;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(`tab-${tab}`).classList.add('active');
+        
+        document.getElementById('wb-left').style.display = tab==='wb' ? 'flex' : 'none';
+        document.getElementById('bb-left').style.display = tab==='bb' ? 'flex' : 'none';
+        
+        document.getElementById('wb-area').style.display = tab==='wb' ? 'flex' : 'none';
+        document.getElementById('bb-area').style.display = tab==='bb' ? 'flex' : 'none';
+
+        log(`Μετάβαση: <b>${tab === 'wb' ? 'Λευκό Κουτί (Κώδικας)' : 'Μαύρο Κουτί (Διάγραμμα)'}</b>`, 'var(--primary)');
+        if(tab==='wb') loadWb();
+        if(tab==='bb') loadBb();
+    }
+
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+    function openHelp() { document.getElementById('helpModal').style.display = 'flex'; }
+    function closeHelp(e, force=false) { 
+        if(force || e.target.id === 'helpModal') document.getElementById('helpModal').style.display = 'none'; 
+    }
+
+    function log(msg, color = 'var(--text-main)') {
+        const term = document.getElementById('terminal');
+        const now = new Date();
+        const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+        term.innerHTML += `<div class="log-msg"><span class="log-time">[${timeStr}]</span> <span style="color:${color}">${msg}</span></div>`;
+        term.scrollTop = term.scrollHeight;
+    }
+
+    // --- WHITE BOX LOGIC ---
+    let isWbFixed = false;
+    let activeLineIdx = null;
+    let activeLineEl = null;
+
+    function loadWb() {
+        activeWbId = document.getElementById('wbSelect').value;
+        const scen = WB_DATA[activeWbId];
+        isWbFixed = false;
+        
+        document.getElementById('wbDesc').innerHTML = scen.desc;
+        
+        const ed = document.getElementById('editor');
+        ed.innerHTML = '';
+        
+        scen.codeLines.forEach((line, idx) => {
+            let div = document.createElement('div');
+            div.className = 'code-line';
+            div.innerHTML = line.html;
+            div.onclick = (e) => handleLineClick(e, idx, div);
+            ed.appendChild(div);
+        });
+
+        document.getElementById('wb-status').innerHTML = `Κάνε κλικ στη γραμμή που έχει το λάθος.`;
+        document.getElementById('wb-status').style.color = 'var(--secondary)';
+        
+        log(`Επιθεώρηση Κώδικα: <b>${document.getElementById('wbSelect').options[document.getElementById('wbSelect').selectedIndex].text}</b>`);
+    }
+
+    function handleLineClick(e, idx, lineEl) {
+        if(isWbFixed) return; 
+        
+        const scen = WB_DATA[activeWbId];
+        const lineData = scen.codeLines[idx];
+
+        if(lineData.isBug) {
+            activeLineIdx = idx;
+            activeLineEl = lineEl;
+            
+            const menu = document.getElementById('ctxMenu');
+            menu.innerHTML = `<div class="fix-menu-header">ΕΠΙΛΟΓΗ ΔΙΟΡΘΩΣΗΣ:</div>`;
+            
+            lineData.fixes.forEach((f, fIdx) => {
+                let opt = document.createElement('div');
+                opt.className = 'fix-opt';
+                opt.innerText = f;
+                opt.onclick = () => applyPatch(fIdx);
+                menu.appendChild(opt);
+            });
+
+            menu.style.left = `${e.clientX - 180}px`;
+            menu.style.top = `${e.clientY + 15}px`;
+            menu.style.display = 'flex';
+        } else {
+            lineEl.classList.add('error-shake');
+            setTimeout(() => lineEl.classList.remove('error-shake'), 400);
+            log(`Γραμμή ${idx + 1}: Αυτή η εντολή φαίνεται σωστή. Ψάξε αλλού!`, 'var(--warning)');
+        }
+    }
+
+    function applyPatch(selectedIdx) {
+        document.getElementById('ctxMenu').style.display = 'none';
+        
+        const scen = WB_DATA[activeWbId];
+        const lineData = scen.codeLines[activeLineIdx];
+
+        if(selectedIdx === lineData.correctIdx) {
+            isWbFixed = true;
+            activeLineEl.innerHTML = lineData.fixedHtml;
+            activeLineEl.classList.add('success-flash');
+            
+            document.getElementById('wb-status').innerHTML = `<i class="fa-solid fa-check"></i> Code Resolved`;
+            document.getElementById('wb-status').style.color = 'var(--success)';
+            
+            log(`<b>Επιτυχής Διόρθωση:</b> ${scen.solMsg}`, 'var(--success)');
+        } else {
+            activeLineEl.classList.add('error-shake');
+            setTimeout(() => activeLineEl.classList.remove('error-shake'), 400);
+            log(`Λάθος επιλογή διόρθωσης! Η λογική παραμένει λανθασμένη. Ξαναδιάβασε την εκφώνηση!`, 'var(--error)');
+        }
+    }
+
+    document.addEventListener('click', (e) => {
+        if(!e.target.closest('.code-line') && document.getElementById('ctxMenu').style.display === 'flex') {
+            document.getElementById('ctxMenu').style.display = 'none';
+        }
+    });
+
+
+    // --- BLACK BOX LOGIC (Διαγράμματα ΙΕΠ) ---
+    function loadBb() {
+        activeBbId = document.getElementById('bbSelect').value;
+        const scen = BB_DATA[activeBbId];
+        bbFound = [];
+        bbOutputs = {};
+        
+        document.getElementById('bbDesc').innerHTML = scen.desc;
+        
+        const inputEl = document.getElementById('testVal');
+        inputEl.step = scen.step;
+        inputEl.value = '';
+        
+        buildDiagram(scen);
+        buildChecklist(scen);
+        
+        log(`Διάγραμμα Διαστημάτων: <b>${document.getElementById('bbSelect').options[document.getElementById('bbSelect').selectedIndex].text}</b>`);
+    }
+
+   // Δημιουργεί δυναμικά το HTML του Διαγράμματος
+    function buildDiagram(scen) {
+        const container = document.getElementById('bb-diagram-area');
+        let html = '';
+        let prevRightVal = null; // Κρατάει την προηγούμενη δεξιά τιμή για τις κάθετες γραμμές
+        
+        scen.diagram.forEach(item => {
+            let currLeftVal = item.type === 'point' ? item.value : item.val1;
+            
+            // Αν υπάρχει προηγούμενο διάστημα, βάλε κρυφή κάθετη γραμμή!
+            if (prevRightVal !== null) {
+                html += `<div class="diag-separator hidden" data-left="${prevRightVal}" data-right="${currLeftVal}"></div>`;
+            }
+            
+            if(item.type === 'point') {
+                const idStr = item.value.replace('.', '-');
+                bbOutputs[item.value] = item.output;
+                
+                html += `<div class="diag-wrapper">`;
+                if(item.symbol === '->') html += `<div class="diag-symbol"><i class="fa-solid fa-arrow-right-long"></i></div>`;
+                
+                html += `<div class="diag-col">
+                            <div class="diag-box locked" id="in-${idStr}">?</div>
+                            <div class="diag-out-box locked" id="out-${idStr}">???</div>
+                         </div>`;
+                         
+                if(item.symbol === '<-') html += `<div class="diag-symbol"><i class="fa-solid fa-arrow-left-long"></i></div>`;
+                html += `</div>`;
+                
+                prevRightVal = item.value; // Ενημέρωση για το επόμενο βήμα
+                
+            } else if(item.type === 'range') {
+                const id1 = item.val1.replace('.', '-');
+                const id2 = item.val2.replace('.', '-');
+                bbOutputs[item.val1] = item.out1;
+                bbOutputs[item.val2] = item.out2;
+                
+                html += `<div class="diag-wrapper">
+                            <div class="diag-col">
+                                <div class="diag-box locked" id="in-${id1}">?</div>
+                                <div class="diag-out-box locked" id="out-${id1}">???</div>
+                            </div>
+                            <div class="diag-symbol"><i class="fa-solid fa-arrows-left-right"></i></div>
+                            <div class="diag-col">
+                                <div class="diag-box locked" id="in-${id2}">?</div>
+                                <div class="diag-out-box locked" id="out-${id2}">???</div>
+                            </div>
+                         </div>`;
+                         
+                prevRightVal = item.val2; // Ενημέρωση για το επόμενο βήμα
+            }
+        });
+        
+        container.innerHTML = html;
+    }
+
+    function buildChecklist(scen) {
+        const cl = document.getElementById('bb-checklist');
+        cl.innerHTML = '';
+        scen.boundaries.forEach(b => {
+            let badge = document.createElement('div');
+            badge.className = 'chk-badge';
+            badge.id = `badge-${b.replace('.', '-')}`; 
+            badge.innerHTML = `<i class="fa-solid fa-lock"></i> Όριο: ?`;
+            cl.appendChild(badge);
+        });
+    }
+
+    // Όταν ο μαθητής πατάει "Έλεγχος"
+    function testValue() {
+        const inp = document.getElementById('testVal');
+        if(inp.value === '') return;
+        
+        const scen = BB_DATA[activeBbId];
+        
+        // Parse ανάλογα με τον τύπο της άσκησης (Float ή Int)
+        const numVal = scen.type === 'float' ? parseFloat(inp.value) : parseInt(inp.value);
+        const valStr = scen.type === 'float' ? numVal.toFixed(scen.dec) : numVal.toString();
+        
+        inp.value = '';
+
+        const isBoundary = scen.boundaries.includes(valStr);
+        const alreadyFound = bbFound.includes(valStr);
+
+        if(isBoundary && !alreadyFound) {
+            // Το βρήκε! Ξεκλειδώνουμε το κουτάκι στο διάγραμμα
+            bbFound.push(valStr);
+            const idStr = valStr.replace('.', '-');
+            
+            const inBox = document.getElementById(`in-${idStr}`);
+            if(inBox) {
+                inBox.innerText = valStr;
+                inBox.classList.remove('locked');
+                inBox.classList.add('unlocked');
+            }
+            
+            const outBox = document.getElementById(`out-${idStr}`);
+            if(outBox) {
+                outBox.innerText = bbOutputs[valStr]; // Παίρνουμε το σωστό αποτέλεσμα
+                outBox.classList.remove('locked');
+            }
+
+// --- ΝΕΟΣ ΚΩΔΙΚΑΣ: ΕΜΦΑΝΙΣΗ ΚΑΘΕΤΩΝ ΓΡΑΜΜΩΝ ---
+            const separators = document.querySelectorAll('.diag-separator');
+            separators.forEach(sep => {
+                const leftVal = sep.getAttribute('data-left');
+                const rightVal = sep.getAttribute('data-right');
+                // Αν ο μαθητής έχει βρει ΚΑΙ το αριστερό ΚΑΙ το δεξί όριο, εμφάνισε τη γραμμή!
+                if (bbFound.includes(leftVal) && bbFound.includes(rightVal)) {
+                    sep.classList.remove('hidden');
+                }
+            });
+            // ----------------------------------------------
+
+
+            // Ενημέρωση Checklist
+            const badge = document.getElementById(`badge-${idStr}`);
+            if(badge) {
+                badge.classList.add('found');
+                badge.innerHTML = `<i class="fa-solid fa-star"></i> Όριο: ${valStr}`;
+            }
+            
+            log(`<b>Επιτυχία:</b> Το <b>${valStr}</b> είναι ακραία τιμή! Το διάγραμμα ενημερώθηκε.`, 'var(--warning)');
+            
+            if(bbFound.length === scen.boundaries.length) {
+                setTimeout(() => {
+                    alert("ΣΥΓΧΑΡΗΤΗΡΙΑ!\n\nΑποκάλυψες όλα τα όρια. Το διάγραμμα των ισοδύναμων διαστημάτων ολοκληρώθηκε επιτυχώς!");
+                    log("Ολοκλήρωση: Όλα τα οριακά σενάρια εντοπίστηκαν!", "var(--success)");
+                }, 500);
+            }
+        } else if(!isBoundary) {
+            log(`Το <b>${valStr}</b> δεν ανήκει στα όρια των διαστημάτων (δεν είναι ακραία τιμή).`, 'var(--error)');
+        } else {
+            log(`Το <b>${valStr}</b> το έχεις ήδη αποκαλύψει στο διάγραμμα!`, 'var(--secondary)');
+        }
+    }
+
+    // INIT
+    window.onload = () => {
+        openHelp();
+        loadWb();
+        loadBb();
+    };
+
+</script>
+</body>
+</html>
