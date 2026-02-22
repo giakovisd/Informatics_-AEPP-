@@ -349,7 +349,7 @@
             "2. Έλεγχος: Είναι το δένδρο κενό; Αν ναι, βάλε τον κόμβο εδώ.",
             "3. Σύγκριση: Είναι η νέα τιμή ΜΙΚΡΟΤΕΡΗ;",
             "   -> Αν ΝΑΙ: Πήγαινε στο Αριστερό Υπόδεντρο.",
-            "4. Σύγκριση: Είναι η νέα τιμή ΜΕΓΑΛΥΤΕΡΗ;",
+            "4. Σύγκριση: Είναι η νέα τιμή ΜΕΓΑΛΥΤΕΡΗ Ή ΙΣΗ;;",
             "   -> Αν ΝΑΙ: Πήγαινε στο Δεξί Υπόδεντρο.",
             "5. Βρέθηκε κενή θέση; Τοποθέτησε τον κόμβο!"
         ];
@@ -498,13 +498,7 @@
             while(true) {
                 document.getElementById(curr.id).style.borderColor = '#dc2626'; 
                 
-                if(val === curr.val) {
-                    narrate(`Η τιμή ${val} υπάρχει ήδη.`);
-                    log("Υπάρχει ήδη", 'err');
-                    ball.remove();
-                    document.getElementById(curr.id).style.borderColor = '';
-                    return;
-                }
+               
 
                 if(val < curr.val) {
                     highlightLine(2); 
@@ -527,9 +521,11 @@
                     }
                     curr = curr.left;
                     await moveBall(ball, curr);
-                } else {
+               } else {
                     highlightLine(4); 
-                    narrate(`${val} μεγαλύτερο του ${curr.val}. Πάμε Δεξιά.`);
+                    // Αν είναι ίσο λέει "ίσο", αλλιώς "μεγαλύτερο"
+                    let rel = (val === curr.val) ? "ίσο με το" : "μεγαλύτερο του";
+                    narrate(`${val} ${rel} ${curr.val}. Πάμε Δεξιά.`);
                     await sleep(speed*0.8);
                     
                     highlightLine(5); 
