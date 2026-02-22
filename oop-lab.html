@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OOP - Εργοστάσιο Αντικειμένων & Ενθυλάκωση</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-main: #f8fafc;
+            --panel-bg: #ffffff;
+            --text-main: #1e293b;
+            --border-col: #e2e8f0;
+            
+            --primary: #8b5cf6; /* Purple theme for Objects */
+            --primary-hover: #7c3aed;
+            
+            --class-bg: #f1f5f9;
+            --object-bg: #ffffff;
+            --object-header: #8b5cf6;
+            
+            --prop-bg: #fee2e2; /* Red-ish for locked properties */
+            --prop-border: #fca5a5;
+            
+            --meth-bg: #dcfce7; /* Green-ish for open methods */
+            --meth-border: #86efac;
+            --meth-hover: #bbf7d0;
+            
+            --term-bg: #1e293b;
+            --term-text: #e2e8f0;
+        }
+
+        body.dark-mode {
+            --bg-main: #0f172a;
+            --panel-bg: #1e293b;
+            --text-main: #f1f5f9;
+            --border-col: #334155;
+            
+            --primary: #a78bfa;
+            --primary-hover: #8b5cf6;
+            
+            --class-bg: #0f172a;
+            --object-bg: #1e293b;
+            --object-header: #6d28d9;
+            
+            --prop-bg: #7f1d1d;
+            --prop-border: #991b1b;
+            
+            --meth-bg: #14532d;
+            --meth-border: #166534;
+            --meth-hover: #166534;
+            
+            --term-bg: #020617;
+            --term-text: #cbd5e1;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0; padding: 0; background-color: var(--bg-main); color: var(--text-main);
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* HEADER */
+        header {
+            background: var(--panel-bg); border-bottom: 1px solid var(--border-col); height: 70px;
+            display: flex; align-items: center; justify-content: space-between; padding: 0 20px; flex-shrink: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); z-index: 10;
+        }
+        .title-area { display: flex; align-items: center; gap: 15px; }
+        .main-title { font-weight: bold; font-size: 1.2rem; color: var(--primary); display: flex; align-items: center; gap: 8px;}
+        .sub-title { font-size: 0.8rem; color: #64748b; border-left: 2px solid var(--border-col); padding-left: 10px; max-width: 500px; line-height: 1.3;}
+
+        .btn {
+            padding: 8px 16px; border-radius: 6px; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+            border: 1px solid var(--border-col); background: var(--panel-bg); color: var(--text-main);
+            display: flex; align-items: center; gap: 8px; transition: all 0.2s;
+        }
+        .btn:hover { background: var(--class-bg); }
+        .btn-primary { background: var(--primary); color: white; border: none; }
+        .btn-primary:hover { background: var(--primary-hover); color: white;}
+
+        /* MODAL (Οδηγίες Χρήσης) */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5); z-index: 1000;
+            display: none; justify-content: center; align-items: center;
+            backdrop-filter: blur(3px);
+        }
+        .modal-content {
+            background: var(--panel-bg); width: 600px; max-width: 90%;
+            border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            display: flex; flex-direction: column; overflow: hidden;
+            animation: modalFadeIn 0.3s ease-out;
+        }
+        @keyframes modalFadeIn { from {opacity:0; transform:translateY(-20px);} to {opacity:1; transform:translateY(0);} }
+        
+        .modal-header {
+            background: var(--primary); color: white; padding: 15px 20px;
+            font-size: 1.2rem; font-weight: bold; display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-close { background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; transition: transform 0.2s;}
+        .modal-close:hover { transform: scale(1.2); }
+        
+        .modal-body { padding: 20px; font-size: 0.95rem; line-height: 1.6; color: var(--text-main); overflow-y: auto; max-height: 70vh;}
+        .modal-body ol { margin-top: 10px; padding-left: 20px; }
+        .modal-body li { margin-bottom: 12px; }
+        .modal-highlight { font-weight: bold; color: var(--primary); }
+
+        /* MAIN LAYOUT */
+        .main-content { display: flex; flex: 1; padding: 20px; gap: 20px; overflow: hidden; }
+
+        /* LEFT PANEL: Class & Factory */
+        .left-panel { flex: 0 0 350px; display: flex; flex-direction: column; gap: 15px; }
+        
+        .tabs { display: flex; border-bottom: 1px solid var(--border-col); }
+        .tab { flex: 1; padding: 10px; cursor: pointer; text-align: center; font-weight: bold; font-size: 0.9rem; border-bottom: 3px solid transparent; color: #64748b; }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+        .panel-box {
+            background: var(--panel-bg); border: 1px solid var(--border-col); border-radius: 8px; 
+            padding: 15px; display: flex; flex-direction: column; box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        }
+        
+        .class-code {
+            background: var(--class-bg); padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; line-height: 1.5;
+            border-left: 4px solid var(--primary); margin-bottom: 15px;
+            white-space: pre-wrap; /* ΑΥΤΗ Η ΕΝΤΟΛΗ ΚΡΑΤΑΕΙ ΤΑ ENTER ΚΑΙ ΤΑ ΚΕΝΑ! */
+        }
+        .kw { color: #2563eb; font-weight: bold; }
+        .p-name { color: #dc2626; }
+        .m-name { color: #16a34a; font-weight: bold;}
+
+        .factory-form { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--border-col); padding-top: 15px;}
+        .factory-form input { padding: 8px; border: 1px solid var(--border-col); border-radius: 4px; font-family: inherit; background: var(--bg-main); color: var(--text-main);}
+
+        /* RIGHT PANEL: Objects World */
+        .right-panel { flex: 1; display: flex; flex-direction: column; gap: 15px; overflow: hidden; }
+        
+        .objects-world {
+            flex: 1; background: var(--bg-main); border: 1px solid var(--border-col); border-radius: 8px;
+            padding: 20px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 20px; align-content: flex-start;
+            background-image: radial-gradient(var(--border-col) 1px, transparent 1px); background-size: 20px 20px;
+        }
+
+        /* OBJECT CARD */
+        .obj-card {
+            width: 260px; background: var(--object-bg); border: 2px solid var(--object-header); border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden;
+            animation: popIn 0.3s ease-out; transition: transform 0.2s;
+        }
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        
+        .obj-header { background: var(--object-header); color: white; padding: 10px; text-align: center; font-weight: bold; }
+        .obj-header span { display: block; font-size: 0.75rem; font-weight: normal; opacity: 0.8;}
+        
+        .obj-section { padding: 10px; border-bottom: 1px solid var(--border-col); }
+        .obj-section-title { font-size: 0.75rem; color: #64748b; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;}
+        
+        /* Properties (Encapsulated) */
+        .prop-row { 
+            display: flex; justify-content: space-between; align-items: center; padding: 6px; 
+            background: var(--prop-bg); border: 1px solid var(--prop-border); border-radius: 4px; margin-bottom: 5px;
+            font-family: monospace; cursor: not-allowed; position: relative;
+        }
+        .prop-row:hover::after {
+            content: "Ενθυλάκωση!"; position: absolute; right: 5px; top: -15px; background: #ef4444; color: white; font-size: 0.6rem; padding: 2px 4px; border-radius: 3px; font-family: sans-serif;
+        }
+        .prop-val { font-weight: bold; font-size: 0.9rem; }
+        
+        /* Methods (Public Interface) */
+        .meth-btn {
+            width: 100%; text-align: left; padding: 8px; background: var(--meth-bg); border: 1px solid var(--meth-border);
+            border-radius: 4px; margin-bottom: 5px; cursor: pointer; font-family: monospace; font-weight: bold; color: var(--text-main);
+            display: flex; justify-content: space-between; align-items: center; transition: background 0.1s;
+        }
+        .meth-btn:hover { background: var(--meth-hover); transform: scale(1.02);}
+        .meth-btn:active { transform: scale(0.98); }
+
+        /* TERMINAL LOG */
+        .terminal {
+            height: 120px; background: var(--term-bg); color: var(--term-text); border-radius: 8px; padding: 10px;
+            font-family: 'Consolas', monospace; font-size: 0.85rem; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;
+        }
+        .log-msg { border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 2px; }
+        .log-time { color: #a8a29e; font-size: 0.7rem; margin-right: 8px; }
+        .log-hl { color: #facc15; font-weight: bold; }
+
+        /* EFFECTS */
+        .shake { animation: shakeError 0.4s; border-color: #ef4444 !important; }
+        @keyframes shakeError { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-5px);} 75% {transform: translateX(5px);} }
+        
+        .flash { animation: flashSuccess 0.5s; }
+        @keyframes flashSuccess { 0% { background-color: #22c55e; color: white; } 100% { background-color: transparent; } }
+
+    </style>
+</head>
+<body>
+
+<div class="modal-overlay" id="helpModal" onclick="closeHelpOnOutside(event)">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span><i class="fa-solid fa-graduation-cap"></i> Οδηγίες Χρήσης & Θεωρία</span>
+            <button class="modal-close" onclick="closeHelp()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Καλώς ήρθες στο Εργοστάσιο Αντικειμένων! Εδώ θα δεις τη θεωρία του Αντικειμενοστραφούς Προγραμματισμού να ζωντανεύει. Ακολούθησε τα παρακάτω βήματα:</p>
+            <ol>
+                <li><span class="modal-highlight">Μελέτησε το "Καλούπι":</span> Στα αριστερά βλέπεις τον κώδικα της <span class="modal-highlight">Κλάσης</span>. Είναι απλώς το σχέδιο, δεν υπάρχει ακόμα κανένα πραγματικό αντικείμενο.</li>
+                <li><span class="modal-highlight">Φτιάξε Στιγμιότυπα:</span> Πληκτρολόγησε ένα όνομα και πάτα "Δημιουργία". Φτιάξε 2 ή 3 διαφορετικά <span class="modal-highlight">Αντικείμενα (Στιγμιότυπα)</span>. Παρατήρησε ότι παράγονται από την ίδια Κλάση, αλλά είναι εντελώς ανεξάρτητα!</li>
+                <li><span class="modal-highlight">Τέσταρε την Ενθυλάκωση:</span> Προσπάθησε να κάνεις κλικ πάνω στη Ζωή ή τη Μπαταρία (εκεί που έχει το λουκετάκι) για να αλλάξεις την τιμή της. Τι συμβαίνει; Το σύστημα σε εμποδίζει, γιατί τα δεδομένα είναι κρυφά (<span class="modal-highlight">Ενθυλάκωση</span>)!</li>
+                <li><span class="modal-highlight">Στείλε Μηνύματα:</span> Αφού δεν μπορείς να πειράξεις τα δεδομένα απευθείας, πάτα τα πράσινα κουμπιά από κάτω. Ζητάς δηλαδή από το ίδιο το αντικείμενο να εκτελέσει μια <span class="modal-highlight">Μέθοδο</span>. Δες πώς αλλάζει η κατάσταση ΜΟΝΟ του αντικειμένου που πάτησες!</li>
+            </ol>
+            <p style="text-align: center; margin-top: 20px; font-weight: bold; color: #64748b;">
+                Καλή εξάσκηση!
+            </p>
+        </div>
+    </div>
+</div>
+
+<header>
+    <div class="title-area">
+        <div class="main-title">
+            <i class="fa-solid fa-boxes-packing"></i>
+            <span>Το Εργοστάσιο Αντικειμένων</span>
+        </div>
+        <div class="sub-title">
+            Προσομοιωτής δημιουργίας Στιγμιοτύπων, Κλήσης Μεθόδων & Ενθυλάκωσης.
+        </div>
+    </div>
+    
+    <div style="display:flex; gap: 10px;">
+        <button class="btn btn-primary" onclick="openHelp()"><i class="fa-solid fa-circle-question"></i> Οδηγίες</button>
+        <button class="btn" onclick="toggleTheme()"><i class="fa-solid fa-moon"></i></button>
+    </div>
+</header>
+
+<div class="main-content">
+    
+    <div class="left-panel">
+        <div class="tabs">
+            <div class="tab active" id="tab-hero" onclick="switchScenario('hero')"><i class="fa-solid fa-khanda"></i> RPG Ήρωας</div>
+            <div class="tab" id="tab-phone" onclick="switchScenario('phone')"><i class="fa-solid fa-mobile-screen"></i> SmartPhone</div>
+        </div>
+
+        <div class="panel-box" style="flex: 1;">
+            <div style="font-weight: bold; margin-bottom: 10px; color: var(--primary);">Το Καλούπι (Η Κλάση)</div>
+            
+            <div class="class-code" id="codeView">
+                </div>
+
+            <div class="factory-form">
+                <div style="font-weight: bold; font-size: 0.9rem;"><i class="fa-solid fa-industry"></i> Παραγωγή Αντικειμένου</div>
+                <input type="text" id="objName" placeholder="Δώσε Όνομα / Μοντέλο..." autocomplete="off">
+                <button class="btn btn-primary" style="justify-content: center;" onclick="createObject()">
+                    <i class="fa-solid fa-plus"></i> Δημιουργία
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="right-panel">
+        <div class="objects-world" id="world">
+            <div style="width: 100%; text-align: center; color: #94a3b8; margin-top: 50px;" id="emptyMsg">
+                <i class="fa-solid fa-arrow-left-long" style="font-size: 2rem; margin-bottom: 10px;"></i><br>
+                Χρησιμοποίησε το εργοστάσιο στα αριστερά για να φτιάξεις αντικείμενα.
+            </div>
+        </div>
+        
+        <div class="terminal" id="terminal">
+            <div class="log-msg"><span class="log-time">[System]</span> Σύστημα έτοιμο. Αναμονή για δημιουργία αντικειμένων...</div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- SCENARIO DATA & LOGIC ---
+    const SCENARIOS = {
+        'hero': {
+            className: 'Ήρωας',
+            code: `<span class="kw">ΚΛΑΣΗ</span> Ήρωας
+<span class="kw">ΙΔΙΟΤΗΤΕΣ</span>:
+  <i class="fa-solid fa-lock" style="font-size:0.7em"></i> <span class="p-name">Όνομα</span>
+  <i class="fa-solid fa-lock" style="font-size:0.7em"></i> <span class="p-name">Ζωή_HP</span>
+  <i class="fa-solid fa-lock" style="font-size:0.7em"></i> <span class="p-name">Εμπειρία_XP</span>
+<span class="kw">ΜΕΘΟΔΟΙ</span>:
+  <span class="m-name">Δέξου_Χτύπημα()</span>
+  <span class="m-name">Πιες_Φίλτρο()</span>
+  <span class="m-name">Νίκησε_Εχθρό()</span>
+<span class="kw">ΤΕΛΟΣ_ΚΛΑΣΗΣ</span>`,
+            props: [
+                { id: 'name', label: 'Όνομα', type: 'string' },
+                { id: 'hp', label: 'Ζωή_HP', type: 'number', init: 100, icon: 'fa-heart', color: '#ef4444' },
+                { id: 'xp', label: 'Εμπ_XP', type: 'number', init: 0, icon: 'fa-star', color: '#eab308' }
+            ],
+            methods: [
+                { id: 'damage', label: 'Δέξου_Χτύπημα()', icon: 'fa-burst', action: (obj) => { 
+                    if(obj.hp > 0) obj.hp = Math.max(0, obj.hp - 20); 
+                    return `Ο ${obj.name} δέχτηκε ζημιά! HP: ${obj.hp}`; 
+                }},
+                { id: 'potion', label: 'Πιες_Φίλτρο()', icon: 'fa-flask', action: (obj) => { 
+                    if(obj.hp > 0) obj.hp = Math.min(100, obj.hp + 30); 
+                    return `Ο ${obj.name} ήπιε φίλτρο! HP: ${obj.hp}`; 
+                }},
+                { id: 'win', label: 'Νίκησε_Εχθρό()', icon: 'fa-khanda', action: (obj) => { 
+                    if(obj.hp > 0) { obj.xp += 50; return `Ο ${obj.name} νίκησε! Κέρδισε 50 XP.`; }
+                    return `Ο ${obj.name} έχει ηττηθεί και δεν μπορεί να πολεμήσει.`;
+                }}
+            ]
+        },
+        'phone': {
+            className: 'SmartPhone',
+            code: `<span class="kw">ΚΛΑΣΗ</span> SmartPhone
+<span class="kw">ΙΔΙΟΤΗΤΕΣ</span>:
+  <i class="fa-solid fa-lock" style="font-size:0.7em"></i> <span class="p-name">Μοντέλο</span>
+  <i class="fa-solid fa-lock" style="font-size:0.7em"></i> <span class="p-name">Μπαταρία</span>
+  <i class="fa-solid fa-lock" style="font-size:0.7em"></i> <span class="p-name">Οθόνη</span>
+<span class="kw">ΜΕΘΟΔΟΙ</span>:
+  <span class="m-name">Άνοιξε_Κλείσε_Οθόνη()</span>
+  <span class="m-name">Παίξε_Video()</span>
+  <span class="m-name">Φόρτισε()</span>
+<span class="kw">ΤΕΛΟΣ_ΚΛΑΣΗΣ</span>`,
+            props: [
+                { id: 'name', label: 'Μοντέλο', type: 'string' },
+                { id: 'bat', label: 'Μπαταρία', type: 'number', init: 100, icon: 'fa-battery-full', color: '#22c55e', suffix: '%' },
+                { id: 'screen', label: 'Οθόνη', type: 'bool', init: false, icon: 'fa-mobile-screen', labels: ['ΚΛΕΙΣΤΗ', 'ΑΝΟΙΧΤΗ'] }
+            ],
+            methods: [
+                { id: 'toggle', label: 'Άνοιξε_Κλείσε()', icon: 'fa-power-off', action: (obj) => { 
+                    obj.screen = !obj.screen; 
+                    return `Η οθόνη του ${obj.name} είναι πλέον ${obj.screen ? 'ΑΝΟΙΧΤΗ' : 'ΚΛΕΙΣΤΗ'}.`; 
+                }},
+                { id: 'video', label: 'Παίξε_Video()', icon: 'fa-play', action: (obj) => { 
+                    if(!obj.screen) return `Αποτυχία: Η οθόνη του ${obj.name} είναι κλειστή!`;
+                    if(obj.bat < 15) return `Αποτυχία: Δεν έχει μπαταρία το ${obj.name}!`;
+                    obj.bat -= 15;
+                    return `Το ${obj.name} παίζει βίντεο. Μπαταρία: ${obj.bat}%`; 
+                }},
+                { id: 'charge', label: 'Φόρτισε()', icon: 'fa-bolt', action: (obj) => { 
+                    obj.bat = 100; 
+                    return `Το ${obj.name} φορτίστηκε πλήρως (100%).`; 
+                }}
+            ]
+        }
+    };
+
+    // --- STATE ---
+    let currentScenario = 'hero';
+    let instances = []; // Holds the created objects
+    let objCounter = 0;
+
+    // --- INITIALIZATION ---
+    function switchScenario(key) {
+        currentScenario = key;
+        
+        // UI Tabs
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(`tab-${key}`).classList.add('active');
+        
+        // Update Code View
+        document.getElementById('codeView').innerHTML = SCENARIOS[key].code;
+        document.getElementById('objName').placeholder = key === 'hero' ? "π.χ. Geralt, Kratos..." : "π.χ. iPhone 15, Galaxy S24...";
+        document.getElementById('objName').value = "";
+        
+        // Reset World
+        instances = [];
+        renderWorld();
+        log(`Αλλαγή σεναρίου: Κλάση ${SCENARIOS[key].className}`);
+    }
+
+    // --- CORE LOGIC ---
+    function createObject() {
+        const nameInput = document.getElementById('objName');
+        const name = nameInput.value.trim() || `Αντικείμενο_${++objCounter}`;
+        
+        const template = SCENARIOS[currentScenario];
+        
+        // Build new object instance based on template props
+        let newObj = { _id: Date.now(), name: name };
+        template.props.forEach(p => {
+            if(p.id !== 'name') newObj[p.id] = p.init;
+        });
+
+        instances.push(newObj);
+        nameInput.value = "";
+        
+        log(`Δημιουργήθηκε νέο στιγμιότυπο: <span class="log-hl">${name}</span> της Κλάσης ${template.className}`);
+        renderWorld();
+    }
+
+    function executeMethod(objId, methodId) {
+        const obj = instances.find(o => o._id === objId);
+        const methodTemplate = SCENARIOS[currentScenario].methods.find(m => m.id === methodId);
+        
+        if(obj && methodTemplate) {
+            // Log message passing
+            log(`Αποστολή μηνύματος <span class="log-hl">${methodTemplate.label}</span> στο αντικείμενο [${obj.name}]...`);
+            
+            // Execute logic
+            const resultMsg = methodTemplate.action(obj);
+            
+            // Re-render to show new state
+            renderWorld();
+            
+            // Visual feedback on the specific object card
+            const card = document.getElementById(`card-${objId}`);
+            if(card) {
+                card.classList.add('flash');
+                setTimeout(() => card.classList.remove('flash'), 500);
+            }
+            
+            // Log result
+            setTimeout(() => log(resultMsg), 100); 
+        }
+    }
+
+    // --- ENCAPSULATION TEACHING MOMENT ---
+    function violationAttempt(propName, event) {
+        // Trigger shake effect on the row
+        const row = event.currentTarget;
+        row.classList.remove('shake');
+        void row.offsetWidth; // trigger reflow
+        row.classList.add('shake');
+        
+        alert(`ΕΝΘΥΛΑΚΩΣΗ (Encapsulation)!\n\nΔεν μπορείς να αλλάξεις την ιδιότητα "${propName}" απευθείας!\n\nΤα δεδομένα του αντικειμένου είναι κλειδωμένα. Πρέπει να καλέσεις μια "Μέθοδο" (τα πράσινα κουμπιά από κάτω) για να ζητήσεις από το ίδιο το αντικείμενο να αλλάξει την κατάστασή του.`);
+        log(`<span style="color:#ef4444">Αποτροπή παραβίασης ενθυλάκωσης στην ιδιότητα ${propName}.</span>`);
+    }
+
+    // --- RENDER UI ---
+    function renderWorld() {
+        const world = document.getElementById('world');
+        const emptyMsg = document.getElementById('emptyMsg'); // Βρίσκουμε το μήνυμα με ασφάλεια
+        
+        if(instances.length === 0) {
+            if(emptyMsg) emptyMsg.style.display = 'block';
+            Array.from(world.children).forEach(c => { if(c.id !== 'emptyMsg') c.remove(); });
+            return;
+        }
+        
+        if(emptyMsg) emptyMsg.style.display = 'none';
+        
+        // ΑΣΦΑΛΗΣ ΚΑΘΑΡΙΣΜΟΣ: Διαγράφουμε μόνο τις παλιές κάρτες, ΟΧΙ το emptyMsg
+        Array.from(world.children).forEach(c => { if(c.id !== 'emptyMsg') c.remove(); });
+
+        const template = SCENARIOS[currentScenario];
+
+        instances.forEach(obj => {
+            const card = document.createElement('div');
+            card.className = 'obj-card';
+            card.id = `card-${obj._id}`;
+            
+            // Header
+            card.innerHTML = `<div class="obj-header"><span>Αντικείμενο: ${template.className}</span>${obj.name}</div>`;
+            
+            // Properties Section
+            let propsHTML = `<div class="obj-section"><div class="obj-section-title">Ιδιότητες (Κρυφές) <i class="fa-solid fa-lock" style="color:#ef4444"></i></div>`;
+            template.props.forEach(p => {
+                if(p.id === 'name') return; // Το όνομα είναι στο header
+                
+                let displayVal = obj[p.id];
+                if(p.type === 'bool') displayVal = p.labels[displayVal ? 1 : 0];
+                if(p.suffix) displayVal += p.suffix;
+                
+                propsHTML += `
+                    <div class="prop-row" onclick="violationAttempt('${p.label}', event)" title="Κάνε κλικ για να δεις τι προστατεύει η Ενθυλάκωση">
+                        <span><i class="fa-solid ${p.icon}" style="color:${p.color}; margin-right:5px; width:15px;"></i> ${p.label}</span>
+                        <span class="prop-val">${displayVal}</span>
+                    </div>`;
+            });
+            propsHTML += `</div>`;
+            card.innerHTML += propsHTML;
+            
+            // Methods Section
+            let methsHTML = `<div class="obj-section" style="border:none; background:rgba(0,0,0,0.02)"><div class="obj-section-title">Μέθοδοι (Μηνύματα) <i class="fa-solid fa-envelope-open-text" style="color:#22c55e"></i></div>`;
+            template.methods.forEach(m => {
+                methsHTML += `
+                    <button class="meth-btn" onclick="executeMethod(${obj._id}, '${m.id}')">
+                        <span>${m.label}</span>
+                        <i class="fa-solid ${m.icon}"></i>
+                    </button>`;
+            });
+            methsHTML += `</div>`;
+            card.innerHTML += methsHTML;
+
+            world.appendChild(card);
+        });
+    }
+
+    function log(msg) {
+        const term = document.getElementById('terminal');
+        const now = new Date();
+        const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+        
+        term.innerHTML += `<div class="log-msg"><span class="log-time">[${timeStr}]</span> ${msg}</div>`;
+        term.scrollTop = term.scrollHeight;
+    }
+
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+
+    // --- MODAL HELP LOGIC ---
+    function openHelp() {
+        document.getElementById('helpModal').style.display = 'flex';
+    }
+    
+    function closeHelp() {
+        document.getElementById('helpModal').style.display = 'none';
+    }
+    
+    // Κλείνει το παράθυρο αν ο μαθητής κάνει κλικ έξω από αυτό
+    function closeHelpOnOutside(event) {
+        if (event.target === document.getElementById('helpModal')) {
+            closeHelp();
+        }
+    }
+    
+    // Εκτέλεση κατά την εκκίνηση
+    window.onload = function() {
+        switchScenario('hero');
+        openHelp();
+    };
+
+    // Handle Enter key in input
+    document.getElementById('objName').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') createObject();
+    });
+
+</script>
+</body>
+</html>

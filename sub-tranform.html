@@ -117,13 +117,28 @@
         }
 
         .workspace {
-            display: flex; gap: 15px; flex: 1; overflow: hidden;
+            display: flex; gap: 10px; flex: 1; overflow: hidden; /* Μικρύναμε λίγο το gap (από 15px σε 10px) */
         }
 
-        /* Code Blocks */
+        /* Code Blocks (Τώρα θα είναι 3, οπότε αλλάζουμε τα πλάτη) */
         .code-block {
-            flex: 1; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden;
-            display: flex; flex-direction: column; width: 50%;
+            border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden;
+            display: flex; flex-direction: column; 
+        }
+        
+        /* 1η Στήλη: Κύριο Πρόγραμμα (Πιο στενή) */
+        #main-prog-block { flex: 0 0 30%; }
+        
+        /* 2η Στήλη: Υποπρόγραμμα (Πιο φαρδιά για να φαίνεται η αλλαγή) */
+        #sub-prog-block { flex: 0 0 35%; }
+        
+        /* 3η Στήλη: Στατική Αρχική Συνάρτηση */
+        .static-block {
+            flex: 1; /* Παίρνει τον υπόλοιπο χώρο */
+            border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden;
+            display: flex; flex-direction: column;
+            opacity: 0.85; /* Λίγο πιο αχνό για να μη μπερδεύει με το "ζωντανό" κώδικα */
+        }
         }
         .block-header { padding: 8px; font-weight: bold; font-size: 0.9rem; text-align: center; border-bottom: 1px solid var(--border-color); }
         .main-header { background: var(--main-prog-bg); }
@@ -226,18 +241,33 @@
         
         <div class="workspace">
             
-            <div class="code-block">
+            <div class="code-block" id="main-prog-block">
                 <div class="block-header main-header">ΚΥΡΙΟ ΠΡΟΓΡΑΜΜΑ</div>
                 <div class="code-content" id="codeMainContainer">
-                    </div>
+                </div>
             </div>
 
-            <div class="code-block">
-                <div class="block-header sub-header">ΥΠΟΠΡΟΓΡΑΜΜΑ</div>
+            <div class="code-block" id="sub-prog-block">
+                <div class="block-header sub-header">ΥΠΟΠΡΟΓΡΑΜΜΑ (ΔΙΑΔΙΚΑΣΙΑ)</div>
                 <div class="code-content" id="codeSubContainer">
-                    </div>
+                </div>
             </div>
 
+            <div class="static-block">
+                <div class="block-header" style="background: var(--border-color); color: var(--text-color);">ΑΡΧΙΚΗ ΣΥΝΑΡΤΗΣΗ</div>
+                <div class="code-content">
+                    <div class="code-line"><span class="kw">ΣΥΝΑΡΤΗΣΗ</span> Πράξη(χ, ψ): <span class="kw">ΠΡΑΓΜΑΤΙΚΗ</span></div>
+                    <div class="code-line"><span class="kw">ΜΕΤΑΒΛΗΤΕΣ</span></div>
+                    <div class="code-line">  <span class="kw">ΠΡΑΓΜΑΤΙΚΕΣ</span>: χ, ψ</div>
+                    <div class="code-line"><span class="kw">ΑΡΧΗ</span></div>
+                    <div class="code-line">  <span class="kw">ΑΝ</span> χ >= ψ <span class="kw">ΤΟΤΕ</span></div>
+                    <div class="code-line">    Πράξη <span class="sym">←</span> χ - ψ</div>
+                    <div class="code-line">  <span class="kw">ΑΛΛΙΩΣ</span></div>
+                    <div class="code-line">    Πράξη <span class="sym">←</span> χ + ψ</div>
+                    <div class="code-line">  <span class="kw">ΤΕΛΟΣ_ΑΝ</span></div>
+                    <div class="code-line"><span class="kw">ΤΕΛΟΣ_ΣΥΝΑΡΤΗΣΗΣ</span></div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
