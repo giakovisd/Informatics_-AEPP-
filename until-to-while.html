@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Μετατροπή: ΜΕΧΡΙΣ_ΟΤΟΥ &rarr; ΟΣΟ</title>
+    <style>
+        :root {
+            --bg-color: #f1f5f9;       
+            --panel-bg: #ffffff;       
+            --text-color: #1e293b;
+            --border-color: #cbd5e1;   
+            
+            --col-keyword: #2563eb; 
+            --col-var: #0f172a; 
+            --col-num: #d97706;  
+            
+            --highlight-bg: #fef08a; 
+            --flyer-color: #ea580c; 
+            --flyer-bg: #e2e8f0;
+            
+            --active-tab-bg: #2563eb;
+            --active-tab-text: #ffffff;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-color: #f1f5f9;
+            --border-color: #334155;
+            --col-keyword: #60a5fa;
+            --col-var: #e2e8f0;
+            --col-num: #fbbf24;
+            --highlight-bg: #422006;
+            --flyer-color: #f97316;
+            --flyer-bg: #334155;
+            --active-tab-bg: #60a5fa;
+        }
+
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, monospace; margin: 0; display: flex; flex-direction: column; height: 100vh; background: var(--bg-color); color: var(--text-color); overflow: hidden; font-size: 0.95rem; }
+
+        /* HEADER */
+        header {
+            height: 60px; background: var(--panel-bg); border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0; z-index: 100;
+        }
+        h1 { font-size: 1.2rem; margin: 0; display:flex; align-items:center; gap:10px; }
+        
+        .controls { display: flex; gap: 8px; align-items: center; }
+        
+        button {
+            padding: 6px 14px; border: 1px solid var(--border-color); border-radius: 6px;
+            cursor: pointer; font-weight: 600; font-size: 0.9rem;
+            background: var(--panel-bg); color: var(--text-color); display: flex; align-items: center; gap: 6px;
+            transition: all 0.2s; white-space: nowrap;
+        }
+        button:hover { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { opacity: 0.5; cursor: default; transform: none; filter: grayscale(1); }
+        
+        .btn-run { background: #10b981; color: white; border-color: #059669; }
+        .btn-step { background: #3b82f6; color: white; border-color: #2563eb; }
+        .btn-reset { background: #ef4444; color: white; border-color: #dc2626; }
+
+        .speed-control { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin: 0 10px; background: var(--panel-bg); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color); }
+        input[type=range] { width: 100px; cursor: pointer; }
+
+        /* MAIN LAYOUT */
+        .container { display: flex; flex: 1; overflow: hidden; position: relative; }
+
+        /* LEFT: Instructions */
+        .col-left {
+            width: 320px; padding: 20px; 
+            border-right: 1px solid var(--border-color); 
+            background: var(--panel-bg); 
+            overflow-y: auto; line-height: 1.5; font-size: 0.9rem; flex-shrink: 0;
+        }
+        .info-box {
+            background: var(--bg-color); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); border-left: 4px solid var(--col-keyword); margin-bottom: 15px;
+        }
+
+        /* CENTER: Stage */
+        .col-center {
+            flex: 1; padding: 20px; background: var(--bg-color); overflow: hidden; 
+            display: flex; flex-direction: column; align-items: center; position: relative;
+        }
+
+        .tabs { display: flex; gap: 10px; margin-bottom: 15px; background: var(--panel-bg); padding: 5px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .tab-btn {
+            border: none; background: transparent; padding: 8px 16px; cursor: pointer; font-weight: bold; border-radius: 6px; color: var(--text-color); font-size: 0.9rem;
+        }
+        .tab-btn.active { background-color: var(--active-tab-bg); color: var(--active-tab-text); }
+
+        /* CODE AREA */
+        .stage-scroll {
+            width: 100%; height: 100%; overflow: auto; display: flex; justify-content: center; align-items: flex-start;
+        }
+        .stage-area {
+            display: flex; flex-direction: row; justify-content: center; align-items: flex-start; gap: 25px; 
+            padding: 10px; padding-bottom: 60px;
+        }
+
+        .code-card {
+            background: var(--panel-bg); padding: 20px; border-radius: 8px; 
+            border: 1px solid var(--border-color); 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            font-family: 'Consolas', monospace; font-size: 1.05rem; line-height: 1.8;
+            position: relative; white-space: nowrap; 
+        }
+        
+        .card-src { min-width: 320px; } 
+        .card-tgt { min-width: 400px; } 
+
+        .card-title {
+            font-size: 0.9rem; font-weight: bold; margin-bottom: 10px; color: var(--text-color); 
+            border-bottom: 1px solid var(--border-color); padding-bottom: 5px; text-align: center; opacity: 0.8;
+        }
+
+        .line { display: block; padding: 2px 5px; border-radius: 4px; transition: opacity 0.5s; }
+        .line.active { background-color: var(--highlight-bg); border-left: 3px solid #f59e0b; }
+        .line.hidden { opacity: 0; } /* Invisible but takes up space */
+        .line.visible { opacity: 1; }
+
+        .kw { color: var(--col-keyword); font-weight: bold; }
+        .var { color: var(--col-var); }
+        .num { color: var(--col-num); font-weight: bold; display: inline-block; }
+        .op { margin: 0 4px; }
+        
+        .op-pulse { margin: 0 4px; display: inline-block; transition: transform 0.2s; }
+        @keyframes pulseOp {
+            0% { transform: scale(1); color: inherit; }
+            50% { transform: scale(2.5); color: #dc2626; font-weight: bold; }
+            100% { transform: scale(1); color: inherit; }
+        }
+        .pulsate { animation: pulseOp 1.2s ease-in-out; }
+
+        .token { 
+            display: inline-block; padding: 0 4px; border-radius: 4px; border: 1px solid transparent; 
+            transition: background 0.2s;
+        }
+        .token.highlight { background: var(--highlight-bg); border-color: var(--col-num); transform: scale(1.1); }
+        
+        .placeholder {
+            display: inline-block; min-width: 30px; border-bottom: 2px dashed #94a3b8; text-align: center; color: transparent; margin: 0 3px;
+        }
+        .placeholder.filled {
+            border-bottom: none; color: var(--col-num); font-weight: bold; animation: popIn 0.4s;
+        }
+        
+        @keyframes popIn { 0% { transform: scale(0); } 80% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+        /* Code Line Flyer */
+        .flyer {
+            position: fixed; z-index: 1000; 
+            font-family: 'Consolas', monospace; font-size: 1.0rem;
+            color: var(--text-color); background: var(--flyer-bg);
+            padding: 2px 5px; border-radius: 4px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2); pointer-events: none;
+            transition-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+            white-space: nowrap; border: 1px solid var(--border-color);
+        }
+        
+        /* Simple Token Flyer */
+        .flyer-token {
+            position: fixed; z-index: 1000; 
+            font-family: 'Consolas', monospace; font-weight: bold; font-size: 1.3rem;
+            color: white; background: var(--flyer-color);
+            padding: 4px 10px; border-radius: 4px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2); pointer-events: none;
+            transition-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+        }
+
+        /* RIGHT: Progress */
+        .col-right {
+            width: 240px; 
+            background: var(--panel-bg); 
+            border-left: 1px solid var(--border-color); 
+            display: flex; flex-direction: column; padding: 20px; flex-shrink: 0;
+        }
+        
+        .status-steps { list-style: none; padding: 0; margin: 0; }
+        .status-steps li {
+            padding: 10px; border-bottom: 1px solid var(--border-color); opacity: 0.5; transition: 0.3s; font-size: 0.9rem;
+        }
+        .status-steps li.active {
+            opacity: 1; font-weight: bold; color: var(--col-keyword); background: var(--bg-color); border-radius: 4px; border-left: 4px solid var(--col-keyword);
+        }
+
+        .arrow-separator {
+            font-size: 2rem; color: var(--border-color); align-self: center; margin: 0 10px;
+        }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🎬 Μετατροπή: ΜΕΧΡΙΣ_ΟΤΟΥ &rarr; ΟΣΟ</h1>
+    <div class="controls">
+        <button class="btn-reset" onclick="reset()">🔄 Αρχή</button>
+        <button class="btn-step" id="btnStep" onclick="manualStep()">👣 Βήμα</button>
+        <button class="btn-run" id="btnPlay" onclick="togglePlay()">▶ Αναπαραγωγή</button>
+        
+        <div class="speed-control">
+            <span>🐢</span>
+            <input type="range" id="speedRange" min="1" max="20" value="10">
+            <span>🐇</span>
+        </div>
+        <div style="width:1px; background:#ccc; margin:0 5px; height: 20px;"></div>
+        <button onclick="document.body.classList.toggle('dark-mode')">🌙</button>
+    </div>
+</header>
+
+<div class="container">
+    
+    <div class="col-left">
+        <h3>Οδηγίες</h3>
+        <div id="info-content"></div>
+    </div>
+
+    <div class="col-center">
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="loadTab(0)">1. Σίγουρα Αληθής</button>
+            <button class="tab-btn" onclick="loadTab(1)">2. Όχι Σίγουρα Αληθής</button>
+        </div>
+
+        <div class="stage-scroll">
+            <div class="stage-area" id="stage">
+                </div>
+        </div>
+
+    </div>
+
+    <div class="col-right">
+        <h4>Βήματα</h4>
+        <ul class="status-steps" id="steps-list"></ul>
+    </div>
+
+</div>
+
+<script>
+    // --- CONTENT DATA ---
+    const TAB_INFO = [
+        // Tab 1 Text
+        `<p>Όταν μου ζητούν να μετατρέψω μια ΜΕΧΡΙΣ_ΟΤΟΥ σε ΟΣΟ, τότε κάνω την «τούμπα» και κοιτώ τη συνθήκη της ΟΣΟ.</p>
+         <p>Αν στην ΟΣΟ που προέκυψε η συνθήκη της είναι <u>ΣΙΓΟΥΡΑ ΑΛΗΘΗΣ</u> την 1η φορά, άρα τελείωσα.</p>`,
+        
+        // Tab 2 Text
+        `<p>Όταν μου ζητούν να μετατρέψω μια ΜΕΧΡΙΣ_ΟΤΟΥ σε ΟΣΟ, τότε κάνω την «τούμπα» και κοιτώ τη συνθήκη της ΟΣΟ.</p>
+         <p>Αν στην ΟΣΟ που προέκυψε η συνθήκη <u>δεν είναι σίγουρα αληθής</u> την 1η φορά, τότε παίρνω τις εντολές που βρίσκονται μέσα στην ΟΣΟ και τις γράφω <strong>ΑΚΡΙΒΩΣ</strong> μία φορά <strong>πριν</strong> την ΟΣΟ, ώστε σίγουρα να εκτελεστούν μία φορά.</p>`
+    ];
+
+    const SCENARIOS = [
+        // TAB 1
+        {
+            src: `
+            <div class="line"><span class="var">ω</span> <span class="op">←</span> <span class="num">10</span></div>
+            <div class="line" id="m_start"><span class="kw">Αρχή_επανάληψης</span></div>
+            <div class="line" id="m_body1" style="padding-left:20px"><span class="kw">Γράψε</span> <span class="var">ω</span></div>
+            <div class="line" id="m_body2" style="padding-left:20px"><span class="var">ω</span> <span class="op">←</span> <span class="var">ω</span> <span class="op">+</span> <span class="num">1</span></div>
+            <div class="line" id="m_cond"><span class="kw">μέχρις_ότου</span> <span class="var token" id="s_var">ω</span> <span class="op token" id="s_op">&gt;</span> <span class="num token" id="s_val">20</span></div>`,
+            
+            tgt: `
+            <div class="line"><span class="var">ω</span> <span class="op">←</span> <span class="num">10</span></div>
+            <div class="line hidden" id="o_while"><span class="kw">Όσο</span> <span class="var">ω</span> <span class="op-pulse" id="t_op">&le;</span> <span class="placeholder" id="t_val">...</span> <span class="kw">επανάλαβε</span></div>
+            <div class="line hidden" id="o_body1" style="padding-left:20px"><span class="kw">Γράψε</span> <span class="var">ω</span></div>
+            <div class="line hidden" id="o_body2" style="padding-left:20px"><span class="var">ω</span> <span class="op">←</span> <span class="var">ω</span> <span class="op">+</span> <span class="num">1</span></div>
+            <div class="line hidden" id="o_end"><span class="kw">Τέλος_επανάληψης</span></div>`,
+            type: 'simple'
+        },
+        // TAB 2
+        {
+            src: `
+            <div class="line"><span class="kw">Διάβασε</span> <span class="var">ω</span></div>
+            <div class="line" id="m_start"><span class="kw">Αρχή_επανάληψης</span></div>
+            <div class="line" id="m_body1" style="padding-left:20px"><span class="kw">Γράψε</span> <span class="var">ω</span></div>
+            <div class="line" id="m_body2" style="padding-left:20px"><span class="var">ω</span> <span class="op">←</span> <span class="var">ω</span> <span class="op">+</span> <span class="num">1</span></div>
+            <div class="line" id="m_cond"><span class="kw">μέχρις_ότου</span> <span class="var token" id="s_var">ω</span> <span class="op token" id="s_op">&gt;</span> <span class="num token" id="s_val">20</span></div>`,
+            
+            tgt: `
+            <div class="line"><span class="kw">Διάβασε</span> <span class="var">ω</span></div>
+            <div class="line hidden" id="o_pref1"><span class="kw">Γράψε</span> <span class="var">ω</span></div>
+            <div class="line hidden" id="o_pref2"><span class="var">ω</span> <span class="op">←</span> <span class="var">ω</span> <span class="op">+</span> <span class="num">1</span></div>
+            
+            <div class="line hidden" id="o_while"><span class="kw">Όσο</span> <span class="var">ω</span> <span class="op-pulse" id="t_op">&le;</span> <span class="placeholder" id="t_val">...</span> <span class="kw">επανάλαβε</span></div>
+            <div class="line hidden" id="o_body1" style="padding-left:20px"><span class="kw">Γράψε</span> <span class="var">ω</span></div>
+            <div class="line hidden" id="o_body2" style="padding-left:20px"><span class="var">ω</span> <span class="op">←</span> <span class="var">ω</span> <span class="op">+</span> <span class="num">1</span></div>
+            <div class="line hidden" id="o_end"><span class="kw">Τέλος_επανάληψης</span></div>`,
+            type: 'prefix'
+        }
+    ];
+
+    // --- STATE ---
+    let currentTab = 0;
+    let steps = [];
+    let stepIdx = 0;
+    let isPlaying = false;
+    let isAnimating = false;
+    let timer = null;
+
+    // --- SETUP ---
+    function loadTab(idx) {
+        currentTab = idx;
+        stepIdx = 0;
+        isPlaying = false;
+        isAnimating = false;
+        if(timer) clearTimeout(timer);
+
+        document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+        document.getElementById('info-content').innerHTML = `<div class="info-box">${TAB_INFO[idx]}</div>`;
+
+        const scen = SCENARIOS[idx];
+        document.getElementById('stage').innerHTML = `
+            <div class="code-card card-src"><div class="card-title">Αλγόριθμος (ΜΕΧΡΙΣ_ΟΤΟΥ)</div>${scen.src}</div>
+            <div class="arrow-separator">&rarr;</div>
+            <div class="code-card card-tgt"><div class="card-title">Ισοδύναμο (ΟΣΟ)</div>${scen.tgt}</div>
+        `;
+
+        steps = generateSteps(scen.type);
+        renderStepsList();
+        
+        document.getElementById('btnPlay').innerText = "▶ Αναπαραγωγή";
+        document.getElementById('btnPlay').disabled = false;
+        document.getElementById('btnStep').disabled = false;
+    }
+
+    function generateSteps(type) {
+        let s = [];
+        
+        // 1. Structure
+        s.push({ id:0, text:"1. Μετατροπή Δομής", action: 'transform_structure' });
+
+        // 2. Body Copy inside Loop (Animation)
+        s.push({ id:1, text:"2. Σώμα Επανάληψης", action: 'copy_body_loop' });
+
+        // 3. Condition
+        s.push({ id:2, text:"3. Μετατροπή Συνθήκης", srcLine:'m_cond', tgtLine:'o_while', srcToken:'s_val', tgtToken:'t_val', pulseOp:true });
+
+        // 4. Prefix (Only Tab 2)
+        if(type === 'prefix') {
+            s.push({ id:3, text:"4. Αντιγραφή πριν την ΟΣΟ", action: 'copy_body_prefix' });
+        }
+
+        s.push({ id:s.length, text:"Ολοκλήρωση", end:true });
+        return s;
+    }
+
+    function renderStepsList() {
+        const ul = document.getElementById('steps-list');
+        ul.innerHTML = '';
+        steps.forEach((st, i) => {
+            let li = document.createElement('li');
+            li.id = `li-step-${i}`;
+            li.innerText = st.text;
+            ul.appendChild(li);
+        });
+    }
+
+    // --- ANIMATION FUNCTIONS ---
+
+    function triggerPulse(elId) {
+        const el = document.getElementById(elId);
+        if(el) {
+            el.classList.remove('pulsate');
+            void el.offsetWidth;
+            el.classList.add('pulsate');
+        }
+    }
+
+    // Fly a Token (Simple text)
+    function flyTokenAsync(srcId, tgtId) {
+        return new Promise(resolve => {
+            const srcEl = document.getElementById(srcId);
+            const tgtEl = document.getElementById(tgtId);
+            let txt = srcEl.innerText;
+
+            const flyer = document.createElement('div');
+            flyer.className = 'flyer-token';
+            flyer.innerText = txt; 
+            
+            const r1 = srcEl.getBoundingClientRect();
+            const r2 = tgtEl.getBoundingClientRect();
+
+            flyer.style.top = r1.top + 'px';
+            flyer.style.left = r1.left + 'px';
+            document.body.appendChild(flyer);
+
+            const speedVal = parseInt(document.getElementById('speedRange').value);
+            const duration = 2200 - (speedVal * 100); 
+            
+            flyer.style.transitionDuration = duration + 'ms';
+
+            requestAnimationFrame(() => {
+                flyer.style.top = r2.top + 'px';
+                flyer.style.left = r2.left + 'px';
+                flyer.style.transform = 'scale(1.2)';
+            });
+
+            setTimeout(() => {
+                flyer.remove();
+                tgtEl.innerText = txt;
+                tgtEl.classList.add('filled');
+                resolve();
+            }, duration);
+        });
+    }
+
+    // Fly Text Block (Structure)
+    function flyTextAsync(srcId, tgtId, txtOverride) {
+        return new Promise(resolve => {
+            const srcEl = document.getElementById(srcId);
+            const tgtEl = document.getElementById(tgtId);
+            
+            const flyer = document.createElement('div');
+            flyer.className = 'flyer-token';
+            flyer.innerText = txtOverride || srcEl.innerText;
+            
+            const r1 = srcEl.getBoundingClientRect();
+            const r2 = tgtEl.getBoundingClientRect(); // Target is hidden but occupies space?
+            // Need to ensure target is hidden via opacity 0, not display none. 
+            // In our CSS .line.hidden is opacity:0. So rect is valid.
+
+            flyer.style.top = r1.top + 'px';
+            flyer.style.left = r1.left + 'px';
+            document.body.appendChild(flyer);
+
+            const speedVal = parseInt(document.getElementById('speedRange').value);
+            const duration = 2200 - (speedVal * 100); 
+            flyer.style.transitionDuration = duration + 'ms';
+
+            requestAnimationFrame(() => {
+                flyer.style.top = r2.top + 'px';
+                flyer.style.left = r2.left + 'px';
+            });
+
+            setTimeout(() => {
+                flyer.remove();
+                tgtEl.classList.remove('hidden');
+                tgtEl.classList.add('visible');
+                resolve();
+            }, duration);
+        });
+    }
+
+    // Fly Line Copy (The "Copy" Animation)
+    function flyLineCopyAsync(srcId, tgtId) {
+        return new Promise(resolve => {
+            const srcEl = document.getElementById(srcId);
+            const tgtEl = document.getElementById(tgtId);
+            
+            // Create a flyer that looks like the line
+            const flyer = document.createElement('div');
+            flyer.className = 'flyer';
+            flyer.innerHTML = srcEl.innerHTML;
+            
+            const r1 = srcEl.getBoundingClientRect();
+            const r2 = tgtEl.getBoundingClientRect();
+
+            flyer.style.top = r1.top + 'px';
+            flyer.style.left = r1.left + 'px';
+            flyer.style.width = r1.width + 'px'; // Match width
+            document.body.appendChild(flyer);
+
+            const speedVal = parseInt(document.getElementById('speedRange').value);
+            const duration = 2200 - (speedVal * 100); 
+            
+            flyer.style.transition = `all ${duration}ms cubic-bezier(0.45, 0, 0.55, 1)`;
+
+            requestAnimationFrame(() => {
+                flyer.style.top = r2.top + 'px';
+                flyer.style.left = r2.left + 'px';
+            });
+
+            setTimeout(() => {
+                flyer.remove();
+                tgtEl.classList.remove('hidden');
+                tgtEl.classList.add('visible');
+                resolve();
+            }, duration);
+        });
+    }
+
+    // --- LOGIC GROUPS ---
+
+    async function transformStructure() {
+        document.getElementById('m_start').classList.add('active');
+        await flyTextAsync('m_start', 'o_while', 'Όσο ... επανάλαβε');
+        document.getElementById('m_start').classList.remove('active');
+
+        document.getElementById('m_cond').classList.add('active');
+        await flyTextAsync('m_cond', 'o_end', 'Τέλος_επανάληψης');
+        document.getElementById('m_cond').classList.remove('active');
+    }
+
+    async function copyBodyLoop() {
+        // Highlight source
+        document.getElementById('m_body1').classList.add('active');
+        document.getElementById('m_body2').classList.add('active');
+
+        // Copy Line 1
+        await flyLineCopyAsync('m_body1', 'o_body1');
+        // Copy Line 2
+        await flyLineCopyAsync('m_body2', 'o_body2');
+
+        // Keep highlight for context
+    }
+
+    async function copyBodyPrefix() {
+        // Source already highlighted from previous step, ensure it stays
+        document.getElementById('m_body1').classList.add('active');
+        document.getElementById('m_body2').classList.add('active');
+
+        // Copy Line 1 to Prefix 1
+        await flyLineCopyAsync('m_body1', 'o_pref1');
+        // Copy Line 2 to Prefix 2
+        await flyLineCopyAsync('m_body2', 'o_pref2');
+
+        // Remove highlights finally
+        document.getElementById('m_body1').classList.remove('active');
+        document.getElementById('m_body2').classList.remove('active');
+    }
+
+    // --- MAIN LOOP ---
+
+    async function runStepSequence() {
+        if(stepIdx >= steps.length) {
+            isPlaying = false;
+            document.getElementById('btnPlay').innerText = "Τέλος";
+            document.getElementById('btnPlay').disabled = true;
+            document.getElementById('btnStep').disabled = true;
+            return;
+        }
+
+        isAnimating = true;
+        const currentData = steps[stepIdx];
+
+        document.querySelectorAll('.status-steps li').forEach(li => li.classList.remove('active'));
+        document.getElementById(`li-step-${stepIdx}`).classList.add('active');
+        
+        document.querySelectorAll('.active').forEach(e => e.classList.remove('active'));
+        document.querySelectorAll('.highlight').forEach(e => e.classList.remove('highlight'));
+
+        if(currentData.action === 'transform_structure') {
+            await transformStructure();
+        }
+        else if(currentData.action === 'copy_body_loop') {
+            await copyBodyLoop();
+        }
+        else if(currentData.action === 'copy_body_prefix') {
+            await copyBodyPrefix();
+        }
+        else if (currentData.srcLine && currentData.tgtToken) {
+            document.getElementById(currentData.srcLine).classList.add('active');
+            document.getElementById(currentData.srcToken).classList.add('highlight');
+            document.getElementById(currentData.tgtLine).classList.add('active'); 
+            
+            if(currentData.pulseOp) {
+                triggerPulse('t_op');
+            }
+
+            await flyTokenAsync(currentData.srcToken, currentData.tgtToken);
+        }
+
+        isAnimating = false;
+        stepIdx++;
+
+        if(isPlaying) {
+            timer = setTimeout(runStepSequence, 500);
+        }
+    }
+
+    function togglePlay() {
+        if(isAnimating && isPlaying) {
+            isPlaying = false;
+            document.getElementById('btnPlay').innerText = "▶ Συνέχεια";
+            if(timer) clearTimeout(timer);
+        } else if (!isAnimating) {
+            isPlaying = true;
+            document.getElementById('btnPlay').innerText = "⏸ Παύση";
+            runStepSequence();
+        } else {
+            isPlaying = true;
+            document.getElementById('btnPlay').innerText = "⏸ Παύση";
+        }
+    }
+
+    function manualStep() {
+        if(isAnimating) return;
+        runStepSequence();
+    }
+
+    function reset() {
+        loadTab(currentTab);
+    }
+
+    // Init
+    loadTab(0);
+
+</script>
+</body>
+</html>

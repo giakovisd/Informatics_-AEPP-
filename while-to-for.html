@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Μετατροπή: ΟΣΟ &rarr; ΓΙΑ</title>
+    <style>
+        :root {
+            --bg-color: #f1f5f9;       /* Background κεντρικό (ελαφρύ γκρι) */
+            --panel-bg: #ffffff;       /* Background στηλών (λευκό) */
+            --text-color: #1e293b;
+            --border-color: #cbd5e1;   /* Πιο έντονο border για να φαίνονται τα όρια */
+            
+            --col-keyword: #2563eb; 
+            --col-var: #0f172a; 
+            --col-num: #d97706;  
+            
+            --highlight-bg: #fef08a; 
+            --flyer-color: #ea580c; 
+            
+            --active-tab-bg: #2563eb;
+            --active-tab-text: #ffffff;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-color: #f1f5f9;
+            --border-color: #334155;
+            --col-keyword: #60a5fa;
+            --col-var: #e2e8f0;
+            --col-num: #fbbf24;
+            --highlight-bg: #422006;
+            --flyer-color: #f97316;
+            --active-tab-bg: #60a5fa;
+        }
+
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, monospace; margin: 0; display: flex; flex-direction: column; height: 100vh; background: var(--bg-color); color: var(--text-color); overflow: hidden; font-size: 0.95rem; }
+
+        /* HEADER */
+        header {
+            height: 60px; background: var(--panel-bg); border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0; z-index: 100;
+        }
+        h1 { font-size: 1.2rem; margin: 0; display:flex; align-items:center; gap:10px; }
+        
+        .controls { display: flex; gap: 8px; align-items: center; }
+        
+        button {
+            padding: 6px 14px; border: 1px solid var(--border-color); border-radius: 6px;
+            cursor: pointer; font-weight: 600; font-size: 0.9rem;
+            background: var(--panel-bg); color: var(--text-color); display: flex; align-items: center; gap: 6px;
+            transition: all 0.2s; white-space: nowrap;
+        }
+        button:hover { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { opacity: 0.5; cursor: default; transform: none; filter: grayscale(1); }
+        
+        .btn-run { background: #10b981; color: white; border-color: #059669; }
+        .btn-step { background: #3b82f6; color: white; border-color: #2563eb; }
+        .btn-reset { background: #ef4444; color: white; border-color: #dc2626; }
+
+        .speed-control { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin: 0 10px; background: var(--panel-bg); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color); }
+        input[type=range] { width: 100px; cursor: pointer; }
+
+        /* MAIN LAYOUT */
+        .container { display: flex; flex: 1; overflow: hidden; position: relative; }
+
+        /* LEFT: Instructions (WIDER now) */
+        .col-left {
+            width: 280px; /* Increased from 220px */
+            padding: 20px; 
+            border-right: 1px solid var(--border-color); /* Visible Border */
+            background: var(--panel-bg); 
+            overflow-y: auto; line-height: 1.5; font-size: 0.9rem; flex-shrink: 0;
+        }
+        .info-box {
+            background: var(--bg-color); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); border-left: 4px solid var(--col-keyword); margin-bottom: 15px;
+        }
+
+        /* CENTER: Stage */
+        .col-center {
+            flex: 1; padding: 20px; background: var(--bg-color); overflow: hidden; 
+            display: flex; flex-direction: column; align-items: center; position: relative;
+        }
+
+        .tabs { display: flex; gap: 10px; margin-bottom: 15px; background: var(--panel-bg); padding: 5px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .tab-btn {
+            border: none; background: transparent; padding: 8px 16px; cursor: pointer; font-weight: bold; border-radius: 6px; color: var(--text-color); font-size: 0.9rem;
+        }
+        .tab-btn.active { background-color: var(--active-tab-bg); color: var(--active-tab-text); }
+
+        /* CODE AREA */
+        .stage-scroll {
+            width: 100%; height: 100%; overflow: auto; display: flex; justify-content: center; align-items: flex-start;
+        }
+        .stage-area {
+            display: flex; flex-direction: row; justify-content: center; align-items: flex-start; gap: 25px; 
+            padding: 10px; padding-bottom: 60px;
+        }
+
+        .code-card {
+            background: var(--panel-bg); padding: 20px; border-radius: 8px; 
+            border: 1px solid var(--border-color); /* Visible Border */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            font-family: 'Consolas', monospace; font-size: 1.05rem; line-height: 1.8;
+            position: relative; white-space: nowrap; 
+        }
+        
+        .card-src { min-width: 280px; }
+        .card-tgt { min-width: 580px; }
+
+        .card-title {
+            font-size: 0.9rem; font-weight: bold; margin-bottom: 10px; color: var(--text-color); 
+            border-bottom: 1px solid var(--border-color); padding-bottom: 5px; text-align: center; opacity: 0.8;
+        }
+
+        .line { display: block; padding: 2px 5px; border-radius: 4px; }
+        .line.active { background-color: var(--highlight-bg); border-left: 3px solid #f59e0b; }
+
+        .kw { color: var(--col-keyword); font-weight: bold; }
+        .var { color: var(--col-var); }
+        .num { color: var(--col-num); font-weight: bold; display: inline-block; }
+        .op { margin: 0 4px; }
+        
+        .token { 
+            display: inline-block; padding: 0 4px; border-radius: 4px; border: 1px solid transparent; 
+            transition: background 0.2s;
+        }
+        .token.highlight { background: var(--highlight-bg); border-color: var(--col-num); transform: scale(1.1); }
+        
+        .placeholder {
+            display: inline-block; min-width: 30px; border-bottom: 2px dashed #94a3b8; text-align: center; color: transparent; margin: 0 3px;
+        }
+        .placeholder.filled {
+            border-bottom: none; color: var(--col-num); font-weight: bold; animation: popIn 0.4s;
+        }
+        .placeholder.hidden { display: none; }
+        
+        @keyframes popIn { 0% { transform: scale(0); } 80% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+        .flyer {
+            position: fixed; z-index: 1000; 
+            font-family: 'Consolas', monospace; font-weight: bold; font-size: 1.3rem;
+            color: white; background: var(--flyer-color);
+            padding: 4px 10px; border-radius: 4px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2); pointer-events: none;
+            transition-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+        }
+
+        /* RIGHT: Progress (WIDER now) */
+        .col-right {
+            width: 240px; /* Increased from 180px */
+            background: var(--panel-bg); 
+            border-left: 1px solid var(--border-color); /* Visible Border */
+            display: flex; flex-direction: column; padding: 20px; flex-shrink: 0;
+        }
+        
+        .status-steps { list-style: none; padding: 0; margin: 0; }
+        .status-steps li {
+            padding: 10px; border-bottom: 1px solid var(--border-color); opacity: 0.5; transition: 0.3s; font-size: 0.9rem;
+        }
+        .status-steps li.active {
+            opacity: 1; font-weight: bold; color: var(--col-keyword); background: var(--bg-color); border-radius: 4px; border-left: 4px solid var(--col-keyword);
+        }
+
+        .arrow-separator {
+            font-size: 2rem; color: var(--border-color); align-self: center; margin: 0 10px;
+        }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🎬 Μετατροπή: ΟΣΟ &rarr; ΓΙΑ</h1>
+    <div class="controls">
+        <button class="btn-reset" onclick="reset()">🔄 Αρχή</button>
+        <button class="btn-step" id="btnStep" onclick="manualStep()">👣 Βήμα</button>
+        <button class="btn-run" id="btnPlay" onclick="togglePlay()">▶ Αναπαραγωγή</button>
+        
+        <div class="speed-control">
+            <span>🐢</span>
+            <input type="range" id="speedRange" min="1" max="20" value="10">
+            <span>🐇</span>
+        </div>
+        <div style="width:1px; background:#ccc; margin:0 5px; height: 20px;"></div>
+        <button onclick="document.body.classList.toggle('dark-mode')">🌙</button>
+    </div>
+</header>
+
+<div class="container">
+    
+    <div class="col-left">
+        <h3>Οδηγίες</h3>
+        <div id="info-content"></div>
+    </div>
+
+    <div class="col-center">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="loadTab(0)">1. Απλή</button>
+            <button class="tab-btn" onclick="loadTab(1)">2. Ανισότητα</button>
+            <button class="tab-btn" onclick="loadTab(2)">3. Βήμα Αρχή</button>
+        </div>
+
+        <div class="stage-scroll">
+            <div class="stage-area" id="stage">
+                </div>
+        </div>
+    </div>
+
+    <div class="col-right">
+        <h4>Πρόοδος</h4>
+        <ul class="status-steps" id="steps-list"></ul>
+    </div>
+
+</div>
+
+<script>
+    // --- CONTENT DATA (As requested in text) ---
+    const TAB_INFO = [
+        // Tab 1 Text
+        `<p>Στην απλή περίπτωση όπου η συνθήκη είναι <b>&le;</b> ή <b>&ge;</b>, τα όρια της ΓΙΑ είναι ακριβώς η αρχική τιμή και το όριο της συνθήκης του ΟΣΟ.</p>`,
+        
+        // Tab 2 Text
+        `<p>Αν υπάρχει ανισότητα (<b>&lt;</b> ή <b>&gt;</b>) και όχι ισότητα στη συνθήκη της ΟΣΟ, τότε στο ΜΕΧΡΙ της ΓΙΑ μπαίνει η προηγούμενη ή η επόμενη του ορίου, ανάλογα με το βήμα.</p>`,
+        
+        // Tab 3 Text
+        `<p>Όταν η εντολή μεταβολής του μετρητή (βήμα) προηγείται εντολών που χρησιμοποιείται ο (αλλαγμένος) μετρητής μέσα στο βρόχο, τότε η εντολή εμφάνισης στη ΓΙΑ πρέπει να προσαρμοστεί (π.χ. i + βήμα).</p>`
+    ];
+
+    const SCENARIOS = [
+        // 0: Simple
+        {
+            src: `
+            <div class="line" id="L1"><span class="var">i</span> <span class="op">←</span> <span class="num token" id="s_init">1</span></div>
+            <div class="line" id="L2"><span class="kw">ΟΣΟ</span> <span class="var">i</span> <span class="op">&le;</span> <span class="num token" id="s_cond">10</span> <span class="kw">ΕΠΑΝΑΛΑΒΕ</span></div>
+            <div class="line" style="padding-left:20px"><span class="kw">ΕΜΦΑΝΙΣΕ</span> <span class="var">i</span></div>
+            <div class="line" id="L3" style="padding-left:20px"><span class="var">i</span> <span class="op">←</span> <span class="var">i</span> <span class="op">+</span> <span class="num token" id="s_step">2</span></div>
+            <div class="line"><span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span></div>`,
+            tgt: `
+            <div class="line">
+                <span class="kw">ΓΙΑ</span> <span class="var">i</span> <span class="kw">ΑΠΟ</span> <span class="placeholder" id="t_init">...</span> 
+                <span class="kw">ΜΕΧΡΙ</span> <span class="placeholder" id="t_cond">...</span> 
+                <span class="kw">ΜΕ_ΒΗΜΑ</span> <span class="placeholder" id="t_step">...</span>
+            </div>
+            <div class="line" style="padding-left:20px"><span class="kw">ΕΜΦΑΝΙΣΕ</span> <span class="var">i</span></div>
+            <div class="line"><span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span></div>`,
+            type: 'simple'
+        },
+        // 1: Inequality
+        {
+            src: `
+            <div class="line" id="L1"><span class="var">i</span> <span class="op">←</span> <span class="num token" id="s_init">1</span></div>
+            <div class="line" id="L2"><span class="kw">ΟΣΟ</span> <span class="var">i</span> <span class="op">&lt;</span> <span class="num token" id="s_cond">10</span> <span class="kw">ΕΠΑΝΑΛΑΒΕ</span></div>
+            <div class="line" style="padding-left:20px"><span class="kw">ΕΜΦΑΝΙΣΕ</span> <span class="var">i</span></div>
+            <div class="line" id="L3" style="padding-left:20px"><span class="var">i</span> <span class="op">←</span> <span class="var">i</span> <span class="op">+</span> <span class="num token" id="s_step">1</span></div>
+            <div class="line"><span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span></div>`,
+            tgt: `
+            <div class="line">
+                <span class="kw">ΓΙΑ</span> <span class="var">i</span> <span class="kw">ΑΠΟ</span> <span class="placeholder" id="t_init">...</span> 
+                <span class="kw">ΜΕΧΡΙ</span> <span class="placeholder" id="t_cond">...</span> 
+                <span class="kw">ΜΕ_ΒΗΜΑ</span> <span class="placeholder" id="t_step">...</span>
+            </div>
+            <div class="line" style="padding-left:20px"><span class="kw">ΕΜΦΑΝΙΣΕ</span> <span class="var">i</span></div>
+            <div class="line"><span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span></div>`,
+            type: 'ineq'
+        },
+        // 2: Step First
+        {
+            src: `
+            <div class="line" id="L1"><span class="var">i</span> <span class="op">←</span> <span class="num token" id="s_init">1</span></div>
+            <div class="line" id="L2"><span class="kw">ΟΣΟ</span> <span class="var">i</span> <span class="op">&le;</span> <span class="num token" id="s_cond">5</span> <span class="kw">ΕΠΑΝΑΛΑΒΕ</span></div>
+            <div class="line" id="L3" style="padding-left:20px"><span class="var">i</span> <span class="op">←</span> <span class="var">i</span> <span class="op">+</span> <span class="num token" id="s_step">2</span></div>
+            <div class="line" style="padding-left:20px"><span class="kw">ΕΜΦΑΝΙΣΕ</span> <span class="var">i</span></div>
+            <div class="line"><span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span></div>`,
+            tgt: `
+            <div class="line">
+                <span class="kw">ΓΙΑ</span> <span class="var">i</span> <span class="kw">ΑΠΟ</span> <span class="placeholder" id="t_init">...</span> 
+                <span class="kw">ΜΕΧΡΙ</span> <span class="placeholder" id="t_cond">...</span> 
+                <span class="kw">ΜΕ_ΒΗΜΑ</span> <span class="placeholder" id="t_step">...</span>
+            </div>
+            <div class="line" style="padding-left:20px">
+                <span class="kw">ΕΜΦΑΝΙΣΕ</span> 
+                <span class="placeholder" id="t_print_var">...</span> 
+                <span class="placeholder hidden" id="t_print_op"></span> 
+                <span class="placeholder hidden" id="t_print_val"></span>
+            </div>
+            <div class="line"><span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span></div>`,
+            type: 'step_first'
+        }
+    ];
+
+    // --- LOGIC ---
+    let currentTab = 0;
+    let steps = [];
+    let stepIdx = 0;
+    let isPlaying = false;
+    let isAnimating = false; // Prevents double click
+
+    // --- SETUP ---
+    function loadTab(idx) {
+        currentTab = idx;
+        stepIdx = 0;
+        isPlaying = false;
+        isAnimating = false;
+        
+        // Update UI
+        document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+        document.getElementById('info-content').innerHTML = TAB_INFO[idx];
+        
+        const scen = SCENARIOS[idx];
+        document.getElementById('stage').innerHTML = `
+            <div class="code-card card-src"><div class="card-title">Αλγόριθμος (ΟΣΟ)</div>${scen.src}</div>
+            <div class="arrow-separator">&rarr;</div>
+            <div class="code-card card-tgt"><div class="card-title">Ισοδύναμο (ΓΙΑ)</div>${scen.tgt}</div>
+        `;
+
+        // Generate Steps
+        steps = generateSteps(scen.type);
+        renderStepsList();
+        
+        document.getElementById('btnPlay').innerText = "▶ Αναπαραγωγή";
+        document.getElementById('btnPlay').disabled = false;
+        document.getElementById('btnStep').disabled = false;
+    }
+
+    function generateSteps(type) {
+        let s = [
+            { id:0, text:"1. Αρχική Τιμή", srcLine:'L1', srcToken:'s_init', tgtToken:'t_init' },
+            { id:1, text:"2. Τελική Τιμή", srcLine:'L2', srcToken:'s_cond', tgtToken:'t_cond' },
+            { id:2, text:"3. Βήμα", srcLine:'L3', srcToken:'s_step', tgtToken:'t_step' }
+        ];
+
+        if(type === 'ineq') {
+            // Apply minus 1 modifier
+            s[1].modifier = (val) => parseInt(val) - 1;
+        }
+        if(type === 'step_first') {
+            s.push({ id:3, text:"4. Προσαρμογή Εμφάνισης", action:'animate_tab3' });
+        }
+        s.push({ id:4, text:"Ολοκλήρωση", end:true });
+        return s;
+    }
+
+    function renderStepsList() {
+        const ul = document.getElementById('steps-list');
+        ul.innerHTML = '';
+        steps.forEach((st, i) => {
+            let li = document.createElement('li');
+            li.id = `li-step-${i}`;
+            li.innerText = st.text;
+            ul.appendChild(li);
+        });
+    }
+
+    // --- ANIMATION ---
+
+    // Async Animation Wrapper
+    function flyAsync(srcId, tgtId, modifier) {
+        return new Promise(resolve => {
+            const srcEl = document.getElementById(srcId);
+            const tgtEl = document.getElementById(tgtId);
+            
+            let txt = srcEl.innerText;
+            if(modifier) txt = modifier(txt);
+
+            const flyer = document.createElement('div');
+            flyer.className = 'flyer';
+            flyer.innerText = srcEl.innerText; // Fly original
+            
+            const r1 = srcEl.getBoundingClientRect();
+            const r2 = tgtEl.getBoundingClientRect();
+
+            flyer.style.top = r1.top + 'px';
+            flyer.style.left = r1.left + 'px';
+            document.body.appendChild(flyer);
+
+            // Calc duration based on slider: 1(Slow) -> 20(Fast)
+            const speedVal = parseInt(document.getElementById('speedRange').value);
+            const duration = 2200 - (speedVal * 100); 
+            
+            flyer.style.transitionDuration = duration + 'ms';
+
+            // Start move
+            requestAnimationFrame(() => {
+                flyer.style.top = r2.top + 'px';
+                flyer.style.left = r2.left + 'px';
+                flyer.style.transform = 'scale(1.2)';
+            });
+
+            setTimeout(() => {
+                flyer.remove();
+                tgtEl.innerText = txt;
+                tgtEl.classList.add('filled');
+                resolve();
+            }, duration);
+        });
+    }
+
+    // Special Tab 3 Animation
+    async function animateTab3Async() {
+        // 1. Fill 'i' first
+        const tVar = document.getElementById('t_print_var');
+        tVar.innerText = 'i';
+        tVar.classList.remove('placeholder');
+        
+        // 2. Fly the '2' from step
+        const srcStep = document.getElementById('s_step');
+        const tgtVal = document.getElementById('t_print_val'); 
+        
+        // Highlight source again
+        document.getElementById('L3').classList.add('active');
+        srcStep.classList.add('highlight');
+
+        // Prepare target slots
+        const tOp = document.getElementById('t_print_op');
+        tOp.innerText = "+";
+        tOp.classList.remove('hidden');
+        tOp.classList.add('filled');
+        tgtVal.classList.remove('hidden'); 
+
+        // Create flyer
+        const flyer = document.createElement('div');
+        flyer.className = 'flyer';
+        flyer.innerText = "2";
+        
+        const r1 = srcStep.getBoundingClientRect();
+        const r2 = tgtVal.getBoundingClientRect();
+
+        flyer.style.top = r1.top + 'px';
+        flyer.style.left = r1.left + 'px';
+        document.body.appendChild(flyer);
+
+        const speedVal = parseInt(document.getElementById('speedRange').value);
+        const duration = 2200 - (speedVal * 100); 
+        flyer.style.transitionDuration = duration + 'ms';
+
+        // Animate
+        await new Promise(r => requestAnimationFrame(r)); // yield
+        flyer.style.top = r2.top + 'px';
+        flyer.style.left = r2.left + 'px';
+        flyer.style.transform = 'scale(1.2)';
+
+        return new Promise(resolve => {
+            setTimeout(() => {
+                flyer.remove();
+                tgtVal.innerText = "2";
+                tgtVal.classList.add('filled');
+                resolve();
+            }, duration);
+        });
+    }
+
+    // --- CONTROLLER ---
+
+    async function runStepSequence() {
+        if(stepIdx >= steps.length) {
+            isPlaying = false;
+            document.getElementById('btnPlay').innerText = "Τέλος";
+            document.getElementById('btnPlay').disabled = true;
+            document.getElementById('btnStep').disabled = true;
+            return;
+        }
+
+        isAnimating = true;
+        const currentData = steps[stepIdx];
+
+        // UI Updates
+        document.querySelectorAll('.status-steps li').forEach(li => li.classList.remove('active'));
+        document.getElementById(`li-step-${stepIdx}`).classList.add('active');
+        
+        // Clean highlights
+        document.querySelectorAll('.active').forEach(e => e.classList.remove('active'));
+        document.querySelectorAll('.highlight').forEach(e => e.classList.remove('highlight'));
+
+        // Highlight Source if applicable
+        if(currentData.srcLine) {
+            document.getElementById(currentData.srcLine).classList.add('active');
+            document.getElementById(currentData.srcToken).classList.add('highlight');
+        }
+
+        // Logic
+        if(currentData.srcLine && currentData.tgtToken) {
+            // Standard Fly
+            await flyAsync(currentData.srcToken, currentData.tgtToken, currentData.modifier);
+        } else if (currentData.action === 'animate_tab3') {
+            // Special Animation
+            await animateTab3Async();
+        }
+
+        isAnimating = false;
+        stepIdx++;
+
+        // Auto-Play Logic
+        if(isPlaying) {
+            setTimeout(runStepSequence, 500); // Small pause between steps
+        }
+    }
+
+    function togglePlay() {
+        if(isAnimating && isPlaying) {
+            // If running, pause
+            isPlaying = false;
+            document.getElementById('btnPlay').innerText = "▶ Συνέχεια";
+        } else if (!isAnimating) {
+            // Start
+            isPlaying = true;
+            document.getElementById('btnPlay').innerText = "⏸ Παύση";
+            runStepSequence();
+        } else {
+            // Animating but paused -> Resume state
+            isPlaying = true;
+            document.getElementById('btnPlay').innerText = "⏸ Παύση";
+        }
+    }
+
+    function manualStep() {
+        if(isAnimating) return; 
+        runStepSequence();
+    }
+
+    function reset() {
+        loadTab(currentTab);
+    }
+
+    // Init
+    loadTab(0);
+
+</script>
+</body>
+</html>
