@@ -15,6 +15,9 @@
             --col-2d: #8b5cf6;   /* Purple */
             --col-ds: #10b981;   /* Emerald */
             --col-sub: #f59e0b;  /*Orange */   
+            --col-algo: #06b6d4;  /* Cyan (Αλγοριθμικές δομές) */
+            --col-debug: #ef4444; /* Red (Εκσφαλμάτωση) */
+            --col-oop: #6366f1;   /* Indigo (OOP) */
             
             --card-bg: #ffffff;
             --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -60,7 +63,7 @@
 
         /* --- CONTROLS CONTAINER --- */
         .controls-container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: -40px auto 30px; /* Negative margin to overlap header */
             padding: 0 20px;
             position: relative;
@@ -129,6 +132,9 @@
         .tab-btn.active[data-cat="1d"] { color: var(--col-1d); border-bottom: 2px solid var(--col-1d); border-radius: 6px 6px 0 0; }
         .tab-btn.active[data-cat="2d"] { color: var(--col-2d); border-bottom: 2px solid var(--col-2d); border-radius: 6px 6px 0 0; }
         .tab-btn.active[data-cat="struct"] { color: var(--col-ds); border-bottom: 2px solid var(--col-ds); border-radius: 6px 6px 0 0; }
+        .tab-btn.active[data-cat="algo"] { color: var(--col-algo); border-bottom: 2px solid var(--col-algo); border-radius: 6px 6px 0 0; }
+        .tab-btn.active[data-cat="debug"] { color: var(--col-debug); border-bottom: 2px solid var(--col-debug); border-radius: 6px 6px 0 0; }
+        .tab-btn.active[data-cat="oop"] { color: var(--col-oop); border-bottom: 2px solid var(--col-oop); border-radius: 6px 6px 0 0; }
 
         /* --- GRID LAYOUT --- */
         .grid-container {
@@ -172,6 +178,9 @@
         .card[data-cat="1d"] .card-stripe { background: var(--col-1d); }
         .card[data-cat="2d"] .card-stripe { background: var(--col-2d); }
         .card[data-cat="struct"] .card-stripe { background: var(--col-ds); }
+        .card[data-cat="algo"] .card-stripe { background: var(--col-algo); }
+        .card[data-cat="debug"] .card-stripe { background: var(--col-debug); }
+        .card[data-cat="oop"] .card-stripe { background: var(--col-oop); }
 
         .card-body { padding: 20px; flex: 1; display: flex; flex-direction: column; }
 
@@ -205,12 +214,16 @@
 
         .card[data-cat="1d"] .launch-btn { background: #eff6ff; color: var(--col-1d); }
         .card[data-cat="1d"] .launch-btn:hover { background: var(--col-1d); color: white; }
-
         .card[data-cat="2d"] .launch-btn { background: #f5f3ff; color: var(--col-2d); }
         .card[data-cat="2d"] .launch-btn:hover { background: var(--col-2d); color: white; }
-
         .card[data-cat="struct"] .launch-btn { background: #ecfdf5; color: var(--col-ds); }
         .card[data-cat="struct"] .launch-btn:hover { background: var(--col-ds); color: white; }
+        .card[data-cat="algo"] .launch-btn { background: #ecfeff; color: var(--col-algo); }
+        .card[data-cat="algo"] .launch-btn:hover { background: var(--col-algo); color: white; }
+        .card[data-cat="debug"] .launch-btn { background: #fee2e2; color: var(--col-debug); }
+        .card[data-cat="debug"] .launch-btn:hover { background: var(--col-debug); color: white; }
+        .card[data-cat="oop"] .launch-btn { background: #eef2ff; color: var(--col-oop); }
+        .card[data-cat="oop"] .launch-btn:hover { background: var(--col-oop); color: white; }
 
         /* Badge */
         .badge {
@@ -221,6 +234,9 @@
         .card[data-cat="1d"] .badge { background: #eff6ff; color: var(--col-1d); }
         .card[data-cat="2d"] .badge { background: #f5f3ff; color: var(--col-2d); }
         .card[data-cat="struct"] .badge { background: #ecfdf5; color: var(--col-ds); }
+        .card[data-cat="algo"] .badge { background: #ecfeff; color: var(--col-algo); }
+        .card[data-cat="debug"] .badge { background: #fee2e2; color: var(--col-debug); }
+        .card[data-cat="oop"] .badge { background: #eef2ff; color: var(--col-oop); }
 
         /* --- FOOTER --- */
         footer {
@@ -239,7 +255,7 @@
 
 
     </style>
-	<!-- Google Analytics -->
+<!-- Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ABC123XYZ9"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -260,10 +276,13 @@
     <div class="controls-box">
         <div class="tabs">
             <button class="tab-btn active" onclick="filterApps('all')" data-cat="all">Όλα</button>
+            <button class="tab-btn" onclick="filterApps('algo')" data-cat="algo">Αλγοριθμικές δομές</button>
             <button class="tab-btn" onclick="filterApps('1d')" data-cat="1d">Μονοδιάστατοι</button>
             <button class="tab-btn" onclick="filterApps('2d')" data-cat="2d">Δισδιάστατοι</button>
             <button class="tab-btn" onclick="filterApps('struct')" data-cat="struct">Δομές Δεδομένων</button>
             <button class="tab-btn" onclick="filterApps('sub')" data-cat="sub">Υποπρογράμματα</button>
+            <button class="tab-btn" onclick="filterApps('debug')" data-cat="debug">Εκσφαλμάτωση</button>
+            <button class="tab-btn" onclick="filterApps('oop')" data-cat="oop">Αντικειμενοστραφής</button>
         </div>
 
         <div class="search-wrapper">
@@ -278,17 +297,36 @@
 
 <footer>
     &copy; AlgoHub I (v.1.0) 2026 Ιδέα + Δημιουργία: Δημήτρης Γιακοβής, Ευτυχία Δουφέκα
-	<span style="font-size:10px; color:rgba(0,0,0,0.35); margin-left:8px;">
+<span style="font-size:10px; color:rgba(0,0,0,0.35); margin-left:8px;">
 | Το site χρησιμοποιεί Google Analytics για στατιστικούς σκοπούς (ανώνυμα δεδομένα επισκεψιμότητας).
 </span>
-
 </footer>
 
 <script>
     // --- DATABASE ---
     // Here we map all your files to the interface
     const apps = [
-        // 1D ARRAYS (Μονοδιάστατοι) - Blue
+         // Αλγοριθμικές Δομές
+         { title: "Μετατροπή: ΜΕΧΡΙΣ_ΟΤΟΥ → ΟΣΟ", file: "until-to-while.html", cat: "algo", icon: "🎬", desc: "Διαδραστική μετατροπή επανάληψης ΜΕΧΡΙΣ_ΟΤΟΥ σε ΟΣΟ." },
+         { title: "Μετατροπή: ΟΣΟ → ΓΙΑ", file: "while-to-for.html", cat: "algo", icon: "🔁", desc: "Μετατροπή δομής ΟΣΟ σε ΓΙΑ." },
+         { title: "Μετατροπή: ΓΙΑ → ΟΣΟ", file: "for-to-while.html", cat: "algo", icon: "🔄", desc: "Μετατροπή ΓΙΑ σε ΟΣΟ." },
+         { title: "Μετατροπή: ΟΣΟ → ΜΕΧΡΙΣ_ΟΤΟΥ", file: "while-to-repeat.html", cat: "algo", icon: "🔃", desc: "Μετατροπή ΟΣΟ σε ΜΕΧΡΙΣ_ΟΤΟΥ." },
+         { title: "Για - Κανονικές 2017", file: "For-17-kan.html", cat: "algo", icon: "✖️", desc: "Υλοποίηση πολλαπλασιασμού μέσω εμφωλευμένων επαναλήψεων." },
+         { title: "Μέχρις_οτου - Εσπερινά 2008", file: "Repeat-08-esp.html", cat: "algo", icon: "📘", desc: "Άσκηση Μέχρις_οτου με MOD και συνθήκη επιλογής." },
+         { title: "Εμφωλευμένες Οσο - Κανονικές 2009", file: "While-nested-09-kan.html", cat: "algo", icon: "🧩", desc: "Εμφωλευμένες Οσο με συγκεκριμένο πίνακα τιμών." },
+         { title: "Για - Οσο - Επαναληπτικές 2007 ", file: "For-While-07-epan.html", cat: "algo", icon: "📊", desc: "Εμφωλευμένη επανάληψη." },
+         { title: "Οσο  (MOD & Μεταβλητές) - Εσπερινά 2005", file: "While-2005-esp.html", cat: "algo", icon: "🔢", desc: "Εκτέλεση Όσο με MOD, μετρητές και πολλαπλές μεταβολές μεταβλητών." },
+         { title: "Εμφωλευμένες Οσο – Κανονικές 2008", file: "while-nested-08-kan.html", cat: "algo", icon: "🧩", desc: "Εμφωλευμένες επαναλήψεις Οσο, υπολογισμός εκθέτη" },
+         { title: "Οσο – Κανονικές 2002", file: "while-02-kan.html", cat: "algo", icon: "🔁", desc: "Όσο και δομή επιλογής." },
+         { title: "Οσο – Κανονικές 2003", file: "while-03-kan.html", cat: "algo", icon: "📊", desc: "Οσο και δομή επιλογής." },
+         { title: "Οσο – ΕΠΙΛΕΞΕ - Εσπερινά 2006", file: "while-case-06-esp.html", cat: "algo", icon: "🗂️", desc: "Συνδυασμός Όσο με ΕΠΙΛΕΞΕ (πολλαπλές περιπτώσεις)." },
+         { title: "Οσο Collatz – Επαναληπτικές 2009", file: "while-09-epan.html", cat: "algo", icon: "📈", desc: "Προσομοίωση Collatz με έλεγχο συνθηκών και πίνακα εκτέλεσης." },
+         { title: "Μέχρις_οτου - Εσπερινά 2010", file: "repeat-10-esp.html", cat: "algo", icon: "🔁", desc: "Εκτέλεση ΜΕΧΡΙΣ_ΟΤΟΥ με συγκεκριμένο πίνακα τιμών." },
+         { title: "Μέχρις_οτου - Κανονικές 2014", file: "repeat-14-kan.html", cat: "algo", icon: "🔄", desc: "Εκτέλεση ΜΕΧΡΙΣ_ΟΤΟΥ με συγκεκριμένο πίνακα τιμών." },
+         { title: "Οσο - Κανονικές 2012", file: "While-12-kan.html", cat: "algo", icon: "🎓", desc: "Εκτέλεση Οσο και σύνθετη Αν" },
+
+
+         // 1D ARRAYS (Μονοδιάστατοι) - Blue
         { title: "Μέγιστο & Ελάχιστο", file: "max-min.html", cat: "1d", icon: "🏆", desc: "Εύρεση του Max και του Min στοιχείου σε έναν πίνακα." },
         { title: "Σειριακή Αναζήτηση", file: "linear-search.html", cat: "1d", icon: "🔎", desc: "Η κλασική μέθοδος αναζήτησης σε μη ταξινομημένο πίνακα." },
         { title: "Αναζήτηση σε Ταξινομημένο", file: "linear-sorted.html", cat: "1d", icon: "📑", desc: "Σειριακή αναζήτηση σε ταξινομημένο πίνακα." },
@@ -301,14 +339,16 @@
         { title: "Ταξινόμηση Εισαγωγής", file: "insertion-sort.html", cat: "1d", icon: "📥", desc: "Ταξινόμηση με επιλογή (Insertion Sort), κατ' επανάληψη εύρεση του max ή του min." },
         { title: "Συγχώνευση (Merge)", file: "Merge.html", cat: "1d", icon: "🔗", desc: "Συγχώνευση δύο πινάκων σε έναν τρίτο. Στις πρώτες θέσεις του νέου πίνακα μπαίνουν τα στοιχεία του πρώτου πίνακα και στη συνέχεια μπαίνουν τα στοιχεία του δεύτερου πίνακα" },
         { title: "Συγχώνευση Ταξινομημένων", file: "merge-sorted-tables.html", cat: "1d", icon: "zipper", emoji: "🤐", desc: "Συγχώνευση ταξινομημένων πινάκων σε τρίτο που θα είναι ταξινομημένος." },  
-        { title: "Ολίσθηση (Shift)", file: "Shift.html", cat: "1d", icon: "⬅️", desc: "Μετακίνηση στοιχείων προς τα αριστερά (ή πάνω) ή δεξιά (ή κάτω)." },
+        { title: "Ολίσθηση (Shift)", file: "shift.html", cat: "1d", icon: "⬅️", desc: "Μετακίνηση στοιχείων προς τα αριστερά (ή πάνω) ή δεξιά (ή κάτω)." },
         { title: "Συχνότητα Εμφάνισης", file: "frequency-of-occurrence.html", cat: "1d", icon: "📊", desc: "Πόσες φορές υπάρχει η κάθε διαφορετική τιμή στον πίνακα." },
         { title: "Μοναδικότητα", file: "uniqueness.html", cat: "1d", icon: "✨", desc: "Δημιουργία πίνακα χωρίς διπλοεγγραφές (μοναδικότητα)" },
         { title: "Πωλήσεις Τριμήνων", file: "trimina.html", cat: "1d", icon: "📊", desc: "Υπολογισμός αθροισμάτων πωλήσεων ανά τρίμηνο με πολλαπλές αλγοριθμικές λύσεις." },
         { title: "Εκτέλεση κώδικα με πίνακα τιμών (Κανονικές 2016)", file: "tables-16-kan.html", cat: "1d", icon: "🔍", desc: "Πανελλαδικές 2016." },
-        { title: "Εκτέλεση κώδικα με χρήση τριών 1d πινάκων (Επαναληπτικές 2012)", file: "tables-12-epan.html", cat: "1d", icon: "📊", desc: "Εκτέλεση αλγορίθμου επεξεργασίας δεδομένων (DATA-L-R)." },
+        { title: "Εκτέλεση κώδικα με χρήση 3 1d πινάκων (Επαναληπτικές 2012)", file: "tables-12-epan.html", cat: "1d", icon: "📊", desc: "Εκτέλεση αλγορίθμου επεξεργασίας δεδομένων (DATA-L-R)." },
         { title: "Εκτέλεση κώδικα (Επαναληπτικές 2011)", file: "tables-11-epan.html", cat: "1d", icon: "🔢", desc: "Εκτέλεση κώδικα με πίνακα τιμών." },
         { title: "Εκτέλεση κώδικα (Κανονικές 2004)", file: "tables-2004-kan.html", cat: "1d", icon: "📉", desc: "Εκτέλεση κώδικα με πίνακα τιμών" },
+        { title: "Μέχρις_οτου - Επαναληπτικές 2017", file: "Repeat-17-epan.html", cat: "1d", icon: "🔁", desc: "Εκτέλεση Μέχρις_οτου με 4 διαφορετικές τιμές εισόδου." },
+        { title: "Μετατροπή σε Δυαδικό", file: "While-16-epan.html", cat: "1d", icon: "🧮", desc: "Εκτέλεση κώδικα - Μετατροπή δεκαδικού σε δυαδικό με χρήση μονοδιάστατου πίνακα." },
 
         // 2D ARRAYS (Δισδιάστατοι) - Purple
         { title: "Εισαγωγή στοιχείων σε δισδιάστατο", file: "2d-insert.html", cat: "2d", icon: "✍️", desc: "Εισαγωγή στοιχείων κατά γραμμές ή κατά στήλες." },
@@ -322,9 +362,6 @@
         { title: "Πίνακες: Θέμα Β 2024", file: "tables-24-kan.html", cat: "2d", icon: "📝", desc: "Συμπλήρωση κενών σε αλγόριθμο πινάκων σε δισδιάστατο πίνακα." },
         { title: "Πίνακες: Θέμα Β 2024 - Ο μαθητής βλέπει την απάντηση του", file: "table-fill&check-24.html", cat: "2d", icon: "💯", desc: "Διαδραστική συμπλήρωση και έλεγχος εκτέλεσης κώδικα (Θέμα Β 2024)." },
         
-        
-        
-
         // DATA STRUCTURES (Αλλες Δομές Δεδομένων)  - Green
         { title: "Στοίβα & Ουρά (Βασικά)", file: "stack-queue.html", cat: "struct", icon: "🥞", desc: "Οι βασικές λειτουργίες: Ώθηση/Απώθηση και Εισαγωγή/Εξαγωγή." },
         { title: "Μαζικές Λειτουργίες", file: "stack-queue-mass-operations.html", cat: "struct", icon: "🏗️", desc: "Οπτικοποίηση μαζικού γεμίσματος και αδειάσματος Στοίβας και Ουράς, λαμβάνοντας υπόψη τα στοιχεία που ήδη περιέχονται σε αυτές." },
@@ -345,18 +382,23 @@
         { title: "Εκτέλεση διαδικασίας (Καν 2011)", file: "sub-11-kan.html", cat: "sub", icon: "📝", desc: "Κλήση διαδικασίας επαναληπτικά." },
         { title: "Εκτέλεση διαδικασίας (2006)", file: "sub-06-kan.html", cat: "sub", icon: "📋", desc: "Κλήση διαδικασίας" }, 
         { title: "Συμπλήρωση κενών (2025)", file: "sub-fill-25.html", cat: "sub", icon: "🧩", desc: "Άσκηση συμπλήρωσης κενών σε κώδικα υποπρογραμμάτος." },
-// --- ΜΕΤΑΒΙΒΑΣΗ ΠΙΝΑΚΩΝ & ΠΑΡΑΜΕΤΡΟΙ ---
-{ title: "Συνάρτηση 1D Πίνακα", file: "sub-1d-table.html", cat: "sub", icon: "➖", desc: "Παράδειγμα μεταβίβασης μονοδιάστατου πίνακα σε συνάρτηση." },
-{ title: "Διαδικασία με 1D Πίνακα", file: "sub-1d-table-proc.html", cat: "sub", icon: "🔨", desc: "Παράδειγμα μεταβίβασης μονοδιάστατου πίνακα σε Διαδικασία" },
-{ title: "Πέρασμα 2D Πίνακα", file: "sub-2d-table.html", cat: "sub", icon: "▦", desc: "Μεταβίβαση δισδιάστατου πίνακα και επεξεργασία στοιχείων." },
-{ title: "Μέγιστος 4 Αριθμών", file: "sub-four-max.html", cat: "sub", icon: "4️⃣", desc: "Εύρεση μεγίστου 4 αριθμών με κλήση υποπρογραμμάτων." },
+        // --- ΜΕΤΑΒΙΒΑΣΗ ΠΙΝΑΚΩΝ & ΠΑΡΑΜΕΤΡΟΙ ---
+        { title: "Συνάρτηση 1D Πίνακα", file: "sub-1d-table.html", cat: "sub", icon: "➖", desc: "Παράδειγμα μεταβίβασης μονοδιάστατου πίνακα σε συνάρτηση." },
+        { title: "Διαδικασία με 1D Πίνακα", file: "sub-1d-table-proc.html", cat: "sub", icon: "🔨", desc: "Παράδειγμα μεταβίβασης μονοδιάστατου πίνακα σε Διαδικασία" },
+        { title: "Πέρασμα 2D Πίνακα", file: "sub-2d-table.html", cat: "sub", icon: "▦", desc: "Μεταβίβαση δισδιάστατου πίνακα και επεξεργασία στοιχείων." },
+        { title: "Μέγιστος 4 Αριθμών", file: "sub-four-max.html", cat: "sub", icon: "4️⃣", desc: "Εύρεση μεγίστου 4 αριθμών με κλήση υποπρογραμμάτων." },
+        // --- ΜΕΤΑΤΡΟΠΕΣ & ΤΕΧΝΙΚΕΣ ---
+        { title: "Μετατροπή: Διαδικασίας σε Συνάρτηση", file: "sub-proc-to-fun.html", cat: "sub", icon: "ƒ", desc: "Μετατροπή κώδικα από Διαδικασία σε Συνάρτηση (Θέμα Β4)." },
+        { title: "Μετατροπή: Συνάρτησης σε Διαδικασία", file: "sub-tranform.html", cat: "sub", icon: "🔄", desc: "Η αντίστροφη πορεία: Μετατροπή Συνάρτησης σε Διαδικασία." },
+        { title: "Μετατροπή: Συνάρτησης σε Διαδικασία - Προσοχή στις παραμέτρους", file: "sub-tranform-rusian.html", cat: "sub", icon: "🇷🇺", desc: "Πολλαπλασιασμός αλα Ρωσσικά & χρήση βοηθητικών μεταβλητών." },
+      //Εκσφαλμάτωση
+       { title: "Βρες τα λάθη - Μαύρο κουτί: Συμπλήρωσε ακραίες τιμές ", file: "black-white-box.html", cat: "debug", icon: "🕵️‍♂️", desc: "Διαδραστικό Μαύρο κουτί δημιουργίας ακραίων τιμών ισοδύναμων διαστημάτων - εντοπισμό λαθών σε κώδικα." },
+       { title: "Μαύρο κουτί– Συνέχεια", file: "black-box-continued.html", cat: "debug", icon: "🐞", desc: "Δημιουργία σεναρίων ελέγχου και εντοπισμός λαθών χρησιμοποιώντας ακραίες τιμές." },
 
-// --- ΜΕΤΑΤΡΟΠΕΣ & ΤΕΧΝΙΚΕΣ ---
-{ title: "Μετατροπή: Διαδικασίας σε Συνάρτηση", file: "sub-proc-to-fun.html", cat: "sub", icon: "ƒ", desc: "Μετατροπή κώδικα από Διαδικασία σε Συνάρτηση (Θέμα Β4)." },
-{ title: "Μετατροπή: Συνάρτησης σε Διαδικασία", file: "sub-tranform.html", cat: "sub", icon: "🔄", desc: "Η αντίστροφη πορεία: Μετατροπή Συνάρτησης σε Διαδικασία." },
-{ title: "Μετατροπή: Συνάρτησης σε Διαδικασία - Προσοχή στις παραμέτρους", file: "sub-tranform-rusian.html", cat: "sub", icon: "🇷🇺", desc: "Πολλαπλασιασμός αλα Ρωσσικά & χρήση βοηθητικών μεταβλητών." },
-        
-        
+
+        // Αντικειμενοστραφής   
+        { title: "Ασκήσεις Πανελλαδικών στην Κληρονομικότητα", file: "oop-exercices.html", cat: "oop", icon: "🧱", desc: "Διαδραστική κατασκευή διαγράμματος κλάσεων με κληρονομικότητα και έλεγχο απαντήσεων." },
+        { title: "Εργοστάσιο Αντικειμένων", file: "oop-lab.html", cat: "oop", icon: "🏭", desc: "Προσομοιωτής δημιουργίας στιγμιοτύπων, κλήσης μεθόδων και ενθυλάκωσης." },        
 
 // ... κλείσιμο λίστας ];
     ];
@@ -399,6 +441,10 @@
             if(app.cat === '2d') catLabel = "ΠΙΝΑΚΕΣ 2D";
             if(app.cat === 'struct') catLabel = "ΔΟΜΕΣ";
             if(app.cat === 'sub') catLabel = "ΥΠΟΠΡΟΓΡΑΜΜΑΤΑ";
+            if(app.cat === 'algo') catLabel = "ΑΛΓΟΡΙΘΜΙΚΕΣ ΔΟΜΕΣ";
+            if(app.cat === 'debug') catLabel = "ΕΚΣΦΑΛΜΑΤΩΣΗ";
+            if(app.cat === 'oop') catLabel = "ΑΝΤΙΚΕΙΜΕΝΟΣΤΡΑΦΗΣ";
+
 
             card.innerHTML = `
                 <div class="card-stripe"></div>
@@ -440,9 +486,4 @@
 </script>
 
 </body>
-
 </html>
-
-
-
-
