@@ -417,10 +417,26 @@
             ],
             solMsg: "Πολύ ωραία! Ένα συχνό λογικό λάθος είναι η χρήση λανθασμένου μαθηματικού τελεστή. Το συνολικό ποσό υπολογίζεται με πολλαπλασιασμό, όχι με πρόσθεση."
         },
-        '6': {
+       '6': {
             desc: "Δίνεται πίνακας ΕΣΟΔΑ[5, 12] με τα έσοδα 5 υποκαταστημάτων για 12 μήνες. Να υπολογιστεί το ετήσιο άθροισμα εσόδων ΓΙΑ ΚΑΘΕ υποκατάστημα (ανά γραμμή).",
             codeLines: [
-                { html: `<span class="var">Άθροισμα</span> &lt;- <span class="num">0</span>`, isBug: true, fixes: ["Αφαίρεση της εντολής (πρέπει να μπει μέσα στην 1η λούπα)", "Αλλαγή σε Άθροισμα <- 1"], correctIdx: 0, fixedHtml: `<span style="color:var(--secondary)">! Η εντολή μεταφέρθηκε εσωτερικά!</span>` },
+                { 
+                    html: `<span class="var">Άθροισμα</span> &lt;- <span class="num">0</span>`, 
+                    isBug: true, 
+                    fixes: ["Αφαίρεση της εντολής (πρέπει να μπει μέσα στην 1η λούπα)", "Αλλαγή σε Άθροισμα <- 1"], 
+                    correctIdx: 0, 
+                    // Διαγράφει (strike-through) την αρχική λάθος γραμμή
+                    fixedHtml: `<span style="text-decoration: line-through; color:var(--secondary)">Άθροισμα &lt;- 0</span> <span style="color:var(--success); font-size:0.85rem; margin-left:10px;"><i class="fa-solid fa-arrow-down"></i> Μεταφέρθηκε!</span>`,
+                    // Εισάγει τη νέα γραμμή στη σωστή θέση!
+                    extraFix: function() {
+                        const ed = document.getElementById('editor');
+                        const newLine = document.createElement('div');
+                        newLine.className = 'code-line success-flash';
+                        newLine.innerHTML = `  <span class="var">Άθροισμα</span> &lt;- <span class="num">0</span>`;
+                        // Εισαγωγή ανάμεσα στις δύο λούπες (δηλαδή πριν από τη 2η λούπα που είναι το 3ο στοιχείο [index 2])
+                        ed.insertBefore(newLine, ed.children[2]);
+                    }
+                },
                 { html: `<span class="kw">ΓΙΑ</span> <span class="var">i</span> <span class="kw">ΑΠΟ</span> <span class="num">1</span> <span class="kw">ΜΕΧΡΙ</span> <span class="num">5</span>`, isBug: false },
                 { html: `  <span class="kw">ΓΙΑ</span> <span class="var">j</span> <span class="kw">ΑΠΟ</span> <span class="num">1</span> <span class="kw">ΜΕΧΡΙ</span> <span class="num">12</span>`, isBug: false },
                 { html: `    <span class="var">Άθροισμα</span> &lt;- <span class="var">Άθροισμα</span> + ΕΣΟΔΑ[i, j]`, isBug: false },
@@ -428,7 +444,7 @@
                 { html: `  <span class="kw">ΓΡΑΨΕ</span> <span class="var">Άθροισμα</span>`, isBug: false },
                 { html: `<span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span>`, isBug: false }
             ],
-            solMsg: "Μπράβο! Όταν υπολογίζουμε αθροίσματα ανά γραμμή ενός πίνακα (ή για κάθε στοιχείο ξεχωριστά), η αρχικοποίηση πρέπει να γίνεται ακριβώς πριν την εσωτερική λούπα. Έτσι όπως ήταν, υπολόγιζε το γενικό σύνολο όλων!"
+            solMsg: "Μπράβο! Όταν υπολογίζουμε αθροίσματα ανά γραμμή ενός πίνακα, η αρχικοποίηση πρέπει να γίνεται ακριβώς πριν την εσωτερική λούπα. Έτσι όπως ήταν, υπολόγιζε το γενικό σύνολο όλων!"
         },
         '7': {
             desc: "Το τμήμα αλγορίθμου διαβάζει τα ΕΣΟΔΑ και τα ΕΞΟΔΑ μιας εταιρείας και τυπώνει 'ΖΗΜΙΑ' αν τα έξοδα είναι περισσότερα από τα έσοδα.",
@@ -638,6 +654,11 @@
             isWbFixed = true;
             activeLineEl.innerHTML = lineData.fixedHtml;
             activeLineEl.classList.add('success-flash');
+            
+            // ΝΕΟ: Αν υπάρχει έξτρα ενέργεια διόρθωσης (π.χ. προσθήκη νέας γραμμής), εκτέλεσέ την!
+            if (lineData.extraFix) {
+                lineData.extraFix();
+            }
             
             document.getElementById('wb-status').innerHTML = `<i class="fa-solid fa-check"></i> Code Resolved`;
             document.getElementById('wb-status').style.color = 'var(--success)';
