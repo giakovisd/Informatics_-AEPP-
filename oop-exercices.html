@@ -311,7 +311,7 @@
         {
             id: 1,
             title: "Ψηφιακό Περιεχόμενο",
-            text: "Σε μια πλατφόρμα υπάρχει <span class='hl'>ψηφιακό περιεχόμενο</span>:<br>- <span class='hl'>βίντεο</span> που έχει κωδικό, τίτλο, δημιουργό, γλώσσα, κόστος χρήσης, ανάλυση.<br>- <span class='hl'>ήχο</span> που έχει κωδικό, τίτλο, συνθέτη, ρυθμό δειγματοληψίας, κόστος χρήσης.<br>Το ψηφιακό περιεχόμενο μπορεί να ζητηθεί για <span class='hl'>μεταφόρτωση</span> (κοινό) και <span class='hl'>αναπαραγωγή</span>. <br><br><i>Η αναπαραγωγή υλοποιείται με διαφορετικό τρόπο στο βίντεο και στον ήχο</i>",
+            text: "Σε μια πλατφόρμα υπάρχει <span class='hl'>ψηφιακό περιεχόμενο</span>:<br>- <span class='hl'>βίντεο</span> που έχει κωδικό, τίτλο, δημιουργό, γλώσσα, κόστος χρήσης, ανάλυση.<br>- <span class='hl'>ήχος</span> που έχει κωδικός τίτλος συνθέτη, ρυθμό δειγματοληψίας, κόστος χρήσης.<br>Το ψηφιακό περιεχόμενο μπορεί να ζητηθεί για <span class='hl'>μεταφόρτωση</span> και <span class='hl'>αναπαραγωγή</span>. <br>Η αναπαραγωγή υλοποιείται με διαφορετικό τρόπο στο βίντεο και στον ήχο",
             chips: [
                 { id: "c1", text: "Ψηφιακό Περιεχόμενο", type: "class" },
                 { id: "c2", text: "Βίντεο", type: "class" },
@@ -480,12 +480,18 @@
         });
     });
 
-    // --- VALIDATION ---
+   // --- VALIDATION ---
     function checkAnswers() {
         const sol = SCENARIOS[currentScenario].solution;
         let allCorrect = true;
 
-        document.querySelectorAll('.chip').forEach(c => c.classList.remove('correct', 'wrong'));
+        // 1. Αφαιρούμε τις κλάσεις
+        const allChips = document.querySelectorAll('.chip');
+        allChips.forEach(c => c.classList.remove('correct', 'wrong'));
+
+        // 2. ΕΞΑΝΑΓΚΑΣΤΙΚΟ REFLOW: Λέμε στον browser να "σχεδιάσει" την αλλαγή 
+        // ώστε να μπορέσει να ξαναπαίξει το animation του κουνήματος!
+        void document.body.offsetWidth;
 
         for (const [zoneId, expectedIds] of Object.entries(sol)) {
             const zone = document.getElementById(zoneId);
@@ -505,7 +511,7 @@
             chipsInZone.forEach(chip => {
                 let isCorrect = false;
                 
-                // ΠΑΤΕΝΤΑ ΓΙΑ ΤΟΥΣ ΚΛΩΝΟΥΣ: Αφαιρούμε το "_0", "_1" για να βρούμε το αρχικό ID (π.χ. "m2")
+                // Αφαιρούμε το "_0", "_1" για να βρούμε το αρχικό ID (π.χ. "m2")
                 let baseId = chip.id.split('_')[0]; 
                 
                 if(!isSwapped) {
@@ -536,11 +542,15 @@
                                
         if(bankChips > 0) allCorrect = false;
 
+        // 3. Ξεκάθαρο Feedback
         if (allCorrect) {
             alert("Συγχαρητήρια! Το διάγραμμα είναι απόλυτα σωστό.");
+        } else {
+            // Αν θες να μην πετάει παράθυρο κάθε φορά που είναι λάθος, 
+            // μπορείς να σβήσεις το παρακάτω alert. Το animation πλέον θα δουλεύει!
+            // alert("Υπάρχουν ακόμα λάθη ή ελλείψεις. Προσπαθήστε ξανά!");
         }
     }
-
     // --- THEME ---
     function toggleTheme() {
         document.body.classList.toggle('dark-mode');
@@ -550,6 +560,4 @@
 
 </script>
 </body>
-
 </html>
-
