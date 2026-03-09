@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Στοίβα Χρόνου Εκτέλεσης</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            --header-bg: #e2e8f0;
+            --border-color: #cbd5e1;
+            
+            --main-prog-bg: #eff6ff; 
+            --sub-prog-bg: #f0fdf4;  
+            --sub2-prog-bg: #fffbeb;
+            
+            --btn-white-bg: #ffffff;
+            --btn-white-text: #1e293b;
+            --btn-white-border: #cbd5e1;
+            
+            --btn-blue: #3b82f6;
+            --btn-blue-hover: #2563eb;
+            
+            --code-kw: #0000CD;
+            --code-sym: #FF0000;
+            --code-txt: #000000;
+            --code-gray: #64748b;
+            
+            --accent: #8b5cf6;
+            --good: #10b981;
+            --warn: #f59e0b;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --text-color: #f8fafc;
+            --panel-bg: #1e293b;
+            --highlight-line: #b45309; 
+            --header-bg: #334155;
+            --border-color: #475569;
+            
+            --main-prog-bg: #1e3a8a; 
+            --sub-prog-bg: #064e3b;  
+            --sub2-prog-bg: #78350f;
+
+            --btn-white-bg: #334155;
+            --btn-white-text: #f8fafc;
+            --btn-white-border: #475569;
+
+            --code-kw: #60a5fa;
+            --code-sym: #f87171;
+            --code-txt: #f8fafc;
+            --code-gray: #94a3b8;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0; padding: 0;
+            height: 100vh;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* --- Header & Controls --- */
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.8rem 1.5rem; background-color: var(--header-bg);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .header-title { font-size: 1.2rem; font-weight: bold; display: flex; align-items: center; gap: 10px; }
+        .controls { display: flex; align-items: center; gap: 0.8rem; }
+        
+        button {
+            padding: 0.5rem 1rem; border: 1px solid var(--btn-white-border);
+            border-radius: 6px; background-color: var(--btn-white-bg);
+            color: var(--btn-white-text); cursor: pointer;
+            font-weight: 600; display: flex; align-items: center; gap: 0.5rem;
+            transition: 0.2s;
+        }
+        button:hover { filter: brightness(0.95); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-primary { background-color: var(--btn-blue); color: white; border: none; }
+        .btn-primary:hover { background-color: var(--btn-blue-hover); color: white; filter: none; }
+
+        .speed-control { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: 600; }
+        input[type="range"] { cursor: pointer; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex; gap: 1rem; padding: 1rem;
+            height: calc(100vh - 70px); box-sizing: border-box;
+        }
+        .col { background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden;}
+        .col-left { flex: 0.9; }
+        .col-mid { flex: 1.6; position: relative;}
+        .col-right { flex: 1.2; }
+        
+        .col-header {
+            padding: 0.8rem; font-weight: bold; text-align: center;
+            border-bottom: 1px solid var(--border-color); background-color: rgba(0,0,0,0.03);
+        }
+        .col-content { padding: 1.5rem; overflow-y: auto; flex-grow: 1; }
+
+        /* --- Text & Code Styles --- */
+        .problem-info { 
+            font-size: 1.05rem; line-height: 1.7; text-align: justify; 
+            padding-right: 10px;
+        }
+        
+        .code-block { font-family: 'Consolas', monospace; font-size: 0.95rem; margin-bottom: 1.5rem; border-radius: 6px; padding: 0.5rem; border: 1px solid var(--border-color); }
+        .code-block.main { background-color: var(--main-prog-bg); }
+        .code-block.sub1 { background-color: var(--sub-prog-bg); }
+        .code-block.sub2 { background-color: var(--sub2-prog-bg); }
+        
+        .code-line { padding: 4px 8px; border-radius: 4px; margin-bottom: 2px; border-left: 3px solid transparent; transition: background-color 0.2s; white-space: pre-wrap; }
+        .code-line.active { background-color: var(--highlight-line); border-left-color: #ca8a04; color: #000; font-weight: bold; }
+        
+        .kw { color: var(--code-kw); font-weight: bold; }
+        .sym { color: var(--code-sym); font-weight: bold; }
+        .txt { color: var(--code-txt); }
+        .gray { color: var(--code-gray); }
+
+        /* --- Narrative --- */
+        .narrative-box {
+            background-color: rgba(59, 130, 246, 0.1); border: 1px solid var(--btn-blue);
+            padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;
+            font-weight: 600; color: var(--text-color); text-align: center; min-height: 30px;
+            
+        }
+
+        /* --- Stack Styles --- */
+        .stack-area { display: flex; flex-direction: column; align-items: center; justify-content: center; flex-grow: 1; margin-bottom: 20px;}
+        .stack-wrapper { position: relative; padding-left: 60px; margin-top: 10px; }
+        .stack-container {
+            width: 190px; border: 4px solid var(--text-color); border-top: none;
+            background: rgba(0,0,0,0.03); display: flex; flex-direction: column-reverse;
+        }
+        .stack-cell {
+            height: 52px; border-top: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: center;
+            position: relative; background: var(--panel-bg);
+            font-weight: bold; font-size: 0.85rem; text-align: center; transition: background 0.3s;
+            line-height: 1.2;
+        }
+        .stack-cell.filled { background: var(--accent); color: white; }
+        .cell-num { position: absolute; right: -25px; color: var(--code-gray); font-weight: bold; font-size: 0.85rem; }
+        
+        #top-pointer {
+            position: absolute; left: 0; color: #dc2626; font-weight: bold; font-size: 1.2rem;
+            display: flex; align-items: center; gap: 6px; opacity: 0;
+            transition: bottom 1.5s ease-in-out, opacity 0.3s; bottom: 0;
+        }
+
+        /* --- Animations --- */
+        @keyframes pulseDouble {
+            0%   { transform: scale(1);   background: var(--warn); color: #000; }
+            30%  { transform: scale(1.5); background: var(--warn); color: #000; box-shadow: 0 10px 15px rgba(0,0,0,0.2); }
+            70%  { transform: scale(1.5); background: var(--warn); color: #000; box-shadow: 0 10px 15px rgba(0,0,0,0.2); }
+            100% { transform: scale(1);   background: transparent; color: inherit; }
+        }
+        .pulse-double {
+            animation: pulseDouble 2s ease-in-out; position: relative;
+            z-index: 50; transform-origin: center left; 
+        }
+
+        .floating-token {
+            position: fixed; background: var(--accent); color: white;
+            padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 0.85rem;
+            z-index: 100000; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            text-align: center; line-height: 1.2;
+        }
+
+        /* --- Output Screen --- */
+        .output-screen {
+            background-color: #000; color: #10b981; font-family: 'Consolas', monospace;
+            padding: 1rem; border-radius: 6px; height: 120px; overflow-y: auto; font-size: 0.95rem;
+            box-sizing: border-box; border: 2px solid #333;
+        }
+        .output-line { margin-bottom: 0.5rem; border-left: 2px solid #10b981; padding-left: 8px;}
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title"><i class="fa-solid fa-layer-group"></i> Στοίβα Χρόνου Εκτέλεσης</div>
+        
+        <div class="controls">
+            <button onclick="resetSim()"><i class="fa-solid fa-rotate-right"></i> Αρχή</button>
+            <button id="btnPlay" class="btn-primary" onclick="play()"><i class="fa-solid fa-play"></i> Αυτόματη Εκτέλεση</button>
+            <button id="btnStep" onclick="executeStep()"><i class="fa-solid fa-forward-step"></i> Βήμα</button>
+            <div class="speed-control" style="margin-left: 10px; margin-right: 10px;">
+                <i class="fa-solid fa-gauge-high"></i>
+                <input type="range" id="speedSlider" min="500" max="4000" step="100" value="3000" onchange="updateSpeed()">
+            </div>
+            <button id="themeToggle" onclick="toggleTheme()" title="Εναλλαγή Θέματος"><i class="fa-solid fa-moon"></i></button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        
+        <div class="col col-left">
+            <div class="col-header">Εκφώνηση</div>
+            <div class="col-content">
+                <div class="problem-info">
+                    Μια εταιρεία έδωσε αύξηση 200€ στο μισθό ενός υπαλλήλου. Στο μισθό που προκύπτει μετά την αύξηση υπάρχουν κρατήσεις 20%. Να γραφεί πρόγραμμα που θα διαβάζει το μισθό ενός υπαλλήλου και θα εμφανίζει το μισθό του, μετά την προσθήκη των 200€ και την αφαίρεση των κρατήσεων.
+                    <br><br>
+                    Για το σκοπό αυτό να γραφεί μια διαδικασία Υπολ_Μικτών που θα δέχεται το μισθό, θα υπολογίζει την αύξηση, τις κρατήσεις μετά την αύξηση και θα επιστρέφει το νέο μισθό. 
+                    <br><br>
+                    Για τον υπολογισμό των κρατήσεων, η διαδικασία Υπολ_Μικτών, να καλεί τη διαδικασία Υπολ_Κρατήσεων, η οποία θα δέχεται το ποσό μετά την αύξηση, θα υπολογίζει και εμφανίζει τις κρατήσεις και θα επιστρέφει τις κρατήσεις.
+                </div>
+            </div>
+        </div>
+
+        <div class="col col-mid">
+            <div class="col-header">Λύση (Κώδικας)</div>
+            
+            <div style="padding: 1rem 1.5rem 0 1.5rem; background: var(--panel-bg); z-index: 10;">
+                <div class="narrative-box" id="narrativeBox" style="margin-bottom: 0;">Πατήστε "Βήμα" ή "Αυτόματη Εκτέλεση" για να ξεκινήσετε.</div>
+            </div>
+
+            <div class="col-content" style="padding-top: 1rem;">
+                
+                <div class="code-block main">
+                    <div class="code-line" id="line-m1"><span class="kw">ΠΡΟΓΡΑΜΜΑ</span> <span class="txt">Μισθοδοσία</span></div>
+                    <div class="code-line gray">ΜΕΤΑΒΛΗΤΕΣ</div>
+                    <div class="code-line gray">  ΠΡΑΓΜΑΤΙΚΕΣ: μισθος</div>
+                    <div class="code-line gray">ΑΡΧΗ</div>
+                    <div class="code-line" id="line-m2">  <span class="kw">ΔΙΑΒΑΣΕ</span> μισθος</div>
+                    <div class="code-line" id="line-m3">  <span class="kw">ΚΑΛΕΣΕ</span> <span class="txt">Υπολ_μισθού(μισθος)</span></div>
+                    <div class="code-line" id="line-m4">  <span class="kw">ΓΡΑΨΕ</span> <span class="txt">'Ο υπάλληλος έχει μισθό:', μισθος</span></div>
+                    <div class="code-line" id="line-m5"><span class="kw">ΤΕΛΟΣ_ΠΡΟΓΡΑΜΜΑΤΟΣ</span></div>
+                </div>
+
+                <div class="code-block sub1">
+                    <div class="code-line" id="line-s1-1"><span class="kw">ΔΙΑΔΙΚΑΣΙΑ</span> <span class="txt">Υπολ_μισθού(Ποσό)</span></div>
+                    <div class="code-line gray">ΜΕΤΑΒΛΗΤΕΣ</div>
+                    <div class="code-line gray">  ΠΡΑΓΜΑΤΙΚΕΣ: Ποσό, Μικτά, κρατήσεις</div>
+                    <div class="code-line gray">ΑΡΧΗ</div>
+                    <div class="code-line" id="line-s1-2">  Μικτά <span class="sym">&larr;</span> Ποσό <span class="sym">+</span> 200</div>
+                    <div class="code-line" id="line-s1-3">  <span class="kw">ΚΑΛΕΣΕ</span> <span class="txt">Υπολ_Κρατήσεων(Μικτά, κρατήσεις)</span></div>
+                    <div class="code-line" id="line-s1-4">  ποσο <span class="sym">&larr;</span> μικτά <span class="sym">-</span> κρατήσεις</div>
+                    <div class="code-line" id="line-s1-5"><span class="kw">ΤΕΛΟΣ_ΔΙΑΔΙΚΑΣΙΑΣ</span></div>
+                </div>
+
+                <div class="code-block sub2">
+                    <div class="code-line" id="line-s2-1"><span class="kw">ΔΙΑΔΙΚΑΣΙΑ</span> <span class="txt">Υπολ_Κρατήσεων(Χρήματα, κρατήσεις)</span></div>
+                    <div class="code-line gray">ΜΕΤΑΒΛΗΤΕΣ</div>
+                    <div class="code-line gray">  ΠΡΑΓΜΑΤΙΚΕΣ: Χρήματα, κρατήσεις</div>
+                    <div class="code-line gray">ΑΡΧΗ</div>
+                    <div class="code-line" id="line-s2-2">  κρατήσεις <span class="sym">&larr;</span> Χρήματα <span class="sym">*</span> 0.20</div>
+                    <div class="code-line" id="line-s2-3">  <span class="kw">ΓΡΑΨΕ</span> κρατήσεις</div>
+                    <div class="code-line" id="line-s2-4"><span class="kw">ΤΕΛΟΣ_ΔΙΑΔΙΚΑΣΙΑΣ</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col col-right">
+            <div class="col-header">Στοίβα & Έξοδος</div>
+            <div class="col-content" style="display:flex; flex-direction:column; padding: 1rem;">
+                
+                <div class="stack-area">
+                    <h3 style="margin-top:0; font-size: 1rem;">Στοίβα Χρόνου Εκτέλεσης</h3>
+                    <div class="stack-wrapper">
+                        <div id="top-pointer">TOP <i class="fa-solid fa-arrow-right"></i></div>
+                        <div class="stack-container" id="runStack">
+                            <div class="stack-cell" id="cell-1"><span class="cell-val"></span><span class="cell-num">1</span></div>
+                            <div class="stack-cell" id="cell-2"><span class="cell-val"></span><span class="cell-num">2</span></div>
+                            <div class="stack-cell" id="cell-3"><span class="cell-val"></span><span class="cell-num">3</span></div>
+                            <div class="stack-cell" id="cell-4"><span class="cell-val"></span><span class="cell-num">4</span></div>
+                        </div>
+                    </div>
+                    <div style="margin-top:5px; font-weight:bold; color:var(--text-color); border-top: 2px solid var(--border-color); padding-top:5px; width:190px; text-align:center; margin-left:60px;">Βάση Στοίβας</div>
+                </div>
+
+                <h3 style="margin-top:10px; margin-bottom: 5px; font-size: 1rem;">Οθόνη Εξόδου (Κονσόλα)</h3>
+                <div class="output-screen" id="outputScreen">
+                    <div style="color: #64748b; margin-bottom: 10px;">> Αναμονή εκτέλεσης...</div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Θέμα και Ταχύτητα ---
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            const icon = document.body.classList.contains('dark-mode') ? 'fa-sun' : 'fa-moon';
+            document.getElementById('themeToggle').innerHTML = `<i class="fa-solid ${icon}"></i>`;
+        }
+
+        let speed = 1500;
+        function updateSpeed() {
+            var sliderVal = parseInt(document.getElementById('speedSlider').value);
+            speed = 4500 - sliderVal; 
+            if (speed < 150) speed = 150;
+        }
+        updateSpeed();
+
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        // --- Βοηθητικές Συναρτήσεις UI ---
+        function highlight(id) {
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+            if(id) document.getElementById(id).classList.add('active');
+            
+            const el = document.getElementById(id);
+            // Προστέθηκε το inline: 'nearest' για να σταματήσει το οριζόντιο κούνημα!
+            if(el) el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+        }
+
+        function setNarrative(text) {
+            document.getElementById('narrativeBox').innerHTML = text;
+        }
+
+        function printConsole(text) {
+            const out = document.getElementById('outputScreen');
+            out.innerHTML += `<div class="output-line">> ${text}</div>`;
+            out.scrollTop = out.scrollHeight;
+        }
+
+        async function pulseLine(id) {
+            const el = document.getElementById(id);
+            if(el) {
+                el.classList.add('pulse-double');
+                await sleep(2000);
+                el.classList.remove('pulse-double');
+            }
+        }
+
+        // --- Λογική Στοίβας ---
+        let stackCount = 0;
+
+        function updatePointer() {
+            const ptr = document.getElementById('top-pointer');
+            if (stackCount === 0) {
+                ptr.style.opacity = '0';
+            } else {
+                ptr.style.opacity = '1';
+                let offset = (stackCount - 1) * 53 + 13; // 52px height + 1 border
+                ptr.style.bottom = offset + 'px';
+            }
+        }
+
+        function fillCell(pos, text) {
+            const cell = document.getElementById('cell-' + pos);
+            if(cell) {
+                cell.classList.add('filled');
+                cell.querySelector('.cell-val').innerHTML = text;
+            }
+        }
+
+        function clearCell(pos) {
+            const cell = document.getElementById('cell-' + pos);
+            if(cell) {
+                cell.classList.remove('filled');
+                cell.querySelector('.cell-val').innerHTML = '';
+            }
+        }
+
+        // --- ANIMATION (Αναβαθμισμένο) ---
+       // --- ANIMATION (Αναβαθμισμένο για εκκίνηση/κατάληξη στην ΑΡΧΗ της εντολής) ---
+        function animateMove(startId, endId, text, type, midCallback) {
+            return new Promise(async resolve => {
+                const startEl = document.getElementById(startId);
+                const endEl = document.getElementById(endId);
+                const stackCont = document.querySelector('.stack-container');
+                if(!startEl || !endEl || !stackCont) { resolve(); return; }
+
+                const rect1 = startEl.getBoundingClientRect();
+                const rect2 = endEl.getBoundingClientRect();
+                const stackRect = stackCont.getBoundingClientRect();
+
+                const token = document.createElement('div');
+                token.className = 'floating-token';
+                token.innerHTML = text;
+                
+                // Υπολογισμός Συντεταγμένων:
+                // Αν είναι PUSH: Ξεκινάει από την αρχή της εντολής (αριστερά + 60px) και πάει στο κέντρο της στοίβας.
+                // Αν είναι POP: Ξεκινάει από το κέντρο της στοίβας και πάει στην αρχή της εντολής (αριστερά + 60px).
+                const startX = (type === 'push') ? rect1.left + 60 : rect1.left + rect1.width / 2;
+                const startY = rect1.top + rect1.height / 2;
+                const endX = (type === 'push') ? rect2.left + rect2.width / 2 : rect2.left + 60;
+                const endY = rect2.top + rect2.height / 2;
+
+                const stackX = (type === 'push') ? endX : startX;
+                const flightY = stackRect.top - 60; 
+
+                token.style.left = startX + 'px';
+                token.style.top = startY + 'px';
+                token.style.opacity = '1';
+                token.style.transform = 'translate(-50%, -50%) scale(1)';
+                
+                document.body.appendChild(token);
+                token.getBoundingClientRect(); 
+
+                if (type === 'push') {
+                    // Εξαγωγή (Γλιστράει δεξιά έξω από τον κώδικα)
+                    token.style.transition = 'all 1.0s ease-out';
+                    token.style.left = (startX + 260) + 'px'; 
+                    await sleep(2000);
+
+                    if(midCallback) {
+                        midCallback();
+                        await sleep(1000); 
+                    }
+
+                    // Πτήση
+                    token.style.transition = 'all 1.5s cubic-bezier(0.25, 1, 0.5, 1)';
+                    token.style.top = flightY + 'px';
+                    await sleep(1000);
+                    
+                    token.style.left = stackX + 'px';
+                    await sleep(1000);
+                    
+                    token.style.top = endY + 'px';
+                    await sleep(1000);
+                } else { // POP
+                    token.style.transition = 'all 1.5s cubic-bezier(0.25, 1, 0.5, 1)';
+                    token.style.top = flightY + 'px';
+                    await sleep(1000);
+                    
+                    // Πάει και "προσγειώνεται" ακριβώς στην ΑΡΧΗ της εντολής
+                    token.style.left = endX + 'px';
+                    await sleep(1000);
+                    
+                    token.style.top = endY + 'px';
+                    await sleep(1000);
+                }
+
+                token.remove();
+                resolve();
+            });
+        }
+
+        // --- Κινητήρας Εκτέλεσης (Σπασμένος σε 19 Βήματα) ---
+        let stepIdx = 0;
+        let dynMisthos = 0, dynMikta = 0, dynKratiseis = 0, dynKathara = 0;
+        let isPlaying = false;
+        let isAnimating = false;
+        let timer = null;
+
+        async function executeStep() {
+            if (isAnimating || stepIdx > 19) return;
+            isAnimating = true;
+            document.getElementById('btnStep').disabled = true;
+
+            switch(stepIdx) {
+                case 0:
+                    highlight('line-m1');
+                    setNarrative("Έναρξη εκτέλεσης. Ο έλεγχος στο Κύριο Πρόγραμμα.");
+                    break;
+                case 1:
+                    // Παράγει έναν τυχαίο μισθό από 800 έως 2000 (ανά 100)
+                    dynMisthos = Math.floor(Math.random() * 13 + 8) * 100;
+                    dynMikta = dynMisthos + 200;
+                    dynKratiseis = dynMikta * 0.20;
+                    dynKathara = dynMikta - dynKratiseis;
+                    
+                    highlight('line-m2');
+                    setNarrative(`Διαβάζεται ο μισθός. Εστω ότι ο χρήστης πληκτρολογεί ως μισθό: <b>${dynMisthos}€</b>.`);
+                    printConsole(`Είσοδος: μισθος = ${dynMisthos}`);
+                    break;
+                
+                // === ΠΡΩΤΗ ΚΛΗΣΗ (Σπασμένη σε 3 φάσεις) ===
+                case 2:
+                    highlight('line-m3');
+                    setNarrative("Εκτελείται η εντολή ΚΑΛΕΣΕ. Η εκτέλεση του προγράμματος <b>θα διακοπεί</b>, ώστε να εκτελεστούν οι εντολές της διαδικασίας. Πριν περάσει ο έλεγχος στη διαδικασία, εντοπίζεται η διεύθυνση επιστροφής.");
+                    break;
+                case 3:
+                    highlight('line-m4');
+                    setNarrative("<b>Εντοπισμός της διεύθυνσης επιστροφής!</b> Είναι η διεύθυνση της επόμενης εντολής.");
+                    await pulseLine('line-m4');
+                    break;
+                case 4:
+                    setNarrative("Η διεύθυνση επιστροφής <b>ωθείται (PUSH)</b> στη στοίβα...");
+                    const inc1 = () => {
+                        setNarrative("Ο δείκτης&nbsp;<b>top</b>&nbsp;αυξάνεται (top &larr; top + 1).");
+                        stackCount++; updatePointer();
+                    };
+                    // Εδώ αλλάξαμε το όνομα σε "Διεύθυνση α"
+                    await animateMove('line-m4', 'cell-' + (stackCount+1), "<br><b>α</b>", 'push', inc1);
+                    
+                    setNarrative("Αποθηκεύτηκε επιτυχώς! Τώρα εκτελούνται οι εντολές της διαδικασίας.");
+                    fillCell(stackCount, "<br><b>α</b>");
+                    break;
+                
+                // === ΜΕΣΑ ΣΤΗ ΔΙΑΔΙΚΑΣΙΑ 1 ===
+                case 5:
+                    highlight('line-s1-1');
+                    setNarrative("Ο έλεγχος μεταφέρθηκε στη&nbsp;<b>Διαδικασία Υπολ_μισθού</b>.");
+                    break;
+                case 6:
+                    highlight('line-s1-2');
+                    setNarrative(`Υπολογισμός: Προστίθεται η αύξηση των 200€.<br>Μικτά &larr; ${dynMisthos} + 200 = ${dynMikta}`);
+                    break;
+
+                // === ΔΕΥΤΕΡΗ ΚΛΗΣΗ (Σπασμένη σε 3 φάσεις) ===
+                case 7:
+                    highlight('line-s1-3');
+                    setNarrative("Νέα εντολή ΚΑΛΕΣΕ! Η εκτέλεση της διαδικασίας <b>διακόπτεται</b>. Πριν περάσει ο έλεγχος στη διαδικασία, εντοπίζεται η διεύθυνση επιστροφής.");
+                    break;
+                case 8:
+                    highlight('line-s1-4');
+                    setNarrative("Εντόπισε τη νέα <b>διεύθυνση επιστροφής!</b> Είναι η διεύθυνση της επόμενης εντολής! ");
+                    await pulseLine('line-s1-4');
+                    break;
+               case 9:
+                    setNarrative("Η νέα διεύθυνση <b>ωθείται (PUSH)</b> στη στοίβα.");
+                    const inc2 = () => {
+                        setNarrative("Ο δείκτης&nbsp;<b>top</b>&nbsp;αυξάνεται ξανά (top &larr; top + 1).");
+                        stackCount++; updatePointer();
+                    };
+                    // Εδώ αλλάξαμε το όνομα σε "Διεύθυνση β"
+                    await animateMove('line-s1-4', 'cell-' + (stackCount+1), "<br><b>β</b>", 'push', inc2);
+                    
+                    setNarrative("Η δεύτερη διεύθυνση αποθηκεύτηκε! Ο έλεγχος μεταφέρεται στη διαδικασία.");
+                    fillCell(stackCount, "<br><b>β</b>");
+                    break;
+
+                // === ΜΕΣΑ ΣΤΗ ΔΙΑΔΙΚΑΣΙΑ 2 ===
+                case 10:
+                    highlight('line-s2-1');
+                    setNarrative("Ο έλεγχος πέρασε στη&nbsp;<b>Διαδικασία Υπολ_Κρατήσεων</b>.");
+                    break;
+                case 11:
+                    highlight('line-s2-2');
+                    setNarrative(`Υπολογισμός: Οι κρατήσεις είναι το 20% των Μικτών (${dynMikta}).<br>κρατήσεις &larr; ${dynMikta} * 0.20 = ${dynKratiseis}`);
+                    break;
+               case 12:
+                    highlight('line-s2-3');
+                    setNarrative("Εκτύπωση του ποσού των κρατήσεων.");
+                    printConsole(`${dynKratiseis}`);
+                    break;
+
+                // === POP 1 ===
+                case 13:
+                    highlight('line-s2-4');
+                    setNarrative("Η Διαδικασία τερματίζει. Θα γίνει&nbsp;<b>απώθηση (POP)</b>&nbsp;από τη στοίβα της διεύθυνσης που πρέπει να επιστρέψει ο έλεγχος του προγράμαμτος.");
+                    break;
+                case 14:
+                    setNarrative("Η διεύθυνση απωθείται (POP) και ο έλεγχος του προγράμματος πηγαίνει στην εντολή που έχει διεύθυνση, τη διεύθυνση που απωθήθηκε.");
+                    let pop1 = stackCount;
+                    clearCell(pop1);
+                    // Εδώ αλλάξαμε το όνομα σε "Διεύθυνση β"
+                    await animateMove('cell-' + pop1, 'line-s1-4', "<br><b>β</b>", 'pop');
+                    
+                    const s1_4 = document.getElementById('line-s1-4');
+                    s1_4.style.backgroundColor = "var(--good)"; s1_4.style.color = "#fff";
+                    await sleep(1500); s1_4.style.backgroundColor = ""; s1_4.style.color = "";
+                    
+                    setNarrative("Ο δείκτης&nbsp;<b>top</b>&nbsp;μειώθηκε. Κατά την απώθηση της διεύθυνσης επιστροφής, εντοπίζεται η εντολή που πρέπει να εκτελεστεί");
+                    stackCount--; updatePointer();
+                    highlight('line-s1-4');
+                    break;
+                case 15:
+                    setNarrative(`Εκτελείται η εντολή στην οποία επιστρέψαμε (αφαίρεση κρατήσεων).<br>ποσο &larr; ${dynMikta} - ${dynKratiseis} = ${dynKathara}`);
+                    break;
+
+                // === POP 2 ===
+                case 16:
+                    highlight('line-s1-5');
+                    setNarrative("Η Διαδικασία τερματίζει.&nbsp;<b>Απώθηση (POP)</b>&nbsp;της τελευταίας διεύθυνσης από τη στοίβα.");
+                    break;
+               case 17:
+                    setNarrative("Η διεύθυνση απωθείται (POP) και ο έλεγχος του προγράμματος πηγαίνει στην εντολή που έχει διεύθυνση, τη διεύθυνση που απωθήθηκε.");
+                    let pop2 = stackCount;
+                    clearCell(pop2);
+                    // Εδώ αλλάξαμε το όνομα σε "Διεύθυνση α"
+                    await animateMove('cell-' + pop2, 'line-m4', "<br><b>α</b>", 'pop');
+                    
+                    const m4 = document.getElementById('line-m4');
+                    m4.style.backgroundColor = "var(--good)"; m4.style.color = "#fff";
+                    await sleep(1500); m4.style.backgroundColor = ""; m4.style.color = "";
+                    
+                    setNarrative("Ο δείκτης&nbsp;<b>top</b>&nbsp;μειώθηκε. Επιστροφή στο Κύριο Πρόγραμμα!");
+                    stackCount--; updatePointer();
+                    highlight('line-m4');
+                    break;
+                case 18:
+                    setNarrative("Εκτελείται η τελευταία εντολή. Εκτύπωση τελικού μισθού.");
+                    printConsole(`Ο υπάλληλος έχει μισθό: ${dynKathara}`);
+                    break;
+                case 19:
+                    highlight('line-m5');
+                    setNarrative("Η εκτέλεση ολοκληρώθηκε. Η στοίβα άδειασε εντελώς!");
+                    document.getElementById('btnPlay').innerHTML = '<i class="fa-solid fa-play"></i> Αυτόματη Εκτέλεση';
+                    isPlaying = false;
+                    break;
+            }
+
+            stepIdx++;
+            isAnimating = false;
+            document.getElementById('btnStep').disabled = false;
+
+            if (isPlaying && stepIdx <= 19) {
+                timer = setTimeout(executeStep, speed);
+            }
+        }
+
+        function play() {
+            if (isAnimating) return;
+            if (stepIdx > 19) resetSim();
+            
+            if (!isPlaying) {
+                isPlaying = true;
+                document.getElementById('btnPlay').innerHTML = '<i class="fa-solid fa-pause"></i> Παύση';
+                executeStep();
+            } else {
+                isPlaying = false;
+                clearTimeout(timer);
+                document.getElementById('btnPlay').innerHTML = '<i class="fa-solid fa-play"></i> Αυτόματη Εκτέλεση';
+            }
+        }
+
+        function resetSim() {
+            isPlaying = false;
+            isAnimating = false;
+            clearTimeout(timer);
+            stepIdx = 0;
+            stackCount = 0;
+            
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+            document.getElementById('btnPlay').innerHTML = '<i class="fa-solid fa-play"></i> Αυτόματη Εκτέλεση';
+            document.getElementById('btnStep').disabled = false;
+            
+            for(let i=1; i<=4; i++) clearCell(i);
+            updatePointer();
+            
+            setNarrative('Πατήστε "Βήμα" ή "Αυτόματη Εκτέλεση" για να ξεκινήσετε.');
+            document.getElementById('outputScreen').innerHTML = '<div style="color: #64748b; margin-bottom: 10px;">> Αναμονή εκτέλεσης...</div>';
+            
+            document.querySelector('.col-mid .col-content').scrollTop = 0;
+        }
+    </script>
+</body>
+</html>
