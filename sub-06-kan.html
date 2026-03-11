@@ -298,7 +298,7 @@
         
         <div class="slider-container">
             <span>Ταχύτητα:</span>
-            <input type="range" min="500" max="6000" value="4500" id="speedSlider" oninput="updateSpeed()">
+            <input type="range" min="500" max="6100" value="5500" id="speedSlider" oninput="updateSpeed()">
         </div>
     </div>
 </header>
@@ -363,12 +363,18 @@
 <script>
     const CODE_HTML = [
         `ΠΡΟΓΡΑΜΜΑ Κύριο`,
+        `<span style="color: #64748b;">ΜΕΤΑΒΛΗΤΕΣ</span>`,
+        `<span style="color: #64748b;">  ΑΚΕΡΑΙΕΣ: Α, Β, Γ</span>`,
+        `<span style="color: #64748b;">ΑΡΧΗ</span>`,
         `  ΔΙΑΒΑΣΕ Α, Β, Γ`,
         `  ΚΑΛΕΣΕ Διαδ1(<span id="c-main-A" class="param-token main">Α</span>, <span id="c-main-B" class="param-token main">Β</span>, <span id="c-main-G" class="param-token main">Γ</span>)`,
         `  ΓΡΑΨΕ Α, Β, Γ`,
         `ΤΕΛΟΣ_ΠΡΟΓΡΑΜΜΑΤΟΣ`,
         ``,
         `ΔΙΑΔΙΚΑΣΙΑ Διαδ1(<span id="c-proc-B" class="param-token proc">Β</span>, <span id="c-proc-A" class="param-token proc">Α</span>, <span id="c-proc-G" class="param-token proc">Γ</span>)`,
+        `<span style="color: #64748b;">ΜΕΤΑΒΛΗΤΕΣ</span>`,
+        `<span style="color: #64748b;">  ΑΚΕΡΑΙΕΣ: Α, Β, Γ</span>`,
+        `<span style="color: #64748b;">ΑΡΧΗ</span>`,
         `  Α ← Α + 2`,
         `  Β ← Β - 3`,
         `  Γ ← Α + Β`,
@@ -426,12 +432,12 @@
 
     function calcSteps() {
         steps = [];
-        // 1. Init
-        steps.push({ line: 1, type: 'init', vals: {A: 5, B: 7, G: 10}, msg: "Διάβασμα: Α=5, Β=7, Γ=10" });
+        // 1. Init (Ξεκινάει απευθείας στη γραμμή 4 που είναι το ΔΙΑΒΑΣΕ)
+        steps.push({ line: 4, type: 'init', vals: {A: 5, B: 7, G: 10}, msg: "Διάβασμα: Α=5, Β=7, Γ=10" });
 
-        // 2. Call
+        // 2. Call (Μετατοπίστηκε στη γραμμή 5)
         steps.push({ 
-            line: 2, type: 'transfer', 
+            line: 5, type: 'transfer', 
             direction: 'in', 
             mapping: [
                 {from: 'c-main-A', to: 'c-proc-B', val: 5, targetStack: 'stack-proc-B'},
@@ -441,15 +447,15 @@
             msg: "Κλήση: Αντιστοίχιση Πραγματικών (Κύριο) -> Τυπικών (Διαδικασία)" 
         });
 
-        // 3. Proc Logic
-        steps.push({ line: 7, type: 'update', var: 'proc-A', val: 9, msg: "Α ← 7 + 2 = 9" });
-        steps.push({ line: 8, type: 'update', var: 'proc-B', val: 2, msg: "Β ← 5 - 3 = 2" });
-        steps.push({ line: 9, type: 'update', var: 'proc-G', val: 11, msg: "Γ ← 9 + 2 = 11" });
-        steps.push({ line: 10, type: 'print', txt: "9, 2, 11", msg: "Εκτύπωση (Διαδικασία)" });
+        // 3. Proc Logic (Μετατοπίστηκαν λόγω των νέων δηλώσεων)
+        steps.push({ line: 13, type: 'update', var: 'proc-A', val: 9, msg: "Α ← 7 + 2 = 9" });
+        steps.push({ line: 14, type: 'update', var: 'proc-B', val: 2, msg: "Β ← 5 - 3 = 2" });
+        steps.push({ line: 15, type: 'update', var: 'proc-G', val: 11, msg: "Γ ← 9 + 2 = 11" });
+        steps.push({ line: 16, type: 'print', txt: "9, 2, 11", msg: "Εκτύπωση (Διαδικασία)" });
 
         // 4. Return
         steps.push({
-            line: 11, type: 'transfer',
+            line: 17, type: 'transfer',
             direction: 'out', 
             mapping: [
                 {from: 'c-proc-B', to: 'c-main-A', val: 2, targetStack: 'stack-main-A'},
@@ -459,7 +465,7 @@
             msg: "Επιστροφή: Οι τιμές επιστρέφουν στις μεταβλητές του Κυρίου."
         });
 
-        steps.push({ line: 3, type: 'print', txt: "2, 9, 11", msg: "Εκτύπωση (Κύριο)" });
+        steps.push({ line: 6, type: 'print', txt: "2, 9, 11", msg: "Εκτύπωση (Κύριο)" });
     }
 
     function updateVar(varId, val) {
@@ -653,11 +659,17 @@
         speed = 6500 - sliderVal;
     }
 
-    function toggleCode() {
-        const codePanel = document.querySelector('.col-code');
-        codePanel.classList.toggle('hidden');
-        const btn = document.getElementById('btnCode');
-        btn.innerText = codePanel.classList.contains('hidden') ? "👁️ Εμφάνιση Κώδικα" : "👁️ Απόκρυψη Κώδικα";
+   function updateSpeed() {
+        var sliderVal = parseInt(document.getElementById('speedSlider').value);
+        
+        // Μειώσαμε το 6500 σε 6100 για να ελαχιστοποιήσουμε την αναμονή
+        speed = 6100 - sliderVal;
+        
+        // Όριο ασφαλείας: Η ταχύτητα δεν πρέπει να πέσει κάτω από 150ms 
+        // για να μην επικαλύπτονται οι εντολές πριν τελειώσει το animation.
+        if (speed < 150) {
+            speed = 150;
+        }
     }
 
     init();
