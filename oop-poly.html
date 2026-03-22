@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OOP - Εργαστήριο Πολυμορφισμού</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --header-bg: #e2e8f0;
+            --border-color: #cbd5e1;
+            
+            --btn-blue: #3b82f6;
+            --btn-blue-hover: #2563eb;
+            
+            --accent: #8b5cf6; 
+            --good: #10b981;
+            --warn: #f59e0b;
+            --info: #0ea5e9;
+            --sender-color: #475569;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --text-color: #f8fafc;
+            --panel-bg: #1e293b;
+            --header-bg: #334155;
+            --border-color: #475569;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color); color: var(--text-color);
+            margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* --- A11y --- */
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0; }
+
+        /* --- Header --- */
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.8rem 1.5rem; background-color: var(--header-bg);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .header-title { font-size: 1.2rem; font-weight: bold; display: flex; align-items: center; gap: 10px; color: var(--accent); }
+        .controls { display: flex; align-items: center; gap: 0.8rem; }
+        
+        button {
+            padding: 0.6rem 1.2rem; border: 1px solid var(--border-color);
+            border-radius: 6px; background-color: var(--panel-bg);
+            color: var(--text-color); cursor: pointer; font-weight: 600; 
+            display: flex; align-items: center; gap: 0.5rem; transition: 0.2s;
+        }
+        button:hover:not(:disabled) { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-primary { background-color: var(--accent); color: white; border: none; font-size: 1.05rem; padding: 12px 20px;}
+        .btn-primary:hover:not(:disabled) { background-color: #7c3aed; color: white; }
+
+        /* --- Main Layout --- */
+        .main-container { display: flex; gap: 1rem; padding: 1rem; height: calc(100vh - 70px); box-sizing: border-box; }
+        .col { background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden;}
+        
+        .col-left { flex: 0.8; min-width: 250px;}
+        .col-mid { flex: 2.2; position: relative; min-width: 500px;}
+        .col-right { flex: 1; min-width: 300px;}
+
+        .col-header { padding: 0.8rem; font-weight: bold; text-align: center; border-bottom: 1px solid var(--border-color); background-color: rgba(0,0,0,0.03); color: var(--text-color); }
+        .col-content { padding: 1.2rem; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column;}
+
+        /* --- Scenarios Tabs --- */
+        .tabs { display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px;}
+        .tab { padding: 10px; cursor: pointer; font-weight: bold; border: 1px solid var(--border-color); border-radius: 6px; color: var(--code-gray); transition: 0.2s; display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.02); font-size: 0.9rem;}
+        .tab:hover:not(.active) { border-color: var(--accent); color: var(--text-color); }
+        .tab.active { color: var(--accent); border-color: var(--accent); background: rgba(139, 92, 246, 0.05); border-left: 5px solid var(--accent);}
+
+        .theory-box { background: rgba(14, 165, 233, 0.05); border-left: 4px solid var(--info); padding: 12px; border-radius: 4px; font-size: 0.9rem; line-height: 1.5; margin-bottom: 15px;}
+        .theory-hl { font-weight: bold; color: var(--info); margin-bottom: 6px; display: block;}
+
+        /* --- Canvas (Middle) --- */
+        .canvas-area { flex-grow: 1; display: flex; flex-direction: column; position: relative; background-image: radial-gradient(var(--border-color) 1px, transparent 1px); background-size: 20px 20px; overflow: hidden;}
+        
+        .network-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+        .net-line { stroke: var(--border-color); stroke-width: 2; stroke-dasharray: 5, 5; fill: none; transition: stroke 0.3s ease; }
+        .net-line.active { stroke: var(--accent); stroke-dasharray: none; stroke-width: 3; }
+
+        /* Sender Node */
+        .sender-node {
+            position: absolute; top: 8%; left: 50%; transform: translateX(-50%); z-index: 10;
+            background: var(--panel-bg); border: 2px solid var(--sender-color); border-radius: 12px;
+            padding: 15px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 220px;
+        }
+        .sender-title { font-weight: bold; color: var(--sender-color); margin-bottom: 8px; font-size: 0.9rem; text-transform: uppercase;}
+        .msg-lock { background: rgba(139, 92, 246, 0.1); color: var(--accent); border: 1px dashed var(--accent); padding: 8px; border-radius: 6px; font-family: monospace; font-weight: bold; font-size: 1rem;}
+
+        /* Receiver Nodes */
+        .receivers-container { position: absolute; bottom: 10%; left: 0; width: 100%; display: flex; justify-content: space-evenly; z-index: 10; padding: 0 10px; box-sizing: border-box;}
+        
+        .receiver-node {
+            background: var(--panel-bg); border: 2px solid var(--border-color); border-radius: 8px;
+            padding: 12px 8px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            width: 165px; transition: all 0.3s; position: relative; cursor: pointer;
+        }
+        .receiver-node:hover { transform: translateY(-5px); border-color: var(--info); box-shadow: 0 8px 15px rgba(14, 165, 233, 0.2); }
+        .receiver-node.active { border-color: var(--accent); box-shadow: 0 0 20px rgba(139, 92, 246, 0.4); transform: scale(1.05); }
+        
+        .rec-icon { font-size: 2rem; color: var(--info); margin-bottom: 6px; }
+        .rec-name { font-weight: bold; font-size: 0.95rem; color: var(--text-color); margin-bottom: 5px;}
+        
+        /* Internal Code display (ΓΛΩΣΣΑ) */
+        .rec-code {
+            background: #1e293b; color: #a7f3d0; font-family: 'Consolas', monospace; font-size: 0.68rem; font-weight: bold;
+            padding: 8px 6px; border-radius: 4px; margin-top: 8px; opacity: 0.5; transition: 0.3s;
+            white-space: pre-wrap; line-height: 1.4; text-align: left;
+        }
+        .receiver-node.active .rec-code { opacity: 1; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); border: 1px solid var(--good); background: #0f172a;}
+
+        /* Result Bubble */
+        .result-bubble {
+            position: absolute; top: -50px; left: 50%; transform: translateX(-50%) scale(0);
+            background: var(--good); color: white; font-weight: bold; padding: 8px 14px;
+            border-radius: 20px; font-size: 0.95rem; opacity: 0; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            white-space: nowrap; box-shadow: 0 4px 6px rgba(0,0,0,0.2); pointer-events: none; z-index: 20;
+        }
+        .result-bubble::after {
+            content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%);
+            border-width: 6px 6px 0; border-style: solid; border-color: var(--good) transparent transparent transparent;
+        }
+        .receiver-node.show-result .result-bubble { opacity: 1; transform: translateX(-50%) scale(1); }
+
+        .control-panel { margin-top: auto; display: flex; justify-content: center; gap: 10px; width: 100%; padding: 15px; background: rgba(0,0,0,0.02); border-top: 1px solid var(--border-color); z-index: 20;}
+
+        /* --- Terminology & Log (Right - WHITE by default) --- */
+        .term-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #10b981; padding: 12px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 15px; color: #1e293b; line-height: 1.5;}
+        body.dark-mode .term-box { background: rgba(16, 185, 129, 0.05); color: #f8fafc; border-color: rgba(16, 185, 129, 0.2); }
+        .term-title { font-weight: bold; color: #047857; margin-bottom: 6px; font-size: 0.95rem;}
+        body.dark-mode .term-title { color: #34d399; }
+
+        .terminal { flex-grow: 1; background: #ffffff; color: #1e293b; font-family: 'Consolas', monospace; padding: 1rem; border-radius: 6px; overflow-y: auto; font-size: 0.85rem; border: 1px solid var(--border-color); box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);}
+        body.dark-mode .terminal { background: #1e293b; color: #f8fafc; border-color: #475569; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);}
+        
+        .log-entry { margin-bottom: 8px; border-bottom: 1px dashed #e2e8f0; padding-bottom: 8px; line-height: 1.5; animation: fadeIn 0.3s;}
+        body.dark-mode .log-entry { border-bottom: 1px dashed rgba(255,255,255,0.1); }
+        
+        .log-time { color: #64748b; font-size: 0.75rem;}
+        .log-call { color: #7c3aed; font-weight: bold; }
+        body.dark-mode .log-call { color: #c084fc; }
+        .log-target { color: #0284c7; font-weight: bold; }
+        body.dark-mode .log-target { color: #38bdf8; }
+        .log-result { color: #059669; font-weight: bold;}
+        body.dark-mode .log-result { color: #34d399; }
+
+        /* Animations */
+        .flying-msg {
+            position: absolute; background: rgba(139, 92, 246, 0.9); color: white; padding: 6px 12px; border-radius: 20px;
+            font-weight: bold; font-size: 0.85rem; z-index: 9999; pointer-events: none; border: 2px solid #ddd6fe;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.5); display: flex; align-items: center; gap: 6px; font-family: monospace;
+            transform: translate(-50%, -50%); transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1); white-space: nowrap;
+        }
+
+        @keyframes fadeIn { 0% {opacity: 0; transform: translateY(5px);} 100% {opacity: 1; transform: translateY(0);} }
+        
+        .pulse-btn { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% {box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7);} 70% {box-shadow: 0 0 0 10px rgba(139, 92, 246, 0);} 100% {box-shadow: 0 0 0 0 rgba(139, 92, 246, 0);} }
+        
+        @media (max-width: 1400px), (max-height: 800px) {
+            .receiver-node { width: 145px; padding: 10px 6px; }
+            .rec-icon { font-size: 1.6rem; }
+            .rec-code { font-size: 0.6rem; padding: 6px 4px; }
+            .theory-box { font-size: 0.8rem; padding: 10px; margin-bottom: 10px; }
+            .terminal { font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="a11y-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+    <header>
+        <div class="header-title"><i class="fa-solid fa-shapes"></i> Πολυμορφισμός: Ίδιο Μήνυμα, Διαφορετική Υλοποίηση</div>
+        <div class="controls">
+            <button id="soundBtn" onclick="toggleSound()" aria-label="Ενεργοποίηση Ήχου"><i class="fa-solid fa-volume-xmark"></i> Ήχος: OFF</button>
+            <button onclick="toggleTheme()" aria-label="Αλλαγή Θέματος"><i class="fa-solid fa-moon"></i></button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        
+        <div class="col col-left">
+            <div class="col-header">Επιλογή Σεναρίου</div>
+            <div class="col-content">
+                <div class="tabs" id="scenarioTabs"></div>
+                
+                <div class="theory-box" id="theoryBox"></div>
+                
+                <div class="theory-box" style="background: rgba(139, 92, 246, 0.05); border-color: var(--accent);">
+                    <i class="fa-solid fa-lightbulb" style="color: var(--accent)"></i> <b>Οδηγία:</b><br>
+                    Κάνε κλικ σε ένα αντικείμενο για μεμονωμένη κλήση, ή πάτα το κουμπί κάτω δεξιά για να αποδείξεις τον Πολυμορφισμό στην πράξη.
+                </div>
+            </div>
+        </div>
+
+        <div class="col col-mid">
+            <div class="col-header">Ελεγκτής Πολυμορφισμού (Polymorphism Tester)</div>
+            <div class="col-content" style="padding: 0;">
+                
+                <div class="canvas-area" id="canvas">
+                    <svg id="network-lines" class="network-svg"></svg>
+                    
+                    <div class="sender-node" id="node-sender">
+                        <div class="sender-title"><i class="fa-solid fa-laptop-code"></i> Κυρίως Πρόγραμμα</div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 4px;">Μήνυμα προς αποστολή:</div>
+                        <div class="msg-lock" id="msg-display">Μέθοδος()</div>
+                    </div>
+
+                    <div class="receivers-container" id="receivers-container">
+                        </div>
+                </div>
+
+                <div class="control-panel">
+                    <button class="btn-primary pulse-btn" id="btnLoop" onclick="runPolymorphismDemo()">
+                        <i class="fa-solid fa-paper-plane"></i> Αποστολή του ΙΔΙΟΥ Μηνύματος στα Αντικείμενα
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+       <div class="col col-right">
+            <div class="col-header">Καταγραφή Ενεργειών (Log)</div>
+            <div class="col-content">
+                
+                <div class="term-box">
+                    <div class="term-title">Η Έννοια του Πολυμορφισμού</div>
+                    <b>Πολυμορφισμός (Polymorphism)</b> είναι η ιδιότητα σύμφωνα με την οποία μια λειτουργία μπορεί να υλοποιείται με διαφορετικούς τρόπους σε διαφορετικά αντικείμενα. Έτσι, <b>το ίδιο μήνυμα (κλήση μεθόδου) προκαλεί διαφορετικές ενέργειες</b>, ανάλογα με το αντικείμενο που το λαμβάνει.
+                </div>
+
+                <div class="terminal" id="terminal">
+                    </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- WEB AUDIO API (Συνθεσάιζερ χωρίς εξωτερικά MP3) ---
+        let audioCtx = null;
+        let soundEnabled = false;
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const btn = document.getElementById('soundBtn');
+            btn.innerHTML = soundEnabled ? `<i class="fa-solid fa-volume-high"></i> Ήχος: ON` : `<i class="fa-solid fa-volume-xmark"></i> Ήχος: OFF`;
+            if (soundEnabled) initAudio();
+        }
+
+        function playTone(freq, type, duration, vol=0.1, slideFreq=null) {
+            if(!soundEnabled || !audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            if (slideFreq) osc.frequency.exponentialRampToValueAtTime(slideFreq, audioCtx.currentTime + duration);
+            
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        const sfx = {
+            send: () => playTone(800, 'sine', 0.1, 0.05),
+            dog: () => { playTone(150, 'sawtooth', 0.15, 0.2, 100); setTimeout(() => playTone(150, 'sawtooth', 0.2, 0.2, 100), 150); },
+            cat: () => playTone(600, 'sine', 0.5, 0.1, 1200),
+            sheep: () => playTone(250, 'square', 0.4, 0.1, 200),
+            calc: () => playTone(1200, 'square', 0.1, 0.05),
+            success: () => { playTone(440, 'sine', 0.1); setTimeout(() => playTone(660, 'sine', 0.3), 100); }
+        };
+
+        // --- SCENARIOS (Αυστηρή Θεωρία) ---
+        const SCENARIOS = [
+            {
+                id: 'geom', title: 'Γεωμετρικά Σχήματα', icon: 'fa-shapes',
+                theory: '<span class="theory-hl">Γεωμετρικά Σχήματα</span>Τα γεωμετρικά σχήματα δέχονται το ίδιο μήνυμα <b>Υπολ_Εμβαδού()</b>. Το καθένα όμως, υπολογίζει το εμβαδόν του εκτελώντας το δικό του διαφορετικό υποπρόγραμμα (διαφορετικός μαθηματικός τύπος).',
+                method: 'Υπολ_Εμβαδού()',
+                soundType: 'calc',
+                objects: [
+                    { id: 'rec-1', name: 'Κύκλος', icon: 'fa-circle', code: 'ΔΙΑΔΙΚΑΣΙΑ Υπολ_Εμβ()\nΑΡΧΗ\n E <- 3.14 * ακτίνα^2\n ΕΜΦΑΝΙΣΕ E\nΤΕΛΟΣ_ΔΙΑΔΙΚΑΣΙΑΣ', result: 'Εμβαδόν = 3.14 * R²' },
+                    { id: 'rec-2', name: 'Τρίγωνο', icon: 'fa-play fa-rotate-270', code: 'ΔΙΑΔΙΚΑΣΙΑ Υπολ_Εμβ()\nΑΡΧΗ\n E <- (βάση*ύψος)/2\n ΕΜΦΑΝΙΣΕ E\nΤΕΛΟΣ_ΔΙΑΔΙΚΑΣΙΑΣ', result: 'Εμβαδόν = (Β*Υ)/2' },
+                    { id: 'rec-3', name: 'Ορθογώνιο', icon: 'fa-square', code: 'ΔΙΑΔΙΚΑΣΙΑ Υπολ_Εμβ()\nΑΡΧΗ\n E <- μήκος*πλάτος\n ΕΜΦΑΝΙΣΕ E\nΤΕΛΟΣ_ΔΙΑΔΙΚΑΣΙΑΣ', result: 'Εμβαδόν = Μ*Π' }
+                ]
+            },
+            {
+                id: 'animals', title: 'Ήχοι Ζώων', icon: 'fa-paw',
+                theory: '<span class="theory-hl">Ήχοι Ζώων</span>Τα ζώα δέχονται την ίδια ακριβώς εντολή <b>Μίλησε()</b>. Η αντίδραση όμως του κάθε αντικειμένου είναι διαφορετική και εξαρτάται από την κλάση στην οποία ανήκει (το πρόγραμμα το αποφασίζει δυναμικά).',
+                method: 'Μίλησε()',
+                soundType: 'custom',
+                objects: [
+                    { id: 'rec-1', name: 'Σκύλος', icon: 'fa-dog', code: 'ΔΙΑΔΙΚΑΣΙΑ Μίλησε()\nΑΡΧΗ\n ΕΜΦΑΝΙΣΕ "Γαβ-Γαβ"\nΤΕΛΟΣ_ΔΙΑΔΙΚΑΣΙΑΣ', result: 'Γαβ-Γαβ!', sfx: 'dog' },
+                    { id: 'rec-2', name: 'Γάτα', icon: 'fa-cat', code: 'ΔΙΑΔΙΚΑΣΙΑ Μίλησε()\nΑΡΧΗ\n ΕΜΦΑΝΙΣΕ "Νιάου"\nΤΕΛΟΣ_ΔΙΑΔΙΚΑΣΙΑΣ', result: 'Νιάου!', sfx: 'cat' },
+                    { id: 'rec-3', name: 'Πρόβατο', icon: 'fa-paw', code: 'ΔΙΑΔΙΚΑΣΙΑ Μίλησε()\nΑΡΧΗ\n ΕΜΦΑΝΙΣΕ "Μπεεε"\nΤΕΛΟΣ_ΔΙΑΔΙΚΑΣΙΑΣ', result: 'Μπεεε!', sfx: 'sheep' }
+                ]
+            },
+            {
+                id: 'vehicles', title: 'Μέσα Μεταφοράς', icon: 'fa-truck-fast',
+                theory: '<span class="theory-hl">Μέσα Μεταφοράς</span>Τα μέσα μεταφοράς ανταποκρίνονται στο κοινό μήνυμα <b>Κινήσου()</b>. Το κάθε όχημα όμως έχει εντελώς διαφορετικό μηχανισμό υλοποίησης της κίνησης (στο δρόμο, στον αέρα, στο νερό).',
+                method: 'Κινήσου()',
+                soundType: 'calc',
+                objects: [
+                    { id: 'rec-1', name: 'Αυτοκίνητο', icon: 'fa-car', code: 'ΔΙΑΔΙΚΑΣΙΑ Κινήσου()\nΑΡΧΗ\n ΕΜΦΑΝΙΣΕ "Στο δρόμο"\nΤΕΛΟΣ_ΔΙΑΔΙΚΑΣΙΑΣ', result: 'Στο δρόμο με ρόδες!' },
+                    { id: 'rec-2', name: 'Αεροπλάνο', icon: 'fa-plane', code: 'ΔΙΑΔΙΚΑΣΙΑ Κινήσου()\nΑΡΧΗ\n ΕΜΦΑΝΙΣΕ "Στον αέρα"\nΤΕΛΟΣ_ΔΙΑΔΙΚΑΣΙΑΣ', result: 'Στον αέρα με φτερά!' },
+                    { id: 'rec-3', name: 'Πλοίο', icon: 'fa-ship', code: 'ΔΙΑΔΙΚΑΣΙΑ Κινήσου()\nΑΡΧΗ\n ΕΜΦΑΝΙΣΕ "Στο νερό"\nΤΕΛΟΣ_ΔΙΑΔΙΚΑΣΙΑΣ', result: 'Στο νερό με προπέλα!' }
+                ]
+            }
+        ];
+
+        let currentScenIndex = 0;
+        let isAnimating = false;
+
+        function announce(text) { document.getElementById('a11y-announcer').innerText = text; }
+
+        function initUI() {
+            const tabsContainer = document.getElementById('scenarioTabs');
+            tabsContainer.innerHTML = '';
+            SCENARIOS.forEach((s, idx) => {
+                const btn = document.createElement('div');
+                btn.className = `tab ${idx === currentScenIndex ? 'active' : ''}`;
+                btn.innerHTML = `<i class="fa-solid ${s.icon}"></i> ${s.title}`;
+                btn.onclick = () => loadScenario(idx);
+                tabsContainer.appendChild(btn);
+            });
+            loadScenario(currentScenIndex);
+        }
+
+        function loadScenario(idx) {
+            if(isAnimating) return;
+            currentScenIndex = idx;
+            const scen = SCENARIOS[idx];
+            
+            // Update Tabs
+            document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === idx));
+            
+            // Update Theory & Sender
+            document.getElementById('theoryBox').innerHTML = scen.theory;
+            document.getElementById('msg-display').innerText = scen.method;
+            
+            // Build Receivers
+            const recCont = document.getElementById('receivers-container');
+            recCont.innerHTML = '';
+            scen.objects.forEach(obj => {
+                recCont.innerHTML += `
+                    <div class="receiver-node" id="${obj.id}" onclick="triggerCall('${obj.id}')">
+                        <div class="result-bubble">${obj.result}</div>
+                        <i class="fa-solid ${obj.icon} rec-icon"></i>
+                        <div class="rec-name">${obj.name}</div>
+                        <div class="rec-code">${obj.code}</div>
+                    </div>
+                `;
+            });
+
+            // Καθαρισμός του Log χωρίς φλύαρα μηνύματα
+            document.getElementById('terminal').innerHTML = '';
+            
+            setTimeout(drawLines, 100);
+            announce(`Επιλέχθηκε το σενάριο: ${scen.title}.`);
+        }
+
+        // --- DRAW LINES ---
+        function drawLines() {
+            const svg = document.getElementById('network-lines');
+            const canvas = document.getElementById('canvas');
+            const rectCanvas = canvas.getBoundingClientRect();
+            const sender = document.getElementById('node-sender');
+            if(!sender) return;
+            const rectS = sender.getBoundingClientRect();
+            const sX = rectS.left - rectCanvas.left + rectS.width / 2;
+            const sY = rectS.bottom - rectCanvas.top;
+
+            svg.innerHTML = '';
+            const scen = SCENARIOS[currentScenIndex];
+            
+            scen.objects.forEach(obj => {
+                const rec = document.getElementById(obj.id);
+                if(rec) {
+                    const rectR = rec.getBoundingClientRect();
+                    const rX = rectR.left - rectCanvas.left + rectR.width / 2;
+                    const rY = rectR.top - rectCanvas.top;
+                    svg.innerHTML += `<path id="line-${obj.id}" class="net-line" d="M ${sX} ${sY} L ${rX} ${rY}" />`;
+                }
+            });
+        }
+        window.addEventListener('resize', drawLines);
+
+        // --- ANIMATION & LOGIC ---
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        function getTimestamp() {
+            const now = new Date();
+            return `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}.${now.getMilliseconds().toString().padStart(3,'0')}`;
+        }
+
+        function logTerminal(objName, method, result) {
+            const term = document.getElementById('terminal');
+            term.innerHTML += `
+                <div class="log-entry"> 
+                    <i class="fa-solid fa-paper-plane" style="color:#94a3b8"></i> Μήνυμα <span class="log-call">${method}</span> <i class="fa-solid fa-arrow-right" style="color:#cbd5e1; font-size:0.7rem;"></i> Αντικείμενο <span class="log-target">${objName}</span><br>
+                    <i class="fa-solid fa-microchip" style="color:#94a3b8"></i> Υλοποίηση <i class="fa-solid fa-arrow-right" style="color:#cbd5e1; font-size:0.7rem;"></i> <span class="log-result">${result}</span>
+                </div>
+            `;
+            term.scrollTop = term.scrollHeight;
+        }
+
+        async function triggerCall(receiverId) {
+            if (isAnimating) return;
+            isAnimating = true;
+            if(soundEnabled) initAudio();
+            
+            const scen = SCENARIOS[currentScenIndex];
+            const objData = scen.objects.find(o => o.id === receiverId);
+            
+            const sender = document.getElementById('node-sender');
+            const receiver = document.getElementById(receiverId);
+            const line = document.getElementById(`line-${receiverId}`);
+
+            // Start Sender interaction
+            sender.style.borderColor = "var(--accent)";
+            line.classList.add('active');
+            sfx.send();
+
+            // Fly Message
+            await flyMessage(sender, receiver, scen.method);
+
+            // Receiver reacts
+            sender.style.borderColor = "var(--sender-color)";
+            line.classList.remove('active');
+            receiver.classList.add('active', 'show-result');
+            
+            // Play specific sound
+            if(scen.soundType === 'custom') {
+                if(sfx[objData.sfx]) sfx[objData.sfx]();
+            } else {
+                sfx.calc();
+            }
+
+            // Αυστηρή Καταγραφή
+            logTerminal(objData.name, scen.method, objData.result);
+            announce(`Αποστολή μηνύματος στο αντικείμενο ${objData.name}. Το αποτέλεσμα είναι ${objData.result}.`);
+
+            await sleep(1800); 
+            receiver.classList.remove('active', 'show-result');
+            
+            isAnimating = false;
+        }
+
+        async function runPolymorphismDemo() {
+            if (isAnimating) return;
+            const btn = document.getElementById('btnLoop');
+            btn.disabled = true;
+            btn.classList.remove('pulse-btn');
+            
+            const scen = SCENARIOS[currentScenIndex];
+            
+            for (let obj of scen.objects) {
+                await triggerCall(obj.id);
+                await sleep(400); 
+            }
+
+            sfx.success();
+            btn.disabled = false;
+            btn.classList.add('pulse-btn');
+        }
+
+        function flyMessage(startEl, endEl, text) {
+            return new Promise(async resolve => {
+                const rectCanvas = document.getElementById('canvas').getBoundingClientRect();
+                const rectStart = startEl.getBoundingClientRect();
+                const rectEnd = endEl.getBoundingClientRect();
+
+                const sX = rectStart.left - rectCanvas.left + rectStart.width / 2;
+                const sY = rectStart.bottom - rectCanvas.top;
+                
+                const eX = rectEnd.left - rectCanvas.left + rectEnd.width / 2;
+                const eY = rectEnd.top - rectCanvas.top;
+
+                const token = document.createElement('div');
+                token.className = 'flying-msg';
+                token.innerHTML = `<i class="fa-solid fa-paper-plane"></i> ${text}`;
+                
+                token.style.left = sX + 'px';
+                token.style.top = sY + 'px';
+                document.getElementById('canvas').appendChild(token);
+
+                // Reflow
+                token.getBoundingClientRect(); 
+
+                token.style.left = eX + 'px';
+                token.style.top = eY + 'px';
+
+                await sleep(600); 
+                token.remove();
+                resolve();
+            });
+        }
+
+        // Initialize
+        window.onload = initUI;
+    </script>
+</body>
+</html>

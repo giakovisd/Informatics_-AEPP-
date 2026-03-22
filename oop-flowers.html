@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OOP - Συνεργασία & Ανταλλαγή Μηνυμάτων</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --header-bg: #e2e8f0;
+            --border-color: #cbd5e1;
+            
+            --btn-blue: #3b82f6;
+            --btn-blue-hover: #2563eb;
+            
+            --accent: #8b5cf6;
+            --good: #10b981;
+            --warn: #f59e0b;
+            --info: #0ea5e9;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --text-color: #f8fafc;
+            --panel-bg: #1e293b;
+            --header-bg: #334155;
+            --border-color: #475569;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color); color: var(--text-color);
+            margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* --- A11y --- */
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0; }
+
+        /* --- Header --- */
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.8rem 1.5rem; background-color: var(--header-bg);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .header-title { font-size: 1.2rem; font-weight: bold; display: flex; align-items: center; gap: 10px; color: var(--accent); }
+        .controls { display: flex; align-items: center; gap: 0.8rem; }
+        
+        button {
+            padding: 0.6rem 1.2rem; border: 1px solid var(--border-color);
+            border-radius: 6px; background-color: var(--panel-bg);
+            color: var(--text-color); cursor: pointer; font-weight: 600; 
+            display: flex; align-items: center; gap: 0.5rem; transition: 0.2s;
+        }
+        button:hover:not(:disabled) { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-primary { background-color: var(--btn-blue); color: white; border: none; font-size: 1.05rem; padding: 10px 20px;}
+        .btn-primary:hover:not(:disabled) { background-color: var(--btn-blue-hover); color: white; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex; gap: 1rem; padding: 1rem; height: calc(100vh - 70px); box-sizing: border-box;
+        }
+        .col { background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden;}
+        
+        .col-left { flex: 0.85; min-width: 250px;}
+        .col-mid { flex: 2.15; position: relative; min-width: 500px;}
+        .col-right { flex: 1.1; min-width: 320px;}
+
+        .col-header {
+            padding: 0.8rem; font-weight: bold; text-align: center;
+            border-bottom: 1px solid var(--border-color); background-color: rgba(0,0,0,0.03);
+            color: var(--text-color);
+        }
+        .col-content { padding: 1.2rem; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column;}
+
+        /* --- Theory & Motif (Left) --- */
+        .theory-box {
+            background: rgba(139, 92, 246, 0.05); border-left: 4px solid var(--accent);
+            padding: 15px; border-radius: 4px; font-size: 0.95rem; line-height: 1.5; margin-bottom: 15px;
+        }
+        .theory-hl { font-weight: bold; color: var(--accent); }
+
+        .schema-box {
+            display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap;
+            background: rgba(0,0,0,0.03); border: 1px solid var(--border-color);
+            padding: 12px; border-radius: 6px; margin-bottom: 20px;
+            font-size: 0.8rem; font-weight: 700; color: var(--text-color); text-transform: uppercase;
+        }
+        body.dark-mode .schema-box { background: rgba(255,255,255,0.05); }
+        .schema-node {
+            background: var(--panel-bg); padding: 6px 8px; border-radius: 4px;
+            border: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center;
+        }
+        .schema-arrow { color: var(--info); font-size: 1rem; }
+
+        .progress-list { list-style: none; padding: 0; margin: 0; }
+        .progress-list li {
+            padding: 10px; margin-bottom: 8px; border-radius: 6px; border: 1px solid var(--border-color);
+            background: rgba(0,0,0,0.02); color: var(--code-gray); transition: 0.3s;
+            display: flex; align-items: center; gap: 10px; font-size: 0.9rem; font-weight: 500;
+        }
+        .progress-list li.active { background: rgba(16, 185, 129, 0.1); border-color: var(--good); color: var(--text-color); font-weight: bold; }
+        .progress-list li.done { background: rgba(0,0,0,0.05); color: #94a3b8; text-decoration: line-through; }
+
+        /* --- Canvas (Middle) --- */
+        .canvas-area {
+            flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            position: relative; background-image: radial-gradient(var(--border-color) 1px, transparent 1px); background-size: 20px 20px;
+        }
+
+        .network-svg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1; pointer-events: none;
+        }
+        .net-line {
+            stroke: var(--border-color); stroke-width: 3; stroke-dasharray: 8, 8;
+            fill: none; transition: stroke 0.4s ease;
+        }
+        .net-line.active {
+            stroke: var(--info); stroke-dasharray: none; stroke-width: 4;
+        }
+
+        #labels-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 5;
+        }
+        .net-label {
+            position: absolute; background: var(--panel-bg); color: var(--info);
+            font-size: 0.75rem; font-weight: bold; padding: 3px 8px; border-radius: 12px;
+            border: 2px solid var(--border-color); opacity: 0;
+            transition: opacity 0.6s ease, border-color 0.6s ease, color 0.6s ease;
+            white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.08); z-index: 5;
+        }
+        .net-label.visible { opacity: 1; border-color: var(--info); color: var(--info); }
+
+        /* Objects in Canvas */
+        .obj-node {
+            position: absolute; width: 150px; background: var(--panel-bg); border: 2px solid var(--border-color);
+            border-radius: 8px; padding: 12px 8px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            display: flex; flex-direction: column; align-items: center; gap: 6px; transition: 0.3s; z-index: 10;
+            cursor: help;
+        }
+        .obj-node:hover, .obj-node:focus-visible { z-index: 100; }
+        
+        .obj-node.active { border-color: var(--accent); box-shadow: 0 0 15px rgba(139, 92, 246, 0.3); transform: scale(1.05); z-index: 20; }
+        .obj-node i { margin-bottom: 4px; }
+        
+        .obj-name { font-weight: bold; font-size: 1.1rem; color: var(--text-color); margin-top: 5px; }
+        .class-label { font-size: 0.8rem; color: #64748b; font-weight: normal; margin-top: 2px;}
+
+        /* Properties & Methods Inspector (Hover state) */
+        .obj-inspector {
+            position: absolute; top: 105%; left: 50%; transform: translateX(-50%);
+            background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 6px;
+            padding: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 220px; z-index: 100;
+            opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s;
+            text-align: left; font-size: 0.75rem; pointer-events: none;
+        }
+        .obj-node:hover .obj-inspector, .obj-node:focus-visible .obj-inspector { opacity: 1; visibility: visible; }
+        body.dark-mode .obj-inspector { background: #1e293b; border-color: #475569; }
+        
+        .ins-section { margin-bottom: 6px; }
+        .ins-title { font-weight: bold; color: var(--accent); border-bottom: 1px solid var(--border-color); margin-bottom: 4px; padding-bottom: 2px; display: flex; align-items: center; gap: 4px;}
+        .ins-list { list-style: none; padding: 0; margin: 0; color: var(--code-gray); }
+        .ins-list li { margin-bottom: 2px; display: flex; align-items: center; gap: 4px;}
+        .ins-list li i { font-size: 0.65rem; color: var(--good);}
+        body.dark-mode .ins-list { color: #cbd5e1; }
+
+        /* Θέσεις Αντικειμένων */
+        #node-mama { top: 8%; left: 5%; } 
+        #node-giorgos { top: 8%; left: 45%; transform: translateX(-50%); }
+        #node-giovanni { top: 25%; right: 8%; } 
+        #node-antonio { top: 45%; left: 5%; } 
+        #node-pepe { bottom: 8%; left: 45%; transform: translateX(-50%); } 
+        #node-anna { bottom: 8%; right: 8%; } 
+
+        .control-panel {
+            margin-top: 10px; display: flex; justify-content: center; width: 100%;
+            padding: 15px; background: rgba(0,0,0,0.02); border-top: 1px solid var(--border-color); z-index: 20;
+        }
+
+        /* --- Right Column (Terminology & Log) --- */
+        .term-box {
+            background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #10b981;
+            padding: 12px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 15px; color: #1e293b;
+        }
+        body.dark-mode .term-box { background: rgba(16, 185, 129, 0.05); color: #f8fafc; border-color: rgba(16, 185, 129, 0.2); }
+        .term-item { margin-bottom: 6px; line-height: 1.4;}
+        .term-title { font-weight: bold; color: #047857; }
+        body.dark-mode .term-title { color: #34d399; }
+
+        .terminal {
+            flex-grow: 1; background: #f8fafc; color: #1e293b; font-family: 'Segoe UI', Tahoma, sans-serif;
+            padding: 1rem; border-radius: 6px; overflow-y: auto; font-size: 0.9rem;
+            border: 1px solid var(--border-color); margin-top: auto;
+        }
+        body.dark-mode .terminal { background: #1e293b; color: #f8fafc; }
+        
+        /* Δομημένη Αναφορά */
+        .log-item {
+            padding: 10px 12px; border-radius: 6px; background: #ffffff;
+            border-left: 4px solid var(--info); box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            margin-bottom: 12px; line-height: 1.4; animation: fadeIn 0.4s; font-size: 0.85rem;
+        }
+        body.dark-mode .log-item { background: #334155; }
+        .log-item.success { border-left-color: var(--good); }
+        
+        .log-header { font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; color: var(--info); }
+        .log-item.success .log-header { color: var(--good); }
+        
+        .log-table { width: 100%; border-collapse: collapse; }
+        .log-table td { padding: 4px 0; vertical-align: top; border-bottom: 1px dashed rgba(0,0,0,0.05);}
+        .log-table tr:last-child td { border-bottom: none; }
+        .log-table td:first-child { width: 105px; color: #64748b; font-weight: 600; font-size: 0.8rem; text-transform: uppercase;}
+        body.dark-mode .log-table td:first-child { color: #94a3b8; }
+        .log-table td:nth-child(2) { font-weight: 500; }
+        
+        .msg-payload { font-family: monospace; font-weight: bold; color: #0f766e; background: #d1fae5; padding: 2px 4px; border-radius: 4px;}
+        body.dark-mode .msg-payload { color: #34d399; background: rgba(16, 185, 129, 0.1); }
+        
+        .msg-hl { font-family: monospace; font-weight: bold; color: var(--accent); background: rgba(139, 92, 246, 0.1); padding: 2px 4px; border-radius: 4px;}
+
+        /* --- Animations --- */
+        .flying-msg {
+            position: fixed; background: #fef3c7; color: #92400e; padding: 6px 12px; border-radius: 20px;
+            font-weight: bold; font-size: 0.8rem; z-index: 9999; pointer-events: none; border: 1px solid #fcd34d;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 6px; font-family: monospace;
+            transform: translate(-50%, -50%); transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+            max-width: 200px; text-align: center; line-height: 1.2;
+        }
+
+        .flash { animation: flashHighlight 0.6s; }
+        @keyframes flashHighlight {
+            0% { transform: scale(1); border-color: var(--border-color); }
+            50% { transform: scale(1.05); border-color: var(--info); box-shadow: 0 0 15px rgba(14, 165, 233, 0.4); }
+            100% { transform: scale(1); border-color: var(--border-color); }
+        }
+        
+        @keyframes fadeIn { 0% {opacity: 0; transform: translateY(5px);} 100% {opacity: 1; transform: translateY(0);} }
+
+        @media (max-width: 1400px), (max-height: 800px) {
+            .obj-node { width: 120px; padding: 8px 4px; gap: 4px; }
+            .obj-node i { font-size: 1.4rem; }
+            .obj-name { font-size: 0.95rem; }
+            .theory-box { font-size: 0.8rem; padding: 10px; margin-bottom: 10px; }
+            .schema-box { padding: 8px; font-size: 0.7rem; gap: 4px;}
+            .progress-list li { font-size: 0.8rem; padding: 6px; margin-bottom: 5px; }
+            .log-item { font-size: 0.8rem; padding: 8px; margin-bottom: 8px;}
+            .net-label { font-size: 0.65rem; padding: 2px 6px; } 
+        }
+
+        /* Μετακίνηση των πλαισίων (Μαμά και Αντώνιο) πιο δεξιά για να μην κόβονται */
+        #node-mama .obj-inspector, #node-antonio .obj-inspector {
+            transform: translateX(-15%);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="a11y-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+    <header>
+        <div class="header-title"><i class="fa-solid fa-diagram-project"></i> Συνεργασία Αντικειμένων & Ανταλλαγή Μηνυμάτων</div>
+        <div class="controls">
+            <button id="soundBtn" onclick="toggleSound()" aria-label="Ενεργοποίηση Ήχου"><i class="fa-solid fa-volume-xmark"></i> Ήχος: OFF</button>
+            <button onclick="resetApp()" aria-label="Επανεκκίνηση Εφαρμογής"><i class="fa-solid fa-rotate-right"></i> Επανεκκίνηση</button>
+            <button onclick="toggleTheme()" aria-label="Αλλαγή Θέματος"><i class="fa-solid fa-moon"></i></button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        
+        <div class="col col-left">
+            <div class="col-header">Εισαγωγή στη Συνεργασία</div>
+            <div class="col-content">
+                <div class="theory-box">
+                    Στον Αντικειμενοστραφή Προγραμματισμό, το πρόγραμμα είναι ένα <span class="theory-hl">δίκτυο συνεργαζόμενων οντοτήτων (Αντικειμένων)</span>. Κάθε αντικείμενο έχει <b>Ιδιότητες</b> (δεδομένα) και <b>Μεθόδους</b> (υπηρεσίες).<br><br>
+                    Τα αντικείμενα επικοινωνούν μεταξύ τους στέλνοντας <b>Μηνύματα (Αιτήματα)</b>. Το μήνυμα ενεργοποιεί την αντίστοιχη <b>Μέθοδο</b> του παραλήπτη.
+                </div>
+                
+                <div class="schema-box">
+                    <div class="schema-node">Αποστολέας</div>
+                    <i class="fa-solid fa-arrow-right schema-arrow"></i>
+                    <div class="schema-node" style="color:var(--good);">Μήνυμα <br><span style="font-size:0.6rem; font-weight:normal;">(αίτημα)</span></div>
+                    <i class="fa-solid fa-arrow-right schema-arrow"></i>
+                    <div class="schema-node">Παραλήπτης</div>
+                    <i class="fa-solid fa-arrow-right schema-arrow"></i>
+                    <div class="schema-node" style="color:var(--accent);">Μέθοδος <br><span style="font-size:0.6rem; font-weight:normal;">(Ενέργεια)</span></div>
+                </div>
+                
+                <h3 style="margin-bottom:10px; font-size:0.9rem; color:#64748b; text-transform:uppercase;">Αλληλουχια Συνεργασιας</h3>
+                <ul class="progress-list" id="progressList">
+                    <li id="step-1" class="active"><i class="fa-regular fa-circle"></i> 1. Λήψη Παραγγελίας</li>
+                    <li id="step-2"><i class="fa-regular fa-circle"></i> 2. Αίτημα Συνεργασίας (Διεθνώς)</li>
+                    <li id="step-3"><i class="fa-regular fa-circle"></i> 3. Ανάθεση Ανθοδεσίας</li>
+                    <li id="step-4"><i class="fa-regular fa-circle"></i> 4. Ανάθεση Παράδοσης</li>
+                    <li id="step-5"><i class="fa-regular fa-circle"></i> 5. Παράδοση στον Πελάτη</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="col col-mid">
+            <div class="col-header">Διάγραμμα Συνεργασίας μεταξύ αντικειμένων</div>
+            <div class="col-content" style="padding: 0;">
+                
+                <div class="canvas-area" id="canvas">
+                    <svg id="network-lines" class="network-svg"></svg>
+                    <div id="labels-container"></div>
+
+                    <div class="obj-node active" id="node-mama" tabindex="0">
+                        <i class="fa-solid fa-user" style="font-size: 2rem; color: #3b82f6;"></i>
+                        <div class="obj-name">Μαμά</div>
+                        <div class="class-label">(Πελάτης)</div>
+                        <div class="obj-inspector">
+                            <div class="ins-section">
+                                <div class="ins-title"><i class="fa-solid fa-list"></i> Ιδιότητες (Δεδομένα)</div>
+                                <ul class="ins-list">
+                                    <li><i class="fa-solid fa-circle-dot"></i> Όνομα: Μαρία</li>
+                                    <li><i class="fa-solid fa-circle-dot"></i> Επώνυμο: Πέτρου</li>
+                                    <li><i class="fa-solid fa-circle-dot"></i> Διεύθυνση: Αθήνα</li>
+                                </ul>
+                            </div>
+                            <div class="ins-section">
+                                <div class="ins-title"><i class="fa-solid fa-gears"></i> Μεθόδοι (Υπηρεσίες)</div>
+                                <ul class="ins-list">
+                                    <li><i class="fa-solid fa-play"></i> ΚάνειΠαραγγελία()</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="obj-node" id="node-giorgos" tabindex="0">
+                        <i class="fa-solid fa-store" style="font-size: 2rem; color: #10b981;"></i>
+                        <div class="obj-name">Γιώργος</div>
+                        <div class="class-label">(Ανθοπώλης)</div>
+                        <div class="obj-inspector">
+                            <div class="ins-section">
+                                <div class="ins-title"><i class="fa-solid fa-list"></i> Ιδιότητες (Δεδομένα)</div>
+                                <ul class="ins-list">
+                                    <li><i class="fa-solid fa-circle-dot"></i> Επωνυμία: Φλόρα ΕΠΕ</li>
+                                    <li><i class="fa-solid fa-circle-dot"></i> ΑΦΜ: 999888777</li>
+                                    <li><i class="fa-solid fa-circle-dot"></i> Τραπεζικός Λογ.: GR111...</li>
+                                </ul>
+                            </div>
+                            <div class="ins-section">
+                                <div class="ins-title"><i class="fa-solid fa-gears"></i> Μεθόδοι (Υπηρεσίες)</div>
+                                <ul class="ins-list">
+                                    <li><i class="fa-solid fa-play"></i> ΔέχεταιΠαραγγελία()</li>
+                                    <li><i class="fa-solid fa-play"></i> ΖητάΣυνεργασία()</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="obj-node" id="node-giovanni" tabindex="0">
+                        <i class="fa-solid fa-shop" style="font-size: 2rem; color: #10b981;"></i>
+                        <div class="obj-name">Τζιοβάνι</div>
+                        <div class="class-label">(Ανθοπώλης)</div>
+                        <div class="obj-inspector">
+                            <div class="ins-section">
+                                <div class="ins-title"><i class="fa-solid fa-list"></i> Ιδιότητες (Δεδομένα)</div>
+                                <ul class="ins-list">
+                                    <li><i class="fa-solid fa-circle-dot"></i> Επωνυμία: Φιόρι ΟΕ</li>
+                                    <li><i class="fa-solid fa-circle-dot"></i> Διεύθυνση: Ρώμη</li>
+                                </ul>
+                            </div>
+                            <div class="ins-section">
+                                <div class="ins-title"><i class="fa-solid fa-gears"></i> Μεθόδοι (Υπηρεσίες)</div>
+                                <ul class="ins-list">
+                                    <li><i class="fa-solid fa-play"></i> ΑποδέχεταιΣυνεργασία()</li>
+                                    <li><i class="fa-solid fa-play"></i> ΑναθέτειΑνθοδεσία()</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="obj-node" id="node-antonio" tabindex="0">
+                        <i class="fa-solid fa-spa" style="font-size: 2rem; color: #8b5cf6;"></i>
+                        <div class="obj-name">Αντόνιο</div>
+                        <div class="class-label">(Ανθοδέτης)</div>
+                        <div class="obj-inspector">
+                            <div class="ins-section">
+                                <div class="ins-title"><i class="fa-solid fa-list"></i> Ιδιότητες (Δεδομένα)</div>
+                                <ul class="ins-list">
+                                    <li><i class="fa-solid fa-circle-dot"></i> Ειδικότητα: Ανθοδέσμες</li>
+                                    <li><i class="fa-solid fa-circle-dot"></i> Ωριαία Αμοιβή: 20€</li>
+                                </ul>
+                            </div>
+                            <div class="ins-section">
+                                <div class="ins-title"><i class="fa-solid fa-gears"></i> Μεθόδοι (Υπηρεσίες)</div>
+                                <ul class="ins-list">
+                                    <li><i class="fa-solid fa-play"></i> ΕτοιμάζειΑνθοδέσμη()</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="obj-node" id="node-pepe" tabindex="0">
+                        <i class="fa-solid fa-motorcycle" style="font-size: 2rem; color: #f59e0b;"></i>
+                        <div class="obj-name">Πέπε</div>
+                        <div class="class-label">(Ταχυμεταφορέας)</div>
+                        <div class="obj-inspector">
+                            <div class="ins-section">
+                                <div class="ins-title"><i class="fa-solid fa-list"></i> Ιδιότητες (Δεδομένα)</div>
+                                <ul class="ins-list">
+                                    <li><i class="fa-solid fa-circle-dot"></i> Επωνυμία: Ράπιντο ΟΕ</li>
+                                    <li><i class="fa-solid fa-circle-dot"></i> Τύπος: Πόρτα-Πόρτα</li>
+                                </ul>
+                            </div>
+                            <div class="ins-section">
+                                <div class="ins-title"><i class="fa-solid fa-gears"></i> Μεθόδοι (Υπηρεσίες)</div>
+                                <ul class="ins-list">
+                                    <li><i class="fa-solid fa-play"></i> ΠαραδίδειΑνθοδέσμη()</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="obj-node" id="node-anna" tabindex="0">
+                        <i class="fa-solid fa-user-astronaut" style="font-size: 2rem; color: #ec4899;"></i>
+                        <div class="obj-name">Άννα</div>
+                        <div class="class-label">(Πελάτης)</div>
+                        <div class="obj-inspector">
+                            <div class="ins-section">
+                                <div class="ins-title"><i class="fa-solid fa-list"></i> Ιδιότητες (Δεδομένα)</div>
+                                <ul class="ins-list">
+                                    <li><i class="fa-solid fa-circle-dot"></i> Όνομα: Άννα</li>
+                                    <li><i class="fa-solid fa-circle-dot"></i> Διεύθυνση: Μοντάνα 4, Ρώμη</li>
+                                </ul>
+                            </div>
+                            <div class="ins-section">
+                                <div class="ins-title"><i class="fa-solid fa-gears"></i> Μεθόδοι (Υπηρεσίες)</div>
+                                <ul class="ins-list">
+                                    <li><i class="fa-solid fa-play"></i> ΠαραλαμβάνειΑνθοδέσμη()</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-panel">
+                    <button class="btn-primary" id="btnNext" onclick="nextStep()">
+                        <i class="fa-solid fa-arrows-turn-right"></i> Επόμενη Αλληλεπίδραση
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+       <div class="col col-right">
+            <div class="col-header">Παρατηρήσεις & Ορολογία (σελ. 87-89)</div>
+            <div class="col-content">
+                
+                <div class="term-box">
+                    <div class="term-item"><span class="term-title">Αντικείμενο:</span> Έχει συγκεκριμένο ρόλο, δικές του Ιδιότητες (δεδομένα) και Μεθόδους (υπηρεσίες).</div>
+                    <div class="term-item"><span class="term-title">Μήνυμα:</span> Η αίτηση που αποστέλλει ένα αντικείμενο σε ένα άλλο για να του ζητήσει την εκτέλεση μιας υπηρεσίας. Περιέχει τα απαραίτητα δεδομένα.</div>
+                    <div class="term-item"><span class="term-title">Μέθοδος:</span> Η ενέργεια που εκτελεί το αντικείμενο <i>αφού λάβει</i> το μήνυμα.</div>
+                </div>
+
+                <div class="terminal" id="terminal">
+                    <div style="font-weight:bold; color:#64748b; margin-bottom:10px; font-size:0.8rem; text-transform:uppercase;">Καταγραφη Αλληλουχιας Μηνυματων</div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- ΗΧΟΙ ---
+        let soundEnabled = false;
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const btn = document.getElementById('soundBtn');
+            btn.innerHTML = soundEnabled ? `<i class="fa-solid fa-volume-high"></i> Ήχος: ON` : `<i class="fa-solid fa-volume-xmark"></i> Ήχος: OFF`;
+        }
+
+        const sfxSend = new Audio('https://www.myinstants.com/media/sounds/swoosh.mp3');
+        const sfxReceive = new Audio('https://www.myinstants.com/media/sounds/mario-coin.mp3');
+        const sfxMoto = new Audio('https://www.myinstants.com/media/sounds/motorcycle-drive-by.mp3');
+        const sfxTada = new Audio('https://www.myinstants.com/media/sounds/tadaa.mp3');
+        
+        sfxSend.volume = 0.3; sfxReceive.volume = 0.3; sfxMoto.volume = 0.2; sfxTada.volume = 0.3;
+
+        function playSound(sound) {
+            if(soundEnabled) { sound.currentTime = 0; sound.play().catch(e => e); }
+        }
+
+        function announce(text) { document.getElementById('a11y-announcer').innerText = text; }
+
+        // --- STATE MACHINE ---
+        let currentStep = 1;
+        let isAnimating = false;
+
+        const STEPS = [
+            null, 
+            {
+                from: 'node-mama', to: 'node-giorgos', relation: 'Παραγγελία', sound: sfxSend,
+                senderInfo: 'Μαμά (Πελάτης)',
+                receiverInfo: 'Γιώργος (Ανθοπώλης)',
+                messageText: 'Θέλω μια ανθοδέσμη για την Άννα, στη Μοντάνα 4, Ρώμη.',
+                method: 'ΔέχεταιΠαραγγελία()'
+            },
+            {
+                from: 'node-giorgos', to: 'node-giovanni', relation: 'Συνεργασία', sound: sfxSend,
+                senderInfo: 'Γιώργος (Ανθοπώλης)',
+                receiverInfo: 'Τζιοβάνι (Ανθοπώλης)',
+                messageText: 'Ανάλαβε την παραγγελία 837 για τη διεύθυνση Μοντάνα 4.',
+                method: 'ΑποδέχεταιΣυνεργασία()'
+            },
+            {
+                from: 'node-giovanni', to: 'node-antonio', relation: 'Ανάθεση', sound: sfxSend,
+                senderInfo: 'Τζιοβάνι (Ανθοπώλης)',
+                receiverInfo: 'Αντόνιο (Ανθοδέτης)',
+                messageText: 'Φτιάξε μια μεγάλη ανθοδέσμη με κόκκινα τριαντάφυλλα.',
+                method: 'ΕτοιμάζειΑνθοδέσμη()'
+            },
+            {
+                from: 'node-giovanni', to: 'node-pepe', relation: 'Μεταφορά', sound: sfxSend,
+                senderInfo: 'Τζιοβάνι (Ανθοπώλης)',
+                receiverInfo: 'Πέπε (Ταχυμεταφορέας)',
+                messageText: 'Παράδωσε αυτό το πακέτο στη Μοντάνα 4, στον παραλήπτη: Άννα.',
+                method: 'ΑναθέτειΠαράδοση() -> ΠαραδίδειΑνθοδέσμη()'
+            },
+            {
+                from: 'node-pepe', to: 'node-anna', relation: 'Παράδοση', sound: sfxMoto,
+                senderInfo: 'Πέπε (Ταχυμεταφορέας)',
+                receiverInfo: 'Άννα (Πελάτης)',
+                messageText: 'Έχετε μια ανθοδέσμη με ευχές από την Αθήνα!',
+                method: 'ΠαραλαμβάνειΑνθοδέσμη()'
+            }
+        ];
+
+        // --- ΓΡΑΜΜΕΣ ΔΙΚΤΥΟΥ ---
+        function drawLines() {
+            const svg = document.getElementById('network-lines');
+            const labelsContainer = document.getElementById('labels-container');
+            const canvas = document.getElementById('canvas');
+            const rectCanvas = canvas.getBoundingClientRect();
+
+            const getCenter = (id) => {
+                const el = document.getElementById(id);
+                const rect = el.getBoundingClientRect();
+                return { x: rect.left - rectCanvas.left + rect.width / 2, y: rect.top - rectCanvas.top + rect.height / 2 };
+            };
+
+            const p1 = getCenter('node-mama'); const p2 = getCenter('node-giorgos'); const p3 = getCenter('node-giovanni');
+            const p4 = getCenter('node-antonio'); const p5 = getCenter('node-pepe'); const p6 = getCenter('node-anna');
+
+            svg.innerHTML = `
+                <path id="line-1" class="net-line" d="M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}" />
+                <path id="line-2" class="net-line" d="M ${p2.x} ${p2.y} L ${p3.x} ${p3.y}" />
+                <path id="line-3" class="net-line" d="M ${p3.x} ${p3.y} L ${p4.x} ${p4.y}" />
+                <path id="line-4" class="net-line" d="M ${p3.x} ${p3.y} L ${p5.x} ${p5.y}" />
+                <path id="line-5" class="net-line" d="M ${p5.x} ${p5.y} L ${p6.x} ${p6.y}" />
+            `;
+            
+            labelsContainer.innerHTML = '';
+
+            const addLabel = (stepNum, pA, pB, text) => {
+                const midX = (pA.x + pB.x) / 2; const midY = (pA.y + pB.y) / 2;
+                let angle = Math.atan2(pB.y - pA.y, pB.x - pA.x) * (180 / Math.PI);
+                if (angle > 90 || angle < -90) angle += 180; 
+
+                const label = document.createElement('div');
+                label.id = `label-${stepNum}`; label.className = 'net-label'; label.innerText = text;
+                label.style.left = `${midX}px`; label.style.top = `${midY}px`;
+                label.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+                
+                if (stepNum < currentStep) label.classList.add('visible');
+                labelsContainer.appendChild(label);
+            };
+
+            addLabel(1, p1, p2, STEPS[1].relation); addLabel(2, p2, p3, STEPS[2].relation);
+            addLabel(3, p3, p4, STEPS[3].relation); addLabel(4, p3, p5, STEPS[4].relation); addLabel(5, p5, p6, STEPS[5].relation);
+
+            for(let i=1; i<currentStep; i++) {
+                const line = document.getElementById(`line-${i}`);
+                if(line) line.classList.add('active');
+            }
+        }
+
+        window.addEventListener('resize', drawLines); window.addEventListener('load', drawLines);
+
+        function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+
+        // --- Δομημένη Αναφορά στο Terminal ---
+        function logStructured(stepData, isFinal = false) {
+            const term = document.getElementById('terminal');
+            const icon = isFinal ? '<i class="fa-solid fa-check-double"></i>' : '<i class="fa-solid fa-envelope-open-text"></i>';
+            const cls = isFinal ? 'log-item success' : 'log-item';
+            
+            const html = `
+                <div class="${cls}">
+                    <div class="log-header">${icon} Βήμα ${currentStep}: ${stepData.relation}</div>
+                    <table class="log-table">
+                        <tr><td>Αποστολέας:</td><td><b>${stepData.senderInfo}</b></td></tr>
+                        <tr><td>Παραλήπτης:</td><td><b>${stepData.receiverInfo}</b></td></tr>
+                        <tr><td>Μήνυμα:</td><td><span class="msg-payload">"${stepData.messageText}"</span></td></tr>
+                        <tr><td>Μέθοδος:</td><td>Ο παραλήπτης εκτελεί τη μέθοδο: <span class="msg-hl">${stepData.method}</span></td></tr>
+                    </table>
+                </div>
+            `;
+            term.innerHTML += html;
+            term.scrollTop = term.scrollHeight;
+            announce(`Βήμα ${currentStep}. Μήνυμα από ${stepData.senderInfo} προς ${stepData.receiverInfo}. Το μήνυμα ενεργοποιεί τη μέθοδο ${stepData.method}.`);
+        }
+
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        async function nextStep() {
+            if (isAnimating || currentStep > 5) return;
+            isAnimating = true;
+            
+            const btn = document.getElementById('btnNext');
+            btn.disabled = true;
+
+            const stepData = STEPS[currentStep];
+            
+            // 1. Update UI List
+            const listItems = document.querySelectorAll('.progress-list li');
+            listItems.forEach(li => li.classList.remove('active'));
+            if(currentStep > 1) document.getElementById(`step-${currentStep-1}`).classList.add('done');
+            document.getElementById(`step-${currentStep}`).classList.add('active');
+            document.getElementById(`step-${currentStep}`).innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Εκτελείται...`;
+            
+            // 2. Highlight Sender
+            document.querySelectorAll('.obj-node').forEach(n => n.classList.remove('active'));
+            const sender = document.getElementById(stepData.from);
+            sender.classList.add('active');
+
+            // 3. Highlight the Line! 
+            const activeLine = document.getElementById(`line-${currentStep}`);
+            if (activeLine) activeLine.classList.add('active');
+
+            // 4. Animation (Fly Message)
+            playSound(stepData.sound);
+            const receiver = document.getElementById(stepData.to);
+            
+            let shortMsg = stepData.messageText.length > 25 ? stepData.messageText.substring(0,25) + '...' : stepData.messageText;
+            await flyMessage(sender, receiver, shortMsg);
+
+            // 5. Εμφάνιση της ΕΤΙΚΕΤΑΣ ΣΧΕΣΗΣ
+            const activeLabel = document.getElementById(`label-${currentStep}`);
+            if (activeLabel) activeLabel.classList.add('visible');
+
+            // 6. Receiver Flashes
+            playSound(sfxReceive);
+            sender.classList.remove('active');
+            receiver.classList.add('active', 'flash');
+            
+            // Structured Log to terminal
+            let isFinal = currentStep === 5;
+            logStructured(stepData, isFinal);
+
+            // Special end step
+            if (isFinal) {
+                setTimeout(() => {
+                    playSound(sfxTada);
+                    receiver.innerHTML = `<i class="fa-solid fa-user-astronaut" style="font-size: 2rem; color: #ec4899;"></i><div class="obj-name">Άννα</div><div class="class-label" style="background:var(--good); color:white; border-radius:4px; padding:2px; margin-top:4px;">(Παρέλαβε)</div>`;
+                    document.getElementById(`step-5`).innerHTML = `<i class="fa-solid fa-check" style="color:var(--good)"></i> Παράδοση Ολοκληρώθηκε!`;
+                    btn.innerHTML = `<i class="fa-solid fa-flag-checkered"></i> Τέλος Προσομοίωσης`;
+                    
+                    const term = document.getElementById('terminal');
+                    term.innerHTML += `
+                        <div class="log-item conclusion">
+                            <div class="log-header"><i class="fa-solid fa-graduation-cap"></i> ΣΥΜΠΕΡΑΣΜΑ</div>
+                            <div style="font-size:0.9rem; font-weight:600; color:var(--text-color);">
+                                Το πρόβλημα λύθηκε με επιτυχία! Είδαμε στην πράξη ότι ένα αντικειμενοστραφές πρόγραμμα είναι <b>ένα δίκτυο αντικειμένων που συνεργάζονται</b>. Το κάθε αντικείμενο παρέχει <b>υπηρεσίες</b> οι οποίες υλοποιούνται με <b>μεθόδους</b>, τις οποίες τα άλλα αντικείμενα μπορούν να ζητήσουν ανταλλάσσοντας <b>Μηνύματα</b>!
+                            </div>
+                        </div>
+                    `;
+                    term.scrollTop = term.scrollHeight;
+
+                }, 800);
+            } else {
+                document.getElementById(`step-${currentStep}`).innerHTML = `<i class="fa-solid fa-check" style="color:var(--good)"></i> Ολοκληρώθηκε`;
+                btn.disabled = false;
+            }
+
+            setTimeout(() => receiver.classList.remove('flash'), 600);
+            
+            currentStep++;
+            isAnimating = false;
+        }
+
+        function flyMessage(startEl, endEl, msgText) {
+            return new Promise(async resolve => {
+                const rectStart = startEl.getBoundingClientRect();
+                const rectEnd = endEl.getBoundingClientRect();
+
+                const token = document.createElement('div');
+                token.className = 'flying-msg';
+                
+                let icon = 'fa-envelope';
+                if (currentStep === 3) icon = 'fa-spa';
+                if (currentStep === 5) icon = 'fa-box-open';
+                
+                token.innerHTML = `<i class="fa-solid ${icon}"></i> ${msgText}`;
+                
+                token.style.left = (rectStart.left + rectStart.width / 2) + 'px';
+                token.style.top = (rectStart.top + rectStart.height / 2) + 'px';
+                document.body.appendChild(token);
+
+                token.getBoundingClientRect(); 
+
+                token.style.left = (rectEnd.left + rectEnd.width / 2) + 'px';
+                token.style.top = (rectEnd.top + rectEnd.height / 2) + 'px';
+
+                await sleep(1200); 
+                token.remove();
+                resolve();
+            });
+        }
+
+        function resetApp() { location.reload(); }
+
+    </script>
+</body>
+</html>

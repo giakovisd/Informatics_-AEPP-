@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Μετατροπή: Από GOTO σε Δομημένο (Πανελλαδικές)</title>
+    <style>
+        :root {
+            --primary: #3b82f6; 
+            --primary-hover: #2563eb;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --bg-color: #f8fafc;
+            --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            
+            --success-color: #10b981; 
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --highlight-bg: #dcfce7;
+            --highlight-warn: #fef3c7;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        /* --- Toolbar (Αυστηρή Διάταξη από Δεξιά προς Αριστερά) --- */
+        .toolbar {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex; justify-content: flex-end; align-items: center; gap: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            z-index: 100; flex-wrap: wrap;
+        }
+
+        .toolbar-spacer { flex: 1; }
+
+        .tool-btn {
+            background-color: var(--panel-bg);
+            color: var(--primary);
+            border: 1px solid var(--border-color);
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex; align-items: center; gap: 6px;
+            transition: all 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .tool-btn:hover:not(:disabled) { background-color: #f1f5f9; border-color: var(--primary); }
+        .tool-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .tool-btn.blue-btn { background-color: #4285f4; color: white; border: none; }
+        .tool-btn.blue-btn:hover:not(:disabled) { background-color: #3367d6; }
+        .tool-btn.blue-btn.playing { background-color: var(--danger-color); }
+
+        .inputs-group {
+            display: flex; align-items: center; gap: 8px;
+            background: #f8fafc; border: 1px solid #e2e8f0;
+            padding: 4px 12px; border-radius: 6px;
+        }
+        .inputs-group label { font-weight: bold; color: var(--text-light); font-size: 0.85rem;}
+
+        .speed-group {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 0.9rem; color: var(--text-dark);
+            background: #f8fafc; border: 1px solid #e2e8f0;
+            padding: 5px 12px; border-radius: 6px;
+        }
+        .speed-slider { cursor: pointer; width: 80px; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex; flex: 1; padding: 15px; gap: 15px;
+            height: calc(100% - 130px); box-sizing: border-box;
+        }
+
+        .col {
+            background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        /* --- Tabs --- */
+        .tabs-container {
+            display: flex; gap: 5px; margin-bottom: 10px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        .tab-btn {
+            padding: 8px 12px; background: transparent; border: none;
+            font-weight: bold; color: var(--text-light); cursor: pointer;
+            border-bottom: 3px solid transparent; margin-bottom: -2px;
+            transition: 0.2s; font-size: 0.9rem;
+        }
+        .tab-btn:hover { color: var(--primary); }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+        /* --- Code Columns --- */
+        .col-side { flex: 0 0 350px; }
+        .code-title { font-weight: bold; font-size: 1.05rem; margin-bottom: 10px; color: var(--primary); padding-bottom: 5px;}
+        .code-title.structured { color: var(--success-color); border-bottom: 2px solid var(--bg-color); }
+        
+        .code-content {
+            font-family: monospace; font-size: 0.9rem; line-height: 1.6;
+            flex: 1; overflow-y: auto; background: var(--bg-color); border-radius: 6px; padding: 10px;
+            border: 1px solid var(--border-color); position: relative;
+        }
+        
+        .code-line { padding: 4px 8px; border-radius: 4px; transition: 0.3s; border-left: 4px solid transparent; margin: 2px 0;}
+        
+        .struct-line { opacity: 0; transform: translateX(10px); transition: all 0.4s ease; display: none;}
+        .struct-line.visible { opacity: 1; transform: translateX(0); display: block;}
+
+        .code-line.active { background: var(--highlight-bg); color: #166534; font-weight: bold; border-left-color: var(--success-color);}
+        .code-line.active-warn { background: var(--highlight-warn); color: #92400e; font-weight: bold; border-left-color: var(--warning-color);}
+
+        .keyword { color: var(--primary); font-weight: bold; }
+        .goto-keyword { color: var(--danger-color); font-weight: bold; }
+
+        /* Hide logic for exercises */
+        .ex-view { display: none; height: 100%; width: 100%; flex-direction: column;}
+        .ex-view.active-ex { display: flex; }
+
+        /* --- Center Column: Flowchart --- */
+        .col-mid { flex: 1; align-items: center; background: #f8fafc;}
+        .svg-container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; position: relative;}
+        svg { width: 100%; height: 100%; max-width: 600px; display: none;}
+        svg.active-ex { display: block; }
+
+        .fc-elem { opacity: 0; transition: opacity 0.5s ease; }
+        .fc-elem.visible { opacity: 1; }
+        
+        .fc-node { fill: white; stroke: #64748b; stroke-width: 2.5; transition: all 0.3s; }
+        .fc-text { font-family: 'Segoe UI', sans-serif; font-size: 13px; font-weight: bold; fill: #1e293b; pointer-events: none; }
+        
+        .fc-edge { fill: none; stroke: #94a3b8; stroke-width: 2.5; }
+        .fc-label { font-family: 'Segoe UI', sans-serif; font-size: 12px; font-weight: bold; }
+
+        .draw-path { stroke-dasharray: 1200; stroke-dashoffset: 1200; animation: draw 0.8s forwards; }
+        @keyframes draw { to { stroke-dashoffset: 0; } }
+
+        .fc-node.active { fill: var(--highlight-bg); stroke: var(--success-color); stroke-width: 3.5; }
+        .fc-text.active { fill: #166534; }
+        .fc-edge.active { stroke: var(--success-color); stroke-width: 3.5; }
+
+        /* --- Bottom Explanation Panel --- */
+        .explanation-panel {
+            background: var(--panel-bg); border-top: 1px solid var(--border-color);
+            padding: 15px 25px; height: 90px; box-sizing: border-box;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.15rem; color: var(--text-dark); text-align: center;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.02);
+        }
+        .explanation-panel strong { color: var(--primary); }
+
+        /* --- Modern Modal --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(3px);
+            display: none; justify-content: center; align-items: center; z-index: 1000;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .modal-overlay.show { display: flex; opacity: 1; }
+        .modal-content {
+            background: white; padding: 30px; border-radius: 12px;
+            max-width: 550px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            transform: translateY(20px); transition: transform 0.3s;
+        }
+        .modal-overlay.show .modal-content { transform: translateY(0); }
+        .modal-header { font-size: 1.3rem; font-weight: bold; color: var(--primary); margin-bottom: 15px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px;}
+        .modal-body { font-size: 1rem; line-height: 1.6; color: var(--text-dark); margin-bottom: 20px;}
+        .modal-close {
+            background: var(--primary); color: white; border: none; padding: 10px 20px;
+            border-radius: 6px; cursor: pointer; font-size: 1.05rem; font-weight: bold; width: 100%; transition: 0.2s;
+        }
+        .modal-close:hover { background: var(--primary-hover); }
+
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+   <div style="flex: 1; text-align: left; font-weight: bold; font-size: 1.15rem; color: black;">
+        Μετατροπή αδόμητου κώδικα σε δομημένο
+    </div>
+    <button id="btnReset" class="tool-btn" onclick="initApp()">🔄 Αρχή</button>
+    <button id="btnAuto" class="tool-btn blue-btn" onclick="toggleAutoPlay()"><span id="autoIcon">▶</span> <span id="autoText">Αυτόματη Εκτέλεση</span></button>
+    <button id="btnStep" class="tool-btn" onclick="nextStep()">Βήμα ⏭</button>
+    
+   
+
+    <button id="btnTheory" class="tool-btn" onclick="openModal()">📖 Θεωρία</button>
+
+    <div class="speed-group">
+        <label>Ταχύτητα:</label>
+        <input type="range" id="speedSlider" class="speed-slider" min="1" max="5" value="3">
+    </div>
+</div>
+
+<div class="main-container">
+    
+    <div class="col col-side">
+        
+        <div class="tabs-container">
+            <button class="tab-btn active" onclick="switchTab(1)">Βασική</button>
+            <button class="tab-btn" onclick="switchTab(2)">Πανελ. 2007</button>
+            <button class="tab-btn" onclick="switchTab(3)">Πανελ. 2019</button>
+        </div>
+        
+        <div class="code-title">⚠️ Αδόμητος Κώδικας (GOTO)</div>
+        
+       <div class="code-content ex-view active-ex" id="unstruct-1">
+            <div class="code-line" id="E1_U_Title">Αλγόριθμος αδόμητος</div>
+            <div class="code-line" id="E1_U10">10: <span class="keyword">ΑΝ</span> συνθήκη1 <span class="keyword">ΤΟΤΕ</span></div>
+            <div class="code-line" id="E1_U_E1">&nbsp;&nbsp;&nbsp;&nbsp;Εντολή1</div>
+            <div class="code-line" id="E1_U_Cond2">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">ΑΝ</span> συνθήκη2 <span class="keyword">ΤΟΤΕ</span></div>
+            <div class="code-line" id="E1_U_E2">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Εντολή2</div>
+            <div class="code-line" id="E1_U_E3">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Εντολή3</div>
+            <div class="code-line" id="E1_U_GOTO20">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="goto-keyword">Πήγαινε 20</span></div>
+            <div class="code-line" id="E1_U_TA1">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">ΤΕΛΟΣ_ΑΝ</span></div>
+            <div class="code-line" id="E1_U_E4">&nbsp;&nbsp;&nbsp;&nbsp;Εντολή4</div>
+            <div class="code-line" id="E1_U20">20: Εντολή5</div>
+            <div class="code-line" id="E1_U_GOTO10">&nbsp;&nbsp;&nbsp;&nbsp;<span class="goto-keyword">Πήγαινε 10</span></div>
+            <div class="code-line" id="E1_U_TA2"><span class="keyword">ΤΕΛΟΣ_ΑΝ</span></div>
+            <div class="code-line" id="E1_U_E6">&nbsp;&nbsp;&nbsp;&nbsp;Εντολή6</div>
+            <div class="code-line" id="E1_U_End"><span class="keyword">ΤΕΛΟΣ</span> αδόμητος</div>
+        </div>
+
+        <div class="code-content ex-view" id="unstruct-2">
+            <div class="code-line" id="E2_U1">Βήμα 1: <span class="keyword">Αν</span> Α > 0 <span class="keyword">τότε</span> <span class="goto-keyword" id="E2_U1_GOTO">πήγαινε στο Βήμα 5</span></div>
+            <div class="code-line" id="E2_U2">Βήμα 2: <span class="keyword">Αν</span> Α = 0 <span class="keyword">τότε</span> <span class="goto-keyword" id="E2_U2_GOTO">πήγαινε στο Βήμα 7</span></div>
+            <div class="code-line" id="E2_U3">Βήμα 3: Τύπωσε "Αρνητικός"</div>
+            <div class="code-line" id="E2_U4">Βήμα 4: <span class="goto-keyword">Πήγαινε στο Βήμα 8</span></div>
+            <div class="code-line" id="E2_U5">Βήμα 5: Τύπωσε "Θετικός"</div>
+            <div class="code-line" id="E2_U6">Βήμα 6: <span class="goto-keyword">Πήγαινε στο Βήμα 8</span></div>
+            <div class="code-line" id="E2_U7">Βήμα 7: Τύπωσε "Μηδέν"</div>
+            <div class="code-line" id="E2_U8">Βήμα 8: Τύπωσε "Τέλος"</div>
+        </div>
+
+        <div class="code-content ex-view" id="unstruct-3">
+            <div class="code-line" id="E3_U1">Βήμα 1: Θέσε Ρ=0</div>
+            <div class="code-line" id="E3_U2">Βήμα 2: <span class="keyword">Αν</span> Μ2>0, <span class="keyword">τότε</span> <span class="goto-keyword" id="E3_U2_TRUE">πήγαινε στο Βήμα 3</span>,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">αλλιώς</span> <span class="goto-keyword" id="E3_U2_FALSE">πήγαινε στο Βήμα 7</span></div>
+            <div class="code-line" id="E3_U3">Βήμα 3: <span class="keyword">Αν</span> ο Μ2 είναι περιττός,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">τότε</span> <span class="goto-keyword" id="E3_U3_GOTO">θέσε Ρ=Ρ+Μ1</span></div>
+            <div class="code-line" id="E3_U4">Βήμα 4: Θέσε Μ1=Μ1*2</div>
+            <div class="code-line" id="E3_U5">Βήμα 5: Θέσε Μ2=Μ2/2 (μόνο ακέραιο)</div>
+            <div class="code-line" id="E3_U6">Βήμα 6: <span class="goto-keyword">Πήγαινε στο Βήμα 2</span></div>
+            <div class="code-line" id="E3_U7">Βήμα 7: Τύπωσε τον Ρ</div>
+        </div>
+    </div>
+
+    <div class="col col-mid">
+        <div class="code-title" style="border:none;">Κατασκευή Διαγράμματος Ροής</div>
+        <div class="svg-container">
+            
+            <svg viewBox="0 0 500 550" id="svg-1" class="active-ex">
+                <defs>
+                    <marker id="arr1" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto-start-reverse">
+                        <path d="M 0 0 L 6 3 L 0 6 z" fill="#94a3b8" />
+                    </marker>
+                    <marker id="arrAct1" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto-start-reverse">
+                        <path d="M 0 0 L 6 3 L 0 6 z" fill="#10b981" />
+                    </marker>
+                </defs>
+                <g class="fc-elem" id="E1_N1">
+                    <polygon points="150,20 220,50 150,80 80,50" class="fc-node" id="E1_Dia1" />
+                    <text x="150" y="55" text-anchor="middle" class="fc-text">συνθήκη1</text>
+                </g>
+                <g class="fc-elem" id="E1_E1_False">
+                    <path d="M 220 50 L 450 50 L 450 480 L 220 480" class="fc-edge" marker-end="url(#arr1)" />
+                    <text x="260" y="40" class="fc-label" style="fill:var(--danger-color);">ΨΕΥΔΗΣ</text>
+                </g>
+                <g class="fc-elem" id="E1_E1_True">
+                    <path d="M 150 80 L 150 110" class="fc-edge" marker-end="url(#arr1)" />
+                    <text x="165" y="100" class="fc-label" style="fill:var(--success-color);">ΑΛΗΘΗΣ</text>
+                </g>
+                <g class="fc-elem" id="E1_N2">
+                    <rect x="80" y="110" width="140" height="40" rx="4" class="fc-node" id="E1_Rect1" />
+                    <text x="150" y="135" text-anchor="middle" class="fc-text">Εντολή1</text>
+                </g>
+                <path d="M 150 150 L 150 180" class="fc-edge fc-elem" id="E1_E2" marker-end="url(#arr1)" />
+                
+                <g class="fc-elem" id="E1_N3">
+                    <polygon points="150,180 220,210 150,240 80,210" class="fc-node" id="E1_Dia2" />
+                    <text x="150" y="215" text-anchor="middle" class="fc-text">συνθήκη2</text>
+                </g>
+                <g class="fc-elem" id="E1_E2_True">
+                    <path d="M 220 210 L 320 210 L 320 240" class="fc-edge" marker-end="url(#arr1)" />
+                    <text x="260" y="200" class="fc-label" style="fill:var(--success-color);">ΑΛΗΘΗΣ</text>
+                </g>
+                <g class="fc-elem" id="E1_N4">
+                    <rect x="250" y="240" width="140" height="50" rx="4" class="fc-node" id="E1_Rect2" />
+                    <text x="320" y="260" text-anchor="middle" class="fc-text">Εντολή2</text>
+                    <text x="320" y="280" text-anchor="middle" class="fc-text">Εντολή3</text>
+                </g>
+                <g class="fc-elem" id="E1_E2_False">
+                    <path d="M 150 240 L 150 270" class="fc-edge" marker-end="url(#arr1)" />
+                    <text x="165" y="260" class="fc-label" style="fill:var(--danger-color);">ΨΕΥΔΗΣ</text>
+                </g>
+                <g class="fc-elem" id="E1_N5">
+                    <rect x="80" y="270" width="140" height="40" rx="4" class="fc-node" id="E1_Rect3" />
+                    <text x="150" y="295" text-anchor="middle" class="fc-text">Εντολή4</text>
+                </g>
+
+                <g class="fc-elem" id="E1_Merge1">
+                    <path d="M 320 290 L 320 330 L 150 330 L 150 360" class="fc-edge" marker-end="url(#arr1)" />
+                </g>
+                <g class="fc-elem" id="E1_Merge2">
+                    <path d="M 150 310 L 150 360" class="fc-edge" marker-end="url(#arr1)" />
+                </g>
+
+                <g class="fc-elem" id="E1_N6">
+                    <rect x="80" y="360" width="140" height="40" rx="4" class="fc-node" id="E1_Rect4" />
+                    <text x="150" y="385" text-anchor="middle" class="fc-text">Εντολή5</text>
+                </g>
+                
+                <path d="M 150 400 L 150 430 L 40 430 L 40 50 L 80 50" class="fc-edge fc-elem" id="E1_E_Loop" marker-end="url(#arr1)" />
+                
+                <g class="fc-elem" id="E1_N_End">
+                    <rect x="80" y="460" width="140" height="40" rx="4" class="fc-node" id="E1_Rect5" />
+                    <text x="150" y="485" text-anchor="middle" class="fc-text">Εντολή6</text>
+                </g>
+            </svg>
+
+            <svg viewBox="0 0 650 450" id="svg-2">
+                <defs>
+                    <marker id="arr2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto-start-reverse">
+                        <path d="M 0 0 L 6 3 L 0 6 z" fill="#94a3b8" />
+                    </marker>
+                    <marker id="arrAct2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto-start-reverse">
+                        <path d="M 0 0 L 6 3 L 0 6 z" fill="#10b981" />
+                    </marker>
+                </defs>
+                <g class="fc-elem" id="E2_N1">
+                    <polygon points="150,20 220,50 150,80 80,50" class="fc-node" id="E2_Dia1" />
+                    <text x="150" y="55" text-anchor="middle" class="fc-text">A > 0</text>
+                </g>
+                <g class="fc-elem" id="E2_E1_True">
+                    <path d="M 220 50 L 450 50" class="fc-edge" marker-end="url(#arr2)" />
+                    <text x="250" y="40" class="fc-label" style="fill:var(--success-color);">ΑΛΗΘΗΣ</text>
+                </g>
+                <g class="fc-elem" id="E2_E1_False">
+                    <path d="M 150 80 L 150 110" class="fc-edge" marker-end="url(#arr2)" />
+                    <text x="160" y="100" class="fc-label" style="fill:var(--danger-color);">ΨΕΥΔΗΣ</text>
+                </g>
+
+                <g class="fc-elem" id="E2_N5">
+                    <polygon points="450,30 570,30 550,70 430,70" class="fc-node" id="E2_Para2" />
+                    <text x="500" y="55" text-anchor="middle" class="fc-text">ΓΡΑΨΕ 'Θετικός'</text>
+                </g>
+                <g class="fc-elem" id="E2_E_To8_2">
+                    <path d="M 500 70 L 500 300 L 250 300 L 250 330" class="fc-edge" marker-end="url(#arr2)" />
+                </g>
+
+                <g class="fc-elem" id="E2_N2">
+                    <polygon points="150,110 220,140 150,170 80,140" class="fc-node" id="E2_Dia2" />
+                    <text x="150" y="145" text-anchor="middle" class="fc-text">A = 0</text>
+                </g>
+                <g class="fc-elem" id="E2_E2_True">
+                    <path d="M 220 140 L 320 140" class="fc-edge" marker-end="url(#arr2)" />
+                    <text x="240" y="130" class="fc-label" style="fill:var(--success-color);">ΑΛΗΘΗΣ</text>
+                </g>
+                <g class="fc-elem" id="E2_E2_False">
+                    <path d="M 150 170 L 150 210" class="fc-edge" marker-end="url(#arr2)" />
+                    <text x="160" y="195" class="fc-label" style="fill:var(--danger-color);">ΨΕΥΔΗΣ</text>
+                </g>
+
+                <g class="fc-elem" id="E2_N7">
+                    <polygon points="320,120 440,120 420,160 300,160" class="fc-node" id="E2_Para3" />
+                    <text x="370" y="145" text-anchor="middle" class="fc-text">ΓΡΑΨΕ 'Μηδέν'</text>
+                </g>
+                <g class="fc-elem" id="E2_E_To8_3">
+                    <path d="M 370 160 L 370 300 L 250 300" class="fc-edge" marker-end="url(#arr2)" />
+                </g>
+
+                <g class="fc-elem" id="E2_N3">
+                    <polygon points="90,210 230,210 210,250 70,250" class="fc-node" id="E2_Para1" />
+                    <text x="150" y="235" text-anchor="middle" class="fc-text">ΓΡΑΨΕ 'Αρνητικός'</text>
+                </g>
+                <g class="fc-elem" id="E2_E_To8_1">
+                    <path d="M 150 250 L 150 300 L 250 300" class="fc-edge" marker-end="url(#arr2)" />
+                </g>
+
+                <g class="fc-elem" id="E2_N8">
+                    <polygon points="190,330 310,330 290,370 170,370" class="fc-node" id="E2_Para4" />
+                    <text x="250" y="355" text-anchor="middle" class="fc-text">ΓΡΑΨΕ 'Τέλος'</text>
+                </g>
+            </svg>
+
+            <svg viewBox="0 0 550 500" id="svg-3">
+                <defs>
+                    <marker id="arr3" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto-start-reverse">
+                        <path d="M 0 0 L 6 3 L 0 6 z" fill="#94a3b8" />
+                    </marker>
+                    <marker id="arrAct3" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto-start-reverse">
+                        <path d="M 0 0 L 6 3 L 0 6 z" fill="#10b981" />
+                    </marker>
+                </defs>
+                <g class="fc-elem" id="E3_N1">
+                    <rect x="130" y="10" width="140" height="40" rx="4" class="fc-node" id="E3_Rect1" />
+                    <text x="200" y="35" text-anchor="middle" class="fc-text">P &lt;- 0</text>
+                </g>
+                <path d="M 200 50 L 200 80" class="fc-edge fc-elem" id="E3_E1" marker-end="url(#arr3)" />
+                
+                <g class="fc-elem" id="E3_N2">
+                    <polygon points="200,80 270,110 200,140 130,110" class="fc-node" id="E3_Dia1" />
+                    <text x="200" y="115" text-anchor="middle" class="fc-text">M2 > 0</text>
+                </g>
+                
+                <g class="fc-elem" id="E3_E_False">
+                    <path d="M 270 110 L 480 110 L 480 430 L 250 430" class="fc-edge" marker-end="url(#arr3)" />
+                    <text x="375" y="100" class="fc-label" style="fill:var(--danger-color);">ΨΕΥΔΗΣ</text>
+                </g>
+
+                <g class="fc-elem" id="E3_E_True">
+                    <path d="M 200 140 L 200 170" class="fc-edge" marker-end="url(#arr3)" />
+                    <text x="215" y="160" class="fc-label" style="fill:var(--success-color);">ΑΛΗΘΗΣ</text>
+                </g>
+
+                <g class="fc-elem" id="E3_N3">
+                    <polygon points="200,170 280,200 200,230 120,200" class="fc-node" id="E3_Dia2" />
+                    <text x="200" y="205" text-anchor="middle" class="fc-text">Μ2 mod 2 = 1</text>
+                </g>
+
+                <g class="fc-elem" id="E3_E_True2">
+                    <path d="M 280 200 L 370 200 L 370 220" class="fc-edge" marker-end="url(#arr3)" />
+                    <text x="325" y="190" class="fc-label" style="fill:var(--success-color);">ΑΛΗΘΗΣ</text>
+                </g>
+
+                <g class="fc-elem" id="E3_N_Act">
+                    <rect x="300" y="220" width="140" height="40" rx="4" class="fc-node" id="E3_Rect2" />
+                    <text x="370" y="245" text-anchor="middle" class="fc-text">P &lt;- P + M1</text>
+                </g>
+
+                <g class="fc-elem" id="E3_E_False2">
+                    <path d="M 200 230 L 200 290" class="fc-edge" marker-end="url(#arr3)" />
+                    <text x="215" y="260" class="fc-label" style="fill:var(--danger-color);">ΨΕΥΔΗΣ</text>
+                </g>
+
+                <g class="fc-elem" id="E3_E_ActTo4">
+                    <path d="M 370 260 L 370 280 L 200 280" class="fc-edge" marker-end="url(#arr3)" />
+                </g>
+
+                <g class="fc-elem" id="E3_N4">
+                    <rect x="130" y="290" width="140" height="50" rx="4" class="fc-node" id="E3_Rect3" />
+                    <text x="200" y="310" text-anchor="middle" class="fc-text">M1 &lt;- M1 * 2</text>
+                    <text x="200" y="330" text-anchor="middle" class="fc-text">M2 &lt;- M2 div 2</text>
+                </g>
+
+                <path d="M 200 340 L 200 360 L 60 360 L 60 110 L 130 110" class="fc-edge fc-elem" id="E3_E_Loop" marker-end="url(#arr3)" />
+
+                <g class="fc-elem" id="E3_N7">
+                    <polygon points="140,410 260,410 240,450 120,450" class="fc-node" id="E3_Para1" />
+                    <text x="195" y="435" text-anchor="middle" class="fc-text">ΓΡΑΨΕ Ρ</text>
+                </g>
+            </svg>
+
+        </div>
+    </div>
+
+    <div class="col col-side">
+        <div class="code-title structured">✅ Δομημένος Κώδικας (ΟΣΟ)</div>
+        
+        <div class="code-content ex-view active-ex" id="struct-1">
+            <div class="code-line struct-line" id="E1_S_Title">Αλγόριθμος δομημένος</div>
+            <div class="code-line struct-line" id="E1_S_Oso"><span class="keyword">ΟΣΟ</span> συνθήκη1 <span class="keyword">ΕΠΑΝΑΛΑΒΕ</span></div>
+            <div class="code-line struct-line" id="E1_S_E1">&nbsp;&nbsp;Εντολή1</div>
+            <div class="code-line struct-line" id="E1_S_An">&nbsp;&nbsp;<span class="keyword">ΑΝ</span> συνθήκη2 <span class="keyword">ΤΟΤΕ</span></div>
+            <div class="code-line struct-line" id="E1_S_E23">&nbsp;&nbsp;&nbsp;&nbsp;Εντολή2<br>&nbsp;&nbsp;&nbsp;&nbsp;Εντολή3</div>
+            <div class="code-line struct-line" id="E1_S_Allios">&nbsp;&nbsp;<span class="keyword">ΑΛΛΙΩΣ</span></div>
+            <div class="code-line struct-line" id="E1_S_E4">&nbsp;&nbsp;&nbsp;&nbsp;Εντολή4</div>
+            <div class="code-line struct-line" id="E1_S_TA">&nbsp;&nbsp;<span class="keyword">ΤΕΛΟΣ_ΑΝ</span></div>
+            <div class="code-line struct-line" id="E1_S_E5">&nbsp;&nbsp;Εντολή5</div>
+            <div class="code-line struct-line" id="E1_S_TE"><span class="keyword">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span></div>
+            <div class="code-line struct-line" id="E1_S_E6">Εντολή6</div>
+            <div class="code-line struct-line" id="E1_S_End"><span class="keyword">ΤΕΛΟΣ</span> δομημένος</div>
+        </div>
+
+        <div class="code-content ex-view" id="struct-2">
+            <div class="code-line struct-line" id="E2_S1"><span class="keyword">ΑΝ</span> Α > 0 <span class="keyword">ΤΟΤΕ</span></div>
+            <div class="code-line struct-line" id="E2_S2">&nbsp;&nbsp;<span class="keyword">ΓΡΑΨΕ</span> 'Θετικός'</div>
+            <div class="code-line struct-line" id="E2_S3"><span class="keyword">ΑΛΛΙΩΣ_ΑΝ</span> Α = 0 <span class="keyword">ΤΟΤΕ</span></div>
+            <div class="code-line struct-line" id="E2_S4">&nbsp;&nbsp;<span class="keyword">ΓΡΑΨΕ</span> 'Μηδέν'</div>
+            <div class="code-line struct-line" id="E2_S5"><span class="keyword">ΑΛΛΙΩΣ</span></div>
+            <div class="code-line struct-line" id="E2_S6">&nbsp;&nbsp;<span class="keyword">ΓΡΑΨΕ</span> 'Αρνητικός'</div>
+            <div class="code-line struct-line" id="E2_S7"><span class="keyword">ΤΕΛΟΣ_ΑΝ</span></div>
+            <div class="code-line struct-line" id="E2_S8"><span class="keyword">ΓΡΑΨΕ</span> 'Τέλος'</div>
+        </div>
+
+        <div class="code-content ex-view" id="struct-3">
+            <div class="code-line struct-line" id="E3_S1">Ρ &lt;- 0</div>
+            <div class="code-line struct-line" id="E3_S2"><span class="keyword">ΟΣΟ</span> M2 > 0 <span class="keyword">ΕΠΑΝΑΛΑΒΕ</span></div>
+            <div class="code-line struct-line" id="E3_S3">&nbsp;&nbsp;<span class="keyword">ΑΝ</span> M2 mod 2 = 1 <span class="keyword">ΤΟΤΕ</span></div>
+            <div class="code-line struct-line" id="E3_S4">&nbsp;&nbsp;&nbsp;&nbsp;Ρ &lt;- Ρ + Μ1</div>
+            <div class="code-line struct-line" id="E3_S5">&nbsp;&nbsp;<span class="keyword">ΤΕΛΟΣ_ΑΝ</span></div>
+            <div class="code-line struct-line" id="E3_S6">&nbsp;&nbsp;Μ1 &lt;- Μ1 * 2</div>
+            <div class="code-line struct-line" id="E3_S7">&nbsp;&nbsp;Μ2 &lt;- Μ2 div 2</div>
+            <div class="code-line struct-line" id="E3_S8"><span class="keyword">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span></div>
+            <div class="code-line struct-line" id="E3_S9"><span class="keyword">ΓΡΑΨΕ</span> Ρ</div>
+        </div>
+    </div>
+
+</div>
+
+<div class="explanation-panel" id="expPanel">
+    Επιλέξτε άσκηση από τις καρτέλες αριστερά και πατήστε <strong>Βήμα</strong> (ή Αυτόματη Εκτέλεση) για να ξεκινήσει!
+</div>
+
+<div class="modal-overlay" id="theoryModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span>📖 Θεωρία & Πανελλαδικές</span>
+        </div>
+        <div class="modal-body">
+            <p>Για να μετατρέψουμε με ασφάλεια έναν κώδικα <strong>με άλματα GOTO</strong> σε καθαρό Δομημένο Κώδικα, η καλύτερη μεθοδολογία είναι:</p>
+            <ol>
+                <li style="margin-bottom: 8px;">Παρακολουθούμε τον αδόμητο κώδικα γραμμή-γραμμή και τον αποτυπώνουμε σε <strong>Διάγραμμα Ροής</strong>. Διατηρούμε ακριβώς τις ίδιες συνθήκες.</li>
+                <li style="margin-bottom: 8px;">Στο διάγραμμα, οι διαδοχικές εκχωρήσεις ομαδοποιούνται στο ίδιο ορθογώνιο, <strong>η μία κάτω από την άλλη</strong> (όπως ζητάει το Κεφάλαιο 2).</li>
+                <li>Αφού ολοκληρωθεί το σχήμα, το διαβάζουμε για να γράψουμε τον <strong>Δομημένο Κώδικα (σε ΓΛΩΣΣΑ)</strong>. Έτσι βλέπουμε ξεκάθαρα αν ο κώδικας καταλήγει σε Δομή Επιλογής (Πολλαπλή) ή Δομή Επανάληψης (ΟΣΟ)!</li>
+            </ol>
+        </div>
+        <button class="modal-close" onclick="closeModal()">Το κατάλαβα!</button>
+    </div>
+</div>
+
+<script>
+    // --- State Variables ---
+    let currentEx = 1; 
+    let step = 0; 
+    let isAutoPlaying = false;
+    let autoPlayTimer = null;
+    let maxSteps = 18; 
+
+    // --- DOM Elements ---
+    const btnStep = document.getElementById('btnStep');
+    const btnAuto = document.getElementById('btnAuto');
+    const autoIcon = document.getElementById('autoIcon');
+    const autoText = document.getElementById('autoText');
+    const expPanel = document.getElementById('expPanel');
+    const modal = document.getElementById('theoryModal');
+
+    // --- Modal Logic ---
+    function openModal() { modal.classList.add('show'); }
+    function closeModal() { modal.classList.remove('show'); }
+
+    // --- Tab Switch Logic ---
+    function switchTab(exNum) {
+        currentEx = exNum;
+        
+        document.querySelectorAll('.tab-btn').forEach((btn, idx) => {
+            btn.classList.toggle('active', idx + 1 === exNum);
+        });
+
+        document.querySelectorAll('.ex-view').forEach(el => el.classList.remove('active-ex'));
+        document.querySelectorAll('.svg-container svg').forEach(el => el.classList.remove('active-ex'));
+
+        document.getElementById(`unstruct-${exNum}`).classList.add('active-ex');
+        document.getElementById(`struct-${exNum}`).classList.add('active-ex');
+        document.getElementById(`svg-${exNum}`).classList.add('active-ex');
+
+        if (currentEx === 1) maxSteps = 23;
+        if (currentEx === 2) maxSteps = 14;
+        if (currentEx === 3) maxSteps = 19;
+
+        initApp();
+    }
+
+    // --- UI Helpers ---
+    function resetAll() {
+        document.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.active-warn').forEach(el => el.classList.remove('active-warn'));
+        
+        document.querySelectorAll('.fc-elem').forEach(el => {
+            el.classList.remove('visible');
+            el.classList.remove('draw-path');
+        });
+        
+        document.querySelectorAll('.struct-line').forEach(el => el.classList.remove('visible'));
+        document.querySelectorAll('.fc-edge').forEach(el => {
+            el.setAttribute('marker-end', `url(#arr${currentEx})`);
+        });
+    }
+
+    function h(id, type='active') { if(id && document.getElementById(id)) document.getElementById(id).classList.add(type); }
+    function s(id) {
+        if(!id) return;
+        const el = document.getElementById(id);
+        if(el) {
+            el.classList.add('visible');
+            if(el.tagName === 'path') el.classList.add('draw-path');
+        }
+    }
+
+    function clearAll() { 
+        document.querySelectorAll('.active, .active-warn').forEach(el => el.classList.remove('active', 'active-warn'));
+        document.querySelectorAll('.fc-edge').forEach(el => el.setAttribute('marker-end', `url(#arrAct${currentEx})`));
+    }
+
+    // --- Execution Control ---
+    function initApp() {
+        stopAutoPlay();
+        step = 0;
+        resetAll();
+        expPanel.innerHTML = "Διαβάζουμε τον αδόμητο κώδικα (αριστερά) και χτίζουμε το <strong>Διάγραμμα Ροής</strong>. Πατήστε Βήμα!";
+        btnStep.disabled = false;
+    }
+
+    function toggleAutoPlay() {
+        if (isAutoPlaying) stopAutoPlay();
+        else startAutoPlay();
+    }
+
+    function startAutoPlay() {
+        if (step > maxSteps) initApp();
+        isAutoPlaying = true;
+        btnAuto.classList.add('playing');
+        autoIcon.innerText = "⏸";
+        autoText.innerText = "Παύση";
+        btnStep.disabled = true;
+        executeStep();
+    }
+
+    function stopAutoPlay() {
+        isAutoPlaying = false;
+        clearTimeout(autoPlayTimer);
+        btnAuto.classList.remove('playing');
+        autoIcon.innerText = "▶";
+        autoText.innerText = "Αυτόματη Εκτέλεση";
+        if(step <= maxSteps) btnStep.disabled = false;
+    }
+
+    function getSpeed() {
+        const val = document.getElementById('speedSlider').value;
+        const delays = {1: 4500, 2: 3500, 3: 2500, 4: 1500, 5: 900};
+        return delays[val] || 2500;
+    }
+
+    function nextStep() {
+        stopAutoPlay();
+        executeStep();
+    }
+
+    function executeStep() {
+        clearAll();
+        if (currentEx === 1) runEx1();
+        else if (currentEx === 2) runEx2();
+        else if (currentEx === 3) runEx3();
+
+        step++;
+        if (step <= maxSteps && isAutoPlaying) {
+            autoPlayTimer = setTimeout(executeStep, getSpeed());
+        }
+    }
+
+    // --- EXERCISE 1 (Basic) ---
+   // --- EXERCISE 1 (Βασική) ---
+    function runEx1() {
+        const m = `url(#arrAct1)`;
+        switch(step) {
+            case 0: h('E1_U10'); expPanel.innerHTML = "1. Συναντάμε την 10: ΑΝ συνθήκη1."; break;
+            case 1: h('E1_U10'); s('E1_N1'); h('E1_Dia1'); expPanel.innerHTML = "2. Σχεδιάζουμε τον 1ο ρόμβο (συνθήκη1)."; break;
+            case 2: h('E1_U_TA2'); h('E1_U_E6'); s('E1_E1_False'); document.getElementById('E1_E1_False').setAttribute('marker-end', m); expPanel.innerHTML = "3. Αν η συνθήκη είναι ΨΕΥΔΗΣ, η ροή προσπερνά όλο το ΑΝ και καταλήγει στην Εντολή6."; break;
+            case 3: h('E1_U_E6'); s('E1_N_End'); h('E1_Rect5'); expPanel.innerHTML = "4. Σχεδιάζουμε την Εντολή6, έξω από τη δομή."; break;
+            case 4: h('E1_U10'); s('E1_E1_True'); document.getElementById('E1_E1_True').setAttribute('marker-end', m); expPanel.innerHTML = "5. Αν η 1η συνθήκη είναι ΑΛΗΘΗΣ, μπαίνουμε στο σώμα του ΑΝ."; break;
+            case 5: h('E1_U_E1'); s('E1_N2'); h('E1_Rect1'); s('E1_E2'); document.getElementById('E1_E2').setAttribute('marker-end', m); expPanel.innerHTML = "6. Πρώτα εκτελείται κανονικά η Εντολή1."; break;
+            case 6: h('E1_U_Cond2'); s('E1_N3'); h('E1_Dia2'); expPanel.innerHTML = "7. Μετά συναντάμε νέα επιλογή: ΑΝ συνθήκη2. Νέος ρόμβος!"; break;
+            case 7: h('E1_U_E2'); h('E1_U_E3'); s('E1_E2_True'); document.getElementById('E1_E2_True').setAttribute('marker-end', m); expPanel.innerHTML = "8. Αν η 2η συνθήκη είναι ΑΛΗΘΗΣ, πάμε στις Εντολή2, Εντολή3."; break;
+            case 8: h('E1_U_E2'); h('E1_U_E3'); s('E1_N4'); h('E1_Rect2'); expPanel.innerHTML = "9. Σχεδιάζονται στο ίδιο ορθογώνιο, η μία κάτω από την άλλη."; break;
+            case 9: h('E1_U_GOTO20', 'active-warn'); expPanel.innerHTML = "10. Προσοχή! Εδώ υπάρχει Πήγαινε 20. Αυτό παρακάμπτει το ΤΕΛΟΣ_ΑΝ και την Εντολή4."; break;
+            case 10: h('E1_U20'); s('E1_Merge1'); s('E1_N6'); h('E1_Rect4'); document.getElementById('E1_Merge1').setAttribute('marker-end', m); expPanel.innerHTML = "11. Πηδάμε κατευθείαν στην 20: Εντολή5!"; break;
+            case 11: h('E1_U_E4'); s('E1_E2_False'); document.getElementById('E1_E2_False').setAttribute('marker-end', m); expPanel.innerHTML = "12. Τι γίνεται αν η συνθήκη2 ήταν ΨΕΥΔΗΣ; Εκτελείται η Εντολή4."; break;
+            case 12: h('E1_U_E4'); s('E1_N5'); h('E1_Rect3'); expPanel.innerHTML = "13. Σχεδιάζουμε την Εντολή4 στην αριστερή (ΨΕΥΔΗΣ) διαδρομή."; break;
+            case 13: h('E1_U20'); s('E1_Merge2'); document.getElementById('E1_Merge2').setAttribute('marker-end', m); expPanel.innerHTML = "14. Και αυτή η διαδρομή συνεχίζει φυσιολογικά στην 20: Εντολή5."; break;
+            case 14: h('E1_U_GOTO10', 'active-warn'); expPanel.innerHTML = "15. Μετά την Εντολή5 υπάρχει: Πήγαινε 10!"; break;
+            case 15: h('E1_U10'); s('E1_E_Loop'); h('E1_E_Loop'); document.getElementById('E1_E_Loop').setAttribute('marker-end', m); expPanel.innerHTML = "16. Αυτό δημιουργεί βρόχο! Το βελάκι επιστρέφει στον 1ο ρόμβο. Τέλος Διαγράμματος!"; break;
+            case 16: h('E1_Dia1'); s('E1_S_Title'); s('E1_S_Oso'); h('E1_S_Oso'); expPanel.innerHTML = "17. Δομημένος Κώδικας: Ο 1ος ρόμβος κάνει κύκλο (βρόχος). Άρα είναι ΟΣΟ συνθήκη1."; break;
+            case 17: h('E1_Rect1'); s('E1_S_E1'); h('E1_S_E1'); expPanel.innerHTML = "18. Μέσα στον βρόχο, μπαίνει κανονικά η Εντολή1."; break;
+            case 18: h('E1_Dia2'); s('E1_S_An'); h('E1_S_An'); expPanel.innerHTML = "19. Ο 2ος ρόμβος ΔΕΝ κάνει κύκλο. Είναι απλή επιλογή: ΑΝ συνθήκη2 ΤΟΤΕ."; break;
+            case 19: h('E1_Rect2'); s('E1_S_E23'); h('E1_S_E23'); expPanel.innerHTML = "20. Στην Αληθή διαδρομή εκτελούνται οι Εντολή2, Εντολή3."; break;
+            case 20: h('E1_Rect3'); s('E1_S_Allios'); h('E1_S_Allios'); s('E1_S_E4'); h('E1_S_E4'); s('E1_S_TA'); h('E1_S_TA'); expPanel.innerHTML = "21. Η Ψευδής διαδρομή φτιάχνει το ΑΛΛΙΩΣ με την Εντολή4. Κλείνουμε το ΤΕΛΟΣ_ΑΝ."; break;
+            case 21: h('E1_Rect4'); s('E1_S_E5'); h('E1_S_E5'); expPanel.innerHTML = "22. Η Εντολή5 εκτελείται στη συνέχεια, ΠΡΙΝ κλείσει ο βρόχος."; break;
+            case 22: h('E1_E_Loop'); s('E1_S_TE'); h('E1_S_TE'); expPanel.innerHTML = "23. Το βελάκι επιστροφής κλείνει τον βρόχο με ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ."; break;
+            case 23: h('E1_Rect5'); s('E1_S_E6'); h('E1_S_E6'); s('E1_S_End'); h('E1_S_End'); expPanel.innerHTML = "24. Εκτός βρόχου γράφουμε την Εντολή6. Η μετατροπή ολοκληρώθηκε τέλεια!"; btnStep.disabled = true; stopAutoPlay(); break;
+        }
+    }
+
+    // --- EXERCISE 2 (2007) ---
+    function runEx2() {
+        const m = `url(#arrAct2)`;
+        switch(step) {
+            case 0: h('E2_U1'); s('E2_N1'); h('E2_Dia1'); expPanel.innerHTML = "1. Βήμα 1: Ελέγχουμε Αν Α > 0. Σχεδιάζουμε τον ρόμβο."; break;
+            case 1: h('E2_U1_GOTO', 'active-warn'); expPanel.innerHTML = "2. Αν ΑΛΗΘΗΣ: πήγαινε στο Βήμα 5."; break;
+            case 2: h('E2_U5'); s('E2_E1_True'); s('E2_N5'); h('E2_Para2'); document.getElementById('E2_E1_True').setAttribute('marker-end', m); expPanel.innerHTML = "3. Βήμα 5: Τύπωσε Θετικός."; break;
+            case 3: h('E2_U6', 'active-warn'); expPanel.innerHTML = "4. Βήμα 6: Πήγαινε στο Βήμα 8."; break;
+            case 4: h('E2_U8'); s('E2_E_To8_2'); s('E2_N8'); h('E2_Para4'); document.getElementById('E2_E_To8_2').setAttribute('marker-end', m); expPanel.innerHTML = "5. Βήμα 8: Τύπωσε Τέλος. (Ολοκληρώθηκε αυτή η διαδρομή)."; break;
+            case 5: h('E2_U2'); s('E2_E1_False'); s('E2_N2'); h('E2_Dia2'); document.getElementById('E2_E1_False').setAttribute('marker-end', m); expPanel.innerHTML = "6. Πίσω στο Βήμα 2 (ΨΕΥΔΗΣ διαδρομή): Έλεγχος Αν Α = 0."; break;
+            case 6: h('E2_U2_GOTO', 'active-warn'); expPanel.innerHTML = "7. Αν ΑΛΗΘΗΣ: πήγαινε στο Βήμα 7."; break;
+            case 7: h('E2_U7'); s('E2_E2_True'); s('E2_N7'); h('E2_Para3'); document.getElementById('E2_E2_True').setAttribute('marker-end', m); expPanel.innerHTML = "8. Βήμα 7: Τύπωσε Μηδέν. Και μετά πάει φυσιολογικά στο Βήμα 8."; break;
+            case 8: h('E2_U8'); s('E2_E_To8_3'); h('E2_Para4'); document.getElementById('E2_E_To8_3').setAttribute('marker-end', m); expPanel.innerHTML = "9. Συνδέεται κι αυτό στο Τύπωσε Τέλος."; break;
+            case 9: h('E2_U3'); s('E2_E2_False'); s('E2_N3'); h('E2_Para1'); document.getElementById('E2_E2_False').setAttribute('marker-end', m); expPanel.innerHTML = "10. Η ΨΕΥΔΗΣ διαδρομή του Α=0 μας οδηγεί στο Βήμα 3: Τύπωσε Αρνητικός."; break;
+            case 10: h('E2_U4', 'active-warn'); expPanel.innerHTML = "11. Βήμα 4: Πήγαινε στο 8."; break;
+            case 11: h('E2_U8'); s('E2_E_To8_1'); h('E2_Para4'); document.getElementById('E2_E_To8_1').setAttribute('marker-end', m); expPanel.innerHTML = "12. Καταλήγει στο Τύπωσε Τέλος. Το Διάγραμμα Ροής μας δείχνει καθαρά Πολλαπλή Επιλογή!"; break;
+            case 12: h('E2_Dia1'); h('E2_Para2'); s('E2_S1'); s('E2_S2'); h('E2_S1'); h('E2_S2'); expPanel.innerHTML = "13. Δομημένος Κώδικας: Ο 1ος ρόμβος είναι το ΑΝ Α > 0. Από κάτω η εντολή του."; break;
+            case 13: h('E2_Dia2'); h('E2_Para3'); s('E2_S3'); s('E2_S4'); h('E2_S3'); h('E2_S4'); expPanel.innerHTML = "14. Η ψευδής διαδρομή (νέος ρόμβος) είναι το ΑΛΛΙΩΣ_ΑΝ Α = 0."; break;
+            case 14: h('E2_Para1'); s('E2_S5'); s('E2_S6'); s('E2_S7'); h('E2_S5'); h('E2_S6'); h('E2_S7'); expPanel.innerHTML = "15. Ό,τι περισσεύει είναι το ΑΛΛΙΩΣ (Αρνητικός). Κλείνουμε το ΤΕΛΟΣ_ΑΝ."; break;
+            case 15: h('E2_Para4'); s('E2_S8'); h('E2_S8'); expPanel.innerHTML = "16. Η κοινή συνέχεια έξω από τη δομή! Ολοκληρώθηκε!"; btnStep.disabled = true; stopAutoPlay(); break;
+        }
+    }
+
+    // --- EXERCISE 3 (2019) ---
+    function runEx3() {
+        const m = `url(#arrAct3)`;
+        switch(step) {
+            case 0: h('E3_U1'); s('E3_N1'); h('E3_Rect1'); expPanel.innerHTML = "1. Βήμα 1: Θέσε Ρ=0. (Σχεδιάζουμε το ορθογώνιο)."; break;
+            case 1: h('E3_U2'); s('E3_E1'); s('E3_N2'); h('E3_Dia1'); document.getElementById('E3_E1').setAttribute('marker-end', m); expPanel.innerHTML = "2. Βήμα 2: Έλεγχος Αν Μ2 > 0. Σχεδιάζουμε τον 1ο ρόμβο."; break;
+            case 2: h('E3_U2_FALSE', 'active-warn'); expPanel.innerHTML = "3. Αν ΨΕΥΔΗΣ (αλλιώς), πήγαινε στο Βήμα 7."; break;
+            case 3: h('E3_U7'); s('E3_E_False'); s('E3_N7'); h('E3_Para1'); document.getElementById('E3_E_False').setAttribute('marker-end', m); expPanel.innerHTML = "4. Βήμα 7: Τύπωσε τον Ρ. Παρατηρήστε πώς η γραμμή ΨΕΥΔΗΣ τυλίγει το σχήμα δεξιά!"; break;
+            case 4: h('E3_U2_TRUE', 'active-warn'); expPanel.innerHTML = "5. Αν ΑΛΗΘΗΣ (Μ2>0), τότε πήγαινε στο Βήμα 3."; break;
+            case 5: h('E3_U3'); s('E3_E_True'); s('E3_N3'); h('E3_Dia2'); document.getElementById('E3_E_True').setAttribute('marker-end', m); expPanel.innerHTML = "6. Βήμα 3: Αν Μ2 περιττός (mod 2 = 1). Σχεδιάζουμε 2ο ρόμβο."; break;
+            case 6: h('E3_U3_GOTO', 'active-warn'); s('E3_E_True2'); s('E3_N_Act'); h('E3_Rect2'); document.getElementById('E3_E_True2').setAttribute('marker-end', m); expPanel.innerHTML = "7. Αν ΑΛΗΘΗΣ (περιττός), θέσε Ρ = Ρ + Μ1."; break;
+            case 7: h('E3_U4'); h('E3_U5'); s('E3_E_False2'); s('E3_E_ActTo4'); s('E3_N4'); h('E3_Rect3'); document.getElementById('E3_E_False2').setAttribute('marker-end', m); document.getElementById('E3_E_ActTo4').setAttribute('marker-end', m); expPanel.innerHTML = "8. Βήματα 4 & 5: Οι πράξεις του Μ1 και Μ2 εκτελούνται πάντα στη συνέχεια."; break;
+            case 8: h('E3_U6', 'active-warn'); expPanel.innerHTML = "9. Βήμα 6: Πήγαινε στο Βήμα 2."; break;
+            case 9: h('E3_U2'); s('E3_E_Loop'); h('E3_E_Loop'); document.getElementById('E3_E_Loop').setAttribute('marker-end', m); expPanel.innerHTML = "10. Βελάκι επιστροφής στο Βήμα 2. Το Διάγραμμα ολοκληρώθηκε!"; break;
+            case 10: h('E3_Rect1'); s('E3_S1'); h('E3_S1'); expPanel.innerHTML = "11. Δομημένος Κώδικας: Αρχική εκχώρηση."; break;
+            case 11: h('E3_Dia1'); s('E3_S2'); h('E3_S2'); expPanel.innerHTML = "12. Ο 1ος ρόμβος (έλεγχος επανάληψης) γίνεται ΟΣΟ M2 > 0 ΕΠΑΝΑΛΑΒΕ."; break;
+            case 12: h('E3_Dia2'); h('E3_Rect2'); s('E3_S3'); s('E3_S4'); s('E3_S5'); h('E3_S3'); h('E3_S4'); h('E3_S5'); expPanel.innerHTML = "13. Ο 2ος ρόμβος είναι μια απλή ΑΝ... ΤΟΤΕ (αφού δεν έχει ξεχωριστό αλλιώς)."; break;
+            case 13: h('E3_Rect3'); s('E3_S6'); s('E3_S7'); h('E3_S6'); h('E3_S7'); expPanel.innerHTML = "14. Οι εντολές των Μ1, Μ2 μπαίνουν στη συνέχεια μέσα στον βρόχο της ΟΣΟ."; break;
+            case 14: h('E3_E_Loop'); s('E3_S8'); h('E3_S8'); expPanel.innerHTML = "15. Κλείνουμε το ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ."; break;
+            case 15: h('E3_Para1'); s('E3_S9'); h('E3_S9'); expPanel.innerHTML = "16. Τυπώνουμε το Ρ. Ολοκληρώθηκε!"; btnStep.disabled = true; stopAutoPlay(); break;
+        }
+    }
+
+</script>
+</body>
+</html>

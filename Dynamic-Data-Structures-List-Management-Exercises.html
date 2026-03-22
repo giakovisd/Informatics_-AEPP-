@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAD Δομών Δεδομένων</title>
+    <style>
+        :root {
+            /* Light Mode */
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            
+            --array-item-bg: #3b82f6;
+            --array-item-text: #ffffff;
+            --compare-color: #f59e0b;
+            --arrow-color: #dc2626;
+            --disabled-btn: #94a3b8;
+
+            /* CAD Specific */
+            --mem-cell-bg: #ffffff;
+            --mem-cell-border: #94a3b8;
+            --mem-hl-bg: #e0f2fe;
+            --mem-hl-border: #3b82f6;
+            
+            --node-header: #fde047;
+            --node-border: #eab308;
+            --node-body: #ffffff;
+            --node-text: #451a03;
+        }
+
+        body.dark-mode {
+            /* Dark Mode */
+            --bg-color: #0f172a;
+            --text-color: #f1f5f9;
+            --panel-bg: #1e293b;
+            --border-color: #334155;
+            
+            --array-item-bg: #2563eb;
+            --arrow-color: #f87171;
+            --disabled-btn: #475569;
+
+            /* CAD Specific Dark */
+            --mem-cell-bg: #334155;
+            --mem-cell-border: #475569;
+            --mem-hl-bg: #1e3a8a;
+            --mem-hl-border: #3b82f6;
+            
+            --node-header: #b45309;
+            --node-border: #d97706;
+            --node-body: #1e293b;
+            --node-text: #f8fafc;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            height: 70px; box-sizing: border-box; flex-shrink: 0; z-index: 100;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 10px;}
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        button {
+            padding: 8px 14px; border: 1px solid var(--border-color); border-radius: 4px;
+            cursor: pointer; font-weight: 600; font-size: 0.9rem;
+            background-color: var(--panel-bg); color: var(--text-color);
+            transition: all 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 6px;
+        }
+        button.primary { background-color: var(--array-item-bg); color: white; border: none; }
+        button.success { background-color: #10b981; color: white; border: none; }
+        button:hover:not(:disabled) { filter: brightness(0.95); transform: translateY(-1px); }
+        button:disabled { background-color: var(--disabled-btn); color: #ccc; cursor: not-allowed; display: none;}
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex; flex: 1; padding: 15px; gap: 15px;
+            height: calc(100% - 70px); box-sizing: border-box;
+        }
+
+        /* LEFT: Memory & Options Panel */
+        .col-left {
+            flex: 0 0 480px; display: flex; flex-direction: column;
+            background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            overflow: hidden; transition: all 0.3s ease;
+        }
+
+        .tabs { display: flex; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.03); }
+        .tab {
+            flex: 1; text-align: center; padding: 12px; font-size: 0.9rem;
+            border-bottom: 3px solid transparent; color: #64748b; font-weight: bold; cursor: pointer;
+            transition: 0.2s;
+        }
+        .tab.active { background: var(--panel-bg); border-bottom-color: var(--array-item-bg); color: var(--text-color); }
+        .tab:hover:not(.active) { background: rgba(0,0,0,0.05); }
+
+        .problem-info {
+            padding: 15px; border-bottom: 1px solid var(--border-color);
+            color: var(--text-color); font-size: 0.95rem; line-height: 1.5;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        
+        .struct-radios { display: flex; gap: 15px; font-weight: bold; font-size: 0.9rem;}
+        .struct-radios label { cursor: pointer; display: flex; align-items: center; gap: 4px; }
+
+        .memory-area {
+            flex: 1; overflow-y: auto; padding: 15px;
+            display: flex; flex-direction: column;
+        }
+
+        .grid-label { font-weight: bold; margin-bottom: 10px; font-size: 1rem; color: var(--text-color); display: flex; align-items: center; gap: 6px;}
+        .mem-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        
+        .mem-cell {
+            border: 1px dashed var(--mem-cell-border); border-radius: 6px;
+            background: var(--mem-cell-bg); min-height: 70px; 
+            display: flex; flex-direction: column; padding: 4px; transition: 0.2s;
+        }
+        .mem-cell.highlight { background: var(--mem-hl-bg); border: 1px solid var(--mem-hl-border); }
+        
+        .cell-addr { font-size: 0.65rem; color: #64748b; font-weight: bold; margin-bottom: 2px; text-align: center;}
+        body.dark-mode .cell-addr { color: #94a3b8; }
+        .cell-val { text-align: center; font-weight: bold; font-size: 1.1rem; color: var(--text-color); flex-grow: 1; display: flex; align-items: center; justify-content: center; }
+        
+        .cell-ptrs { display: flex; gap: 2px; margin-top: auto; }
+        .ptr-box {
+            border: 1px solid var(--mem-cell-border); background: rgba(0,0,0,0.03);
+            font-size: 0.6rem; text-align: center; width: 100%; padding: 2px 0; color: var(--text-color); border-radius: 2px;
+        }
+
+        /* CENTER: Visualization Canvas */
+        .col-viz {
+            flex: 1; background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; position: relative; overflow: hidden;
+        }
+
+        .canvas-area {
+            flex: 1; position: relative;
+            background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
+            background-size: 20px 20px; overflow: auto; 
+        }
+
+        /* --- NODES --- */
+        .node {
+            position: absolute; width: 115px; background: var(--node-body);
+            border: 2px solid var(--node-border); border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: flex; flex-direction: column;
+            user-select: none; z-index: 10;
+        }
+        
+        .node-header {
+            background: var(--node-header); 
+            padding: 5px 8px; 
+            font-weight: bold; 
+            font-size: 0.75rem; 
+            color: var(--node-text);
+            border-bottom: 1px solid rgba(0,0,0,0.1); 
+            border-radius: 8px 8px 0 0;
+            display: flex; 
+            justify-content: center; /* Κεντράρει απόλυτα τη διεύθυνση */
+            align-items: center; 
+            position: relative; /* Βοηθάει να μπει το 'Χ' δεξιά */
+            cursor: grab; 
+            font-family: monospace;
+        }
+        .node-header:active { cursor: grabbing; }
+
+        /* Νέο πεδίο διεύθυνσης κόμβου στην κεφαλίδα */
+        .node-addr-input {
+            width: 45px;
+            background: transparent;
+            border: none;
+            border-bottom: 1px dashed rgba(0,0,0,0.5);
+            color: inherit;
+            font-family: monospace;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-align: center;
+            outline: none;
+        }
+        .node-addr-input:focus { border-bottom-style: solid; }
+        body.dark-mode .node-addr-input { border-bottom-color: rgba(255,255,255,0.5); }
+
+        .node-body { 
+            padding: 6px; 
+            display: flex; flex-direction: column; 
+            gap: 4px; 
+            color: var(--text-color); 
+        }
+        .input-row { 
+            display: flex; 
+            align-items: center; 
+            gap: 4px; 
+        }
+
+        .input-lbl { 
+            font-size: 0.65rem; 
+            font-weight: bold; 
+            width: 38px; 
+            flex-shrink: 0; 
+            opacity: 0.8;
+        }
+
+        .node-input {
+            flex: 1; 
+            min-width: 0; 
+            border: 1px solid var(--border-color); 
+            border-radius: 4px;
+            text-align: center; 
+            padding: 2px; 
+            font-size: 0.75rem; 
+            font-weight: bold;
+            background: var(--bg-color); 
+            color: var(--text-color); 
+            font-family: monospace;
+        }        
+        .node-input:focus { border-color: var(--compare-color); outline: none; }
+        .node-input.error { background: #fee2e2; border-color: #ef4444; color: #b91c1c; }
+        .node-input.correct { background: #dcfce7; border-color: #10b981; color: #166534; }
+        body.dark-mode .node-input.error { background: rgba(239, 68, 68, 0.2); color: #f87171;}
+        body.dark-mode .node-input.correct { background: rgba(16, 185, 129, 0.2); color: #34d399;}
+
+        /* --- SVG Arrows --- */
+        svg.draw-area { position: absolute; top: 0; left: 0; width: 4000px; height: 3000px; pointer-events: none; z-index: 1; }
+        path.conn-line { fill: none; stroke-width: 2.5px; stroke-linecap: round; }
+        .arrow-next { stroke: var(--array-item-bg); }
+        .arrow-prev { stroke: var(--arrow-color);  }
+
+        /* Helpers */
+        .workspace { display: none; flex: 1; height: 100%; flex-direction: column;}
+        .workspace.active { display: flex; }
+    </style>
+</head>
+<body>
+
+<svg style="position: absolute; width: 0; height: 0;">
+  <defs>
+    <marker id="marker-next" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--array-item-bg)" />
+    </marker>
+    <marker id="marker-prev" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--arrow-color)" />
+    </marker>
+  </defs>
+</svg>
+
+<header>
+    <div class="header-title">
+        <h1>📐 CAD Δομών Δεδομένων</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button onclick="initCurrentTab()">🔄 Νέα Άσκηση</button>
+        <button onclick="addNodeT1()" id="btnAddNode" class="primary">➕ Προσθήκη Κόμβου</button>
+        <button onclick="checkCurrentTab()" class="success">✅ Έλεγχος</button>
+        <button onclick="toggleTheme()" id="btnTheme">🌙</button>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col-left">
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('tab1')">Κατασκευή Λίστας</div>
+            <div class="tab" onclick="switchTab('tab2')">Εύρεση Δεικτών</div>
+        </div>
+
+        <div class="problem-info">
+            <div class="struct-radios">
+                <label><input type="radio" name="globalMode" value="singly" checked onchange="initCurrentTab()"> Απλή Λίστα</label>
+                <label><input type="radio" name="globalMode" value="doubly" onchange="initCurrentTab()"> Διπλή Λίστα</label>
+            </div>
+            <div id="instruction-text" style="font-size: 0.85rem; color: #64748b;">
+                </div>
+        </div>
+
+        <div class="memory-area">
+            <div class="grid-label">Πίνακας Μνήμης RAM</div>
+            <div id="grid-container" class="mem-grid"></div>
+        </div>
+    </div>
+
+    <div class="col-viz">
+        <div id="tab1" class="workspace active">
+            <div class="canvas-area" id="canvas-t1">
+                <svg id="svg-t1" class="draw-area"></svg>
+            </div>
+        </div>
+
+        <div id="tab2" class="workspace">
+            <div class="canvas-area" id="canvas-t2">
+                <svg id="svg-t2" class="draw-area"></svg>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- Configuration ---
+    const MEM_SIZE = 24; 
+    let baseAddr = 100;
+    let currentTab = 'tab1';
+
+    let stateT1 = { mode: 'singly', memory: [], head: null, tail: null };
+    let stateT2 = { mode: 'singly', graph: [] };
+
+    document.addEventListener("DOMContentLoaded", () => {
+        initTab1();
+    });
+
+    // --- UI Logic ---
+    function toggleTheme() {
+        document.body.classList.toggle('dark-mode');
+        const btn = document.getElementById('btnTheme');
+        btn.innerText = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+    }
+
+    function switchTab(id) {
+        currentTab = id;
+        document.querySelectorAll('.workspace').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (id==='tab1' && i===0) || (id==='tab2' && i===1)));
+        
+        document.getElementById(id).classList.add('active');
+
+        // Toggle visibility of "+ Add Node" button
+        document.getElementById('btnAddNode').style.display = (id === 'tab1') ? 'flex' : 'none';
+
+        initCurrentTab();
+    }
+
+    function getGlobalMode() {
+        return document.querySelector('input[name="globalMode"]:checked').value;
+    }
+
+    function initCurrentTab() {
+        if (currentTab === 'tab1') initTab1();
+        else initTab2();
+    }
+
+    function checkCurrentTab() {
+        if (currentTab === 'tab1') checkTab1();
+        else checkTab2();
+    }
+
+    function randomBase() {
+        baseAddr = Math.floor(Math.random() * 80) * 10 + 1000; // e.g. 1200, 1530
+    }
+
+    // Generate guaranteed unique random values
+    function getUniqueValues(count) {
+        let vals = new Set();
+        while(vals.size < count) {
+            vals.add(Math.floor(Math.random() * 90) + 10);
+        }
+        return Array.from(vals);
+    }
+
+    // --- TAB 1: Μνήμη -> Σχέδιο ---
+    function initTab1() {
+        stateT1.mode = getGlobalMode();
+        randomBase();
+        
+        document.getElementById('instruction-text').innerHTML = `
+            <b>Οδηγία:</b> Μελέτησε τη Μνήμη παρακάτω. Πάτα «Προσθήκη Κόμβου» για να δημιουργήσεις τα κουτιά στον καμβά και συμπλήρωσε τις σωστές διευθύνσεις και τιμές.
+        `;
+
+        const canvas = document.getElementById('canvas-t1');
+        canvas.innerHTML = '<svg id="svg-t1" class="draw-area"></svg>';
+
+        let len = Math.floor(Math.random() * 2) + 3; // 3 or 4 nodes
+        let vals = getUniqueValues(len);
+        let nodes = [];
+        
+        for(let i=0; i<len; i++) {
+            nodes.push({ val: vals[i], next: null, prev: null });
+        }
+
+        let used = new Set();
+        nodes.forEach(n => {
+            let a; 
+            do { a = baseAddr + Math.floor(Math.random() * MEM_SIZE); } while(used.has(a));
+            used.add(a); 
+            n.addr = a;
+        });
+
+        for(let i=0; i<len; i++) {
+            if(i < len-1) { 
+                nodes[i].next = nodes[i+1].addr; 
+                nodes[i+1].prev = nodes[i].addr; 
+            }
+        }
+        
+       stateT1.head = nodes[0].addr;
+        stateT1.tail = nodes[nodes.length - 1].addr;
+        stateT1.memory = nodes;
+
+        // Βρίσκουμε τυχαίες, ελεύθερες διευθύνσεις για τις μεταβλητές HEAD και TAIL
+        let headVarAddr, tailVarAddr;
+        do { headVarAddr = baseAddr + Math.floor(Math.random() * MEM_SIZE); } while(used.has(headVarAddr));
+        used.add(headVarAddr);
+        do { tailVarAddr = baseAddr + Math.floor(Math.random() * MEM_SIZE); } while(used.has(tailVarAddr));
+        used.add(tailVarAddr);
+
+        renderGrid(stateT1.memory, stateT1.mode, true, stateT1.head, stateT1.tail, headVarAddr, tailVarAddr);
+    }
+
+    // Βοηθητική συνάρτηση: Βρίσκει τον κόμβο διαβάζοντας το πεδίο της διεύθυνσής του (για το Tab 1)
+    function getNodeByAddrT1(addr) {
+        let nodes = document.querySelectorAll('#canvas-t1 .node');
+        for(let n of nodes) {
+            let inp = n.querySelector('.node-addr-input');
+            if(inp && inp.value.trim() === String(addr)) return n;
+        }
+        return null;
+    }
+
+    function addNodeT1() {
+        const canvas = document.getElementById('canvas-t1');
+        let el = document.createElement('div');
+        el.className = 'node';
+        
+        // Φτιάχνουμε ένα τυχαίο μοναδικό ID για το HTML στοιχείο
+        let uniqueId = Date.now(); 
+        el.id = `node-t1-${uniqueId}`;
+        
+        el.style.left = (50 + Math.random()*200) + 'px';
+        el.style.top = (50 + Math.random()*200) + 'px';
+
+        let inputs = `
+            <div class="input-row"><span class="input-lbl">Τιμή</span><input class="node-input val"></div>
+            <div class="input-row"><span class="input-lbl">Επομ</span><input class="node-input next" oninput="drawT1()"></div>
+        `;
+        if(stateT1.mode === 'doubly') {
+            inputs = `<div class="input-row"><span class="input-lbl">Προηγ</span><input class="node-input prev" oninput="drawT1()"></div>` + inputs;
+        }
+
+        // Στην κεφαλίδα βάλαμε το νέο input! Το onmousedown="event.stopPropagation()" αποτρέπει το drag όταν πληκτρολογούμε.
+        el.innerHTML = `
+            <div class="node-header" onmousedown="startDrag(event, this, 't1')">
+                <span style="display:flex; align-items:center; gap:2px;">
+                    @<input class="node-addr-input" placeholder=";;;" oninput="drawT1()" onmousedown="event.stopPropagation()">
+                </span>
+                <span title="Διαγραφή κόμβου" 
+                      style="position: absolute; right: 8px; cursor: pointer; color: var(--arrow-color); font-size: 1.2rem; line-height: 0;" 
+                      onmousedown="event.stopPropagation();" 
+                      onclick="delT1(${uniqueId})">&times;</span>
+            </div>
+            <div class="node-body">${inputs}</div>
+        `;
+        canvas.appendChild(el);
+    }
+
+    function delT1(id) { 
+        document.getElementById(`node-t1-${id}`).remove(); 
+        drawT1(); 
+    }
+
+    function drawT1() {
+        const svg = document.getElementById('svg-t1');
+        if(!svg) return;
+        svg.innerHTML = '';
+        const nodes = document.querySelectorAll('#canvas-t1 .node');
+        
+        nodes.forEach(el => {
+            let nVal = el.querySelector('.next').value.trim();
+            if(nVal) {
+                let targetNode = getNodeByAddrT1(nVal); // Βρίσκει τον κόμβο δυναμικά!
+                if(targetNode) drawArrow(svg, el, targetNode, 'next');
+            }
+            if(stateT1.mode === 'doubly') {
+                let pVal = el.querySelector('.prev').value.trim();
+                if(pVal) {
+                    let targetNode = getNodeByAddrT1(pVal);
+                    if(targetNode) drawArrow(svg, el, targetNode, 'prev');
+                }
+            }
+        });
+    }
+
+    function checkTab1() {
+        let domNodes = document.querySelectorAll('#canvas-t1 .node');
+        if(domNodes.length !== stateT1.memory.length) { 
+            alert("Λάθος πλήθος κόμβων στον καμβά!"); 
+            return; 
+        }
+
+        // Έλεγχος ότι όλες οι διευθύνσεις έχουν συμπληρωθεί και είναι μοναδικές
+        let usedAddrs = new Set();
+        for(let n of domNodes) {
+            let addr = n.querySelector('.node-addr-input').value.trim();
+            if(!addr) { alert("Συμπλήρωσε τις διευθύνσεις (στο πάνω μέρος) σε όλους τους κόμβους!"); return; }
+            if(usedAddrs.has(addr)) { alert("Προσοχή! Έχεις βάλει την ίδια διεύθυνση σε πάνω από έναν κόμβο!"); return; }
+            usedAddrs.add(addr);
+        }
+
+        for(let n of stateT1.memory) {
+            let el = getNodeByAddrT1(n.addr);
+            if(!el) { alert(`Λείπει ο κόμβος με διεύθυνση @${n.addr}`); return; }
+            
+            let v = el.querySelector('.val').value;
+            if(parseInt(v) !== n.val) { alert(`Λάθος τιμή (Val) στον κόμβο @${n.addr}`); return; }
+
+            let nVal = el.querySelector('.next').value.trim().toUpperCase() || "NULL";
+            let expN = n.next ? n.next+"" : "NULL";
+            if(nVal !== expN) { alert(`Λάθος 'Επομ' στον κόμβο @${n.addr}`); return; }
+
+            if(stateT1.mode === 'doubly') {
+                let pVal = el.querySelector('.prev').value.trim().toUpperCase() || "NULL";
+                let expP = n.prev ? n.prev+"" : "NULL";
+                if(pVal !== expP) { alert(`Λάθος 'Προηγ' στον κόμβο @${n.addr}`); return; }
+            }
+        }
+        alert("Μπράβο! Το διάγραμμα σχεδιάστηκε άριστα!");
+    }
+
+
+    // --- TAB 2: Σχέδιο -> Μνήμη ---
+    function initTab2() {
+        stateT2.mode = getGlobalMode();
+        randomBase();
+        
+        document.getElementById('instruction-text').innerHTML = `
+            <b>Οδηγία:</b> Κοίταξε το διάγραμμα. Πληκτρολόγησε τις διευθύνσεις <b>μέσα στα πεδία Επομ/Προηγ των κόμβων</b> του καμβά και πάτα Έλεγχο!
+        `;
+
+        let len = Math.floor(Math.random() * 2) + 3; 
+        let vals = getUniqueValues(len);
+        let nodes = [];
+        let startX = 60; 
+        let gap = 240; 
+
+        for(let i=0; i<len; i++) {
+            nodes.push({ id: i, val: vals[i], x: startX + i*gap, y: 150 });
+        }
+
+        let used = new Set();
+        nodes.forEach(n => {
+            let a; do { a = baseAddr + Math.floor(Math.random() * MEM_SIZE); } while(used.has(a));
+            used.add(a); n.addr = a;
+        });
+        
+        stateT2.graph = nodes;
+        
+        let headAddr = stateT2.graph[0].addr;
+        let tailAddr = stateT2.graph[stateT2.graph.length - 1].addr;
+        
+        // --- ΝΕΟ ΚΟΜΜΑΤΙ: Βρίσκουμε τυχαίες διευθύνσεις για HEAD και TAIL ---
+        let headVarAddr, tailVarAddr;
+        do { headVarAddr = baseAddr + Math.floor(Math.random() * MEM_SIZE); } while(used.has(headVarAddr));
+        used.add(headVarAddr);
+        do { tailVarAddr = baseAddr + Math.floor(Math.random() * MEM_SIZE); } while(used.has(tailVarAddr));
+        used.add(tailVarAddr);
+        
+        // Καλούμε το renderGrid με τις νέες παραμέτρους
+        renderGrid(stateT2.graph, stateT2.mode, false, headAddr, tailAddr, headVarAddr, tailVarAddr);
+
+        renderTab2Canvas();
+        setTimeout(redrawArrowsT2, 50);
+    }
+
+    function renderTab2Canvas() {
+        const canvas = document.getElementById('canvas-t2');
+        canvas.innerHTML = '<svg id="svg-t2" class="draw-area"></svg>'; 
+
+        stateT2.graph.forEach(n => {
+            let el = document.createElement('div');
+            el.className = 'node';
+            el.id = `node-t2-${n.id}`;
+            el.style.left = n.x + 'px'; 
+            el.style.top = n.y + 'px';
+            
+            let inputs = `
+                <div class="input-row"><span class="input-lbl">Τιμή</span>
+                <div style="width:100%;text-align:center;font-weight:bold;font-size:1.1rem; color:var(--text-color);">${n.val}</div></div>
+                <div class="input-row"><span class="input-lbl">Επομ</span><input class="node-input t2-next" data-addr="${n.addr}" placeholder="?"></div>
+            `;
+            if(stateT2.mode === 'doubly') {
+                inputs = `<div class="input-row"><span class="input-lbl">Προηγ</span><input class="node-input t2-prev" data-addr="${n.addr}" placeholder="?"></div>` + inputs;
+            }
+
+            el.innerHTML = `
+                <div class="node-header" onmousedown="startDrag(event, this, 't2')">
+                    <span>@${n.addr}</span>
+                </div>
+                <div class="node-body">${inputs}</div>
+            `;
+            canvas.appendChild(el);
+        });
+    }
+
+    function redrawArrowsT2() {
+        const svg = document.getElementById('svg-t2');
+        if(!svg) return;
+        svg.innerHTML = '';
+        let nodes = stateT2.graph;
+        for(let i=0; i<nodes.length; i++) {
+            let curr = document.getElementById(`node-t2-${i}`);
+            if(i < nodes.length-1) {
+                let next = document.getElementById(`node-t2-${i+1}`);
+                if(curr && next) drawArrow(svg, curr, next, 'next');
+            }
+            if(stateT2.mode === 'doubly' && i > 0) {
+                let prev = document.getElementById(`node-t2-${i-1}`);
+                if(curr && prev) drawArrow(svg, curr, prev, 'prev');
+            }
+        }
+    }
+
+    function checkTab2() {
+        let ok = true;
+        stateT2.graph.forEach((n, i) => {
+            let nextInp = document.querySelector(`.t2-next[data-addr="${n.addr}"]`);
+            let expN = (i < stateT2.graph.length-1) ? stateT2.graph[i+1].addr+"" : "NULL";
+            
+            if((nextInp.value.toUpperCase().trim() || "NULL") !== expN) { 
+                nextInp.classList.add('error'); nextInp.classList.remove('correct'); ok = false; 
+            } else { 
+                nextInp.classList.remove('error'); nextInp.classList.add('correct'); 
+            }
+
+            if(stateT2.mode === 'doubly') {
+                let prevInp = document.querySelector(`.t2-prev[data-addr="${n.addr}"]`);
+                let expP = (i > 0) ? stateT2.graph[i-1].addr+"" : "NULL";
+                
+                if((prevInp.value.toUpperCase().trim() || "NULL") !== expP) {
+                    prevInp.classList.add('error'); prevInp.classList.remove('correct'); ok = false;
+                } else {
+                    prevInp.classList.remove('error'); prevInp.classList.add('correct');
+                }
+            }
+        });
+        if(ok) alert("Άριστα! Συμπλήρωσες σωστά τους δείκτες!"); 
+        else alert("Υπάρχουν λάθη. Δες τα κόκκινα πεδία στους κόμβους.");
+    }
+
+
+    // --- SHARED FUNCTIONS ---
+    function renderGrid(memoryArray, mode, showPtrs, headVal, tailVal, headVarAddr, tailVarAddr) {
+        const grid = document.getElementById('grid-container');
+        let htmlStr = '';
+        
+        for(let i=0; i<MEM_SIZE; i++) {
+            let addr = baseAddr + i;
+            
+            if (addr === headVarAddr) {
+                // Ειδικό Κελί: HEAD
+                htmlStr += `
+                    <div class="mem-cell highlight" style="border: 2px solid #8b5cf6; background: rgba(139, 92, 246, 0.08);">
+                        <div class="cell-addr" style="color: #8b5cf6; font-size: 0.6rem; font-weight: 800;">${addr} (HEAD)</div>
+                        <div class="cell-val" style="font-size: 0.95rem;">@${headVal}</div>
+                    </div>
+                `;
+            } else if (mode === 'doubly' && addr === tailVarAddr) {
+                // Ειδικό Κελί: TAIL (μόνο σε διπλή λίστα)
+                htmlStr += `
+                    <div class="mem-cell highlight" style="border: 2px solid #ea580c; background: rgba(234, 88, 12, 0.08);">
+                        <div class="cell-addr" style="color: #ea580c; font-size: 0.6rem; font-weight: 800;">${addr} (TAIL)</div>
+                        <div class="cell-val" style="font-size: 0.95rem;">@${tailVal}</div>
+                    </div>
+                `;
+            } else {
+                // Κανονικό Κελί Κόμβου ή Κενό
+                let n = memoryArray.find(x => x.addr === addr);
+                let highlightCls = n ? ' highlight' : '';
+                
+                htmlStr += `<div class="mem-cell${highlightCls}">`;
+                htmlStr += `<div class="cell-addr">${addr}</div>`;
+                if(n) {
+                    htmlStr += `<div class="cell-val">${n.val}</div>`;
+                    if (showPtrs) {
+                        htmlStr += `<div class="cell-ptrs">`;
+                        if(mode === 'doubly') {
+                            htmlStr += `<div class="ptr-box">P: ${n.prev||'-'}</div>`;
+                        }
+                        htmlStr += `<div class="ptr-box">N: ${n.next||'-'}</div></div>`;
+                    }
+                } else { 
+                    htmlStr += `<div class="cell-val" style="opacity:0.2">-</div>`; 
+                }
+                htmlStr += `</div>`;
+            }
+        }
+        
+        grid.innerHTML = htmlStr;
+    }
+
+    function drawArrow(svg, from, to, type) {
+        let r1 = from.getBoundingClientRect();
+        let r2 = to.getBoundingClientRect();
+        let pRect = svg.getBoundingClientRect();
+
+        let x1 = (r1.left+r1.right)/2 - pRect.left;
+        let y1 = (r1.top+r1.bottom)/2 - pRect.top;
+        let x2 = (r2.left+r2.right)/2 - pRect.left;
+        let y2 = (r2.top+r2.bottom)/2 - pRect.top;
+
+        let d;
+        let isDoubly = (getGlobalMode() === 'doubly');
+        
+        if(!isDoubly) {
+            let startX = x1 + 60; 
+            let endX = x2 - 65;   
+            d = `M ${startX} ${y1} L ${endX} ${y2}`;
+        } else {
+            // Straight lines with offset for Doubly Linked List
+            let offset = (type === 'next') ? -10 : 10; 
+            
+            let startX = x1 + 60; 
+            let endX = x2 - 65;   
+            
+            if (x2 < x1) { 
+                startX = x1 - 60; 
+                endX = x2 + 65;
+            }
+
+            d = `M ${startX} ${y1 + offset} L ${endX} ${y2 + offset}`;
+        }
+
+        let path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", d);
+        path.setAttribute("class", "conn-line " + (type === 'next' ? 'arrow-next' : 'arrow-prev'));
+        path.setAttribute("marker-end", type === 'next' ? 'url(#marker-next)' : 'url(#marker-prev)');
+        svg.appendChild(path);
+    }
+
+    // --- DRAG LOGIC ---
+    let dragEl = null, dx = 0, dy = 0, dragTab = '';
+    
+    function startDrag(e, header, tab) {
+        e.preventDefault();
+        dragEl = header.parentElement;
+        dragTab = tab;
+        let r = dragEl.getBoundingClientRect();
+        dx = e.clientX - r.left; 
+        dy = e.clientY - r.top;
+        document.addEventListener('mousemove', onDrag);
+        document.addEventListener('mouseup', endDrag);
+    }
+    function onDrag(e) {
+        if(!dragEl) return;
+        let p = dragEl.parentElement.getBoundingClientRect();
+        dragEl.style.left = (e.clientX - p.left - dx) + 'px';
+        dragEl.style.top = (e.clientY - p.top - dy) + 'px';
+        
+        if(dragTab === 't1') drawT1();
+        else redrawArrowsT2();
+    }
+    function endDrag() {
+        dragEl = null; 
+        document.removeEventListener('mousemove', onDrag); 
+        document.removeEventListener('mouseup', endDrag);
+    }
+</script>
+</body>
+</html>
