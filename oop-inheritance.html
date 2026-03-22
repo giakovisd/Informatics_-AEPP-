@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OOP - Ανιχνευτής Κληρονομικότητας</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --header-bg: #e2e8f0;
+            --border-color: #cbd5e1;
+            
+            --btn-white-bg: #ffffff;
+            --btn-white-text: #1e293b;
+            --btn-white-border: #cbd5e1;
+            
+            --btn-blue: #3b82f6;
+            --btn-blue-hover: #2563eb;
+            
+            --accent: #8b5cf6;
+            --good: #10b981;
+            --warn: #f59e0b;
+            --error: #ef4444;
+
+            --subclass-color: #3b82f6; 
+            --property-color: #10b981; 
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --text-color: #f8fafc;
+            --panel-bg: #1e293b;
+            --header-bg: #334155;
+            --border-color: #475569;
+
+            --btn-white-bg: #334155;
+            --btn-white-text: #f8fafc;
+            --btn-white-border: #475569;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color); color: var(--text-color);
+            margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* --- Header --- */
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.8rem 1.5rem; background-color: var(--header-bg);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .header-title { font-size: 1.2rem; font-weight: bold; display: flex; align-items: center; gap: 10px; color: var(--accent); }
+        .controls { display: flex; align-items: center; gap: 0.8rem; }
+        
+        button {
+            padding: 0.5rem 1rem; border: 1px solid var(--btn-white-border);
+            border-radius: 6px; background-color: var(--btn-white-bg);
+            color: var(--btn-white-text); cursor: pointer; font-weight: 600; 
+            display: flex; align-items: center; gap: 0.5rem; transition: 0.2s;
+        }
+        button:hover { filter: brightness(0.95); }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex; gap: 1rem; padding: 1rem; height: calc(100vh - 70px); box-sizing: border-box;
+        }
+        .col { background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden;}
+        
+        .col-left { flex: 0.85; }
+        .col-mid { flex: 1.5; }
+        /* Αυξήσαμε λίγο το flex της δεξιάς στήλης για να χωράει άνετα και το terminal */
+        .col-right { flex: 0.9; }
+        
+        .col-header {
+            padding: 0.8rem; font-weight: bold; text-align: center;
+            border-bottom: 1px solid var(--border-color); background-color: rgba(0,0,0,0.03);
+        }
+        .col-content { padding: 1.5rem; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column;}
+
+        /* --- Left Column (Theory & Scenarios) --- */
+        .problem-info { font-size: 0.95rem; line-height: 1.5; text-align: justify; margin-bottom: 15px;}
+        
+        .rule-box { background: #f0f9ff; border: 1px solid #bae6fd; border-left: 4px solid var(--btn-blue); padding: 15px; border-radius: 6px; margin-bottom: 20px; color: #0369a1;}
+        body.dark-mode .rule-box { background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.2); color: #bae6fd;}
+        
+        .tabs { display: flex; flex-direction: column; gap: 8px; }
+        .tab { padding: 10px; cursor: pointer; font-weight: bold; border: 2px solid var(--border-color); border-radius: 8px; color: var(--code-gray); transition: 0.2s; display: flex; align-items: center; gap: 8px;}
+        .tab.active { color: var(--accent); border-color: var(--accent); background: rgba(139, 92, 246, 0.05); }
+
+        /* --- Middle Column (The Board) --- */
+        .board { display: flex; flex-direction: column; align-items: center; flex-grow: 1; position: relative;}
+        
+        .node-super {
+            background: var(--accent); color: white; font-weight: bold; font-size: 1.4rem;
+            padding: 15px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            margin-bottom: 10px; position: relative; z-index: 10;
+            border: 3px solid #6d28d9; text-transform: uppercase;
+        }
+
+        .board-hint {
+            font-size: 0.85rem; font-weight: bold; color: var(--warn); margin-bottom: 30px;
+            background: rgba(245, 158, 11, 0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        
+        .lines {
+            position: absolute; top: 85px; left: 0; width: 100%; height: 60px; pointer-events: none;
+            display: flex; justify-content: center;
+        }
+        .line-svg { width: 100%; height: 100%; }
+
+        .zones-container { display: flex; width: 100%; gap: 30px; justify-content: space-around; flex-grow: 1;}
+        
+        .drop-zone {
+            flex: 1; border: 3px dashed var(--border-color); border-radius: 12px;
+            padding: 15px; display: flex; flex-direction: column; align-items: center;
+            transition: 0.3s; background: rgba(0,0,0,0.02); position: relative;
+        }
+        .drop-zone.drag-over { background: rgba(59, 130, 246, 0.1); border-color: var(--btn-blue); transform: scale(1.02);}
+        
+        .zone-title {
+            font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; text-align: center;
+            padding: 8px 15px; border-radius: 8px; color: white; width: 85%; box-sizing: border-box;
+        }
+        .zone-subclass .zone-title { background: var(--subclass-color); }
+        .zone-property .zone-title { background: var(--property-color); }
+        
+        .drop-area {
+            width: 100%; flex-grow: 1; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-content: flex-start;
+        }
+
+        /* --- Right Column (Pool / Bank & Terminal) --- */
+        .bank-area {
+            display: flex; flex-wrap: wrap; gap: 10px; align-content: flex-start;
+            min-height: 180px; padding: 15px; border: 2px dashed var(--border-color); border-radius: 8px;
+            background: rgba(0,0,0,0.02); margin-bottom: 20px;
+        }
+
+        /* Terminal (Now White by Default) */
+        .terminal {
+            flex-grow: 1; background: #ffffff; color: #1e293b; font-family: 'Consolas', monospace;
+            padding: 1rem; border-radius: 6px; overflow-y: auto; font-size: 0.9rem;
+            border: 1px solid var(--border-color); box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+            display: flex; flex-direction: column;
+        }
+        body.dark-mode .terminal {
+            background: #1e293b; color: #f8fafc; border-color: #475569; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .term-msg { margin-bottom: 6px; border-left: 2px solid var(--info); padding-left: 8px; line-height: 1.4; animation: fadeIn 0.3s;}
+        .term-err { border-left-color: var(--error); color: var(--error); }
+        .term-warn { border-left-color: var(--warn); color: #d97706; }
+        body.dark-mode .term-warn { color: var(--warn); }
+        
+        .conclusion-box {
+            background: rgba(139, 92, 246, 0.1); border: 1px solid var(--accent);
+            padding: 10px; border-radius: 6px; color: var(--text-color); margin-top: 10px;
+            font-family: 'Segoe UI', Tahoma, sans-serif; line-height: 1.4; animation: fadeIn 0.4s;
+        }
+
+        /* --- Chips --- */
+        .chip {
+            background: var(--panel-bg); color: var(--text-color); border: 2px solid var(--border-color);
+            padding: 10px 15px; border-radius: 20px; font-weight: bold; font-size: 0.95rem;
+            cursor: grab; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s;
+            user-select: none; text-align: center;
+        }
+        .chip:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); border-color: var(--accent); }
+        .chip:active { cursor: grabbing; transform: scale(0.95); }
+        
+        .chip.correct-subclass { background: var(--subclass-color); color: white; border-color: var(--subclass-color); cursor: default; pointer-events: none; animation: pop 0.4s; }
+        .chip.correct-property { background: var(--property-color); color: white; border-color: var(--property-color); cursor: default; pointer-events: none; animation: pop 0.4s; }
+        
+        @keyframes pop { 0% {transform: scale(0.8);} 50% {transform: scale(1.1);} 100% {transform: scale(1);} }
+        @keyframes fadeIn { 0% {opacity: 0; transform: translateY(5px);} 100% {opacity: 1; transform: translateY(0);} }
+
+        .shake { animation: shakeError 0.5s; border-color: var(--error) !important; color: var(--error) !important; }
+        @keyframes shakeError { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-8px);} 75% {transform: translateX(8px);} }
+
+        @media (max-width: 1400px) {
+            .col-left { flex: 0.9; } .col-mid { flex: 1.5; } .col-right { flex: 1; }
+            .node-super { font-size: 1.2rem; padding: 12px 30px; }
+            .zone-title { font-size: 1rem; }
+            .chip { font-size: 0.85rem; padding: 8px 12px; }
+            .rule-box { font-size: 0.85rem; padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title"><i class="fa-solid fa-sitemap"></i> Ανιχνευτής Κληρονομικότητας</div>
+        <div class="controls">
+            <button onclick="resetGame()"><i class="fa-solid fa-rotate-right"></i> Επανεκκίνηση</button>
+            <button id="themeToggle" onclick="toggleTheme()"><i class="fa-solid fa-moon"></i></button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        
+        <div class="col col-left">
+            <div class="col-header">Θεωρία & Οδηγίες</div>
+            <div class="col-content">
+                <div class="problem-info">
+                    Σύρε (drag & drop) κάθε έννοια στη σωστή κατηγορία, ανάλογα με τη σχέση που έχει με την κεντρική κλάση.
+                </div>
+                
+                <div class="rule-box">
+                    <i class="fa-solid fa-lightbulb" style="color:#eab308; font-size:1.4em; margin-bottom:5px; display:inline-block;"></i> <b>Ο Κανόνας:</b><br><br>
+                    Μια έννοια είναι <b>Υποκλάση</b> όταν μπορούμε να πούμε:<br>
+                    <i>«είναι ένα είδος του...»</i><br><br>
+                    Μια έννοια είναι <b>Ιδιότητα</b> όταν μπορούμε να πούμε:<br>
+                    <i>«έχει / χαρακτηρίζεται από...»</i>
+                </div>
+
+                <h3 style="margin-bottom:10px; font-size: 1rem;">Επίλεξε Σενάριο (Άσκηση):</h3>
+                <div class="tabs">
+                    <div class="tab active" id="tab-human" onclick="loadScenario('human')"><i class="fa-solid fa-user"></i> 1. Άνθρωπος</div>
+                    <div class="tab" id="tab-vehicles" onclick="loadScenario('vehicles')"><i class="fa-solid fa-car"></i> 2. Όχημα</div>
+                    <div class="tab" id="tab-animal" onclick="loadScenario('animal')"><i class="fa-solid fa-paw"></i> 3. Ζώο</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col col-mid">
+            <div class="col-header">Οπτικό Διάγραμμα Αναγνώρισης</div>
+            <div class="col-content" style="padding-top:20px;">
+                
+                <div class="board">
+                    <div class="node-super" id="superClassNode">ΥΠΕΡΚΛΑΣΗ</div>
+                    <div class="board-hint">Κανόνας: Υποκλάση &rarr; «είναι είδος του» | Ιδιότητα &rarr; «έχει»</div>
+                    
+                    <div class="lines">
+                        <svg class="line-svg">
+                            <path d="M 50% 0 L 25% 60" stroke="var(--border-color)" stroke-width="3" fill="none" />
+                            <path d="M 50% 0 L 75% 60" stroke="var(--border-color)" stroke-width="3" fill="none" stroke-dasharray="5,5" />
+                        </svg>
+                    </div>
+
+                    <div class="zones-container">
+                        <div class="drop-zone zone-subclass" id="zone-subclass" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, 'subclass')">
+                            <div class="zone-title"><i class="fa-solid fa-sitemap"></i> Υποκλάσεις</div>
+                            <div style="font-size:0.85rem; color:var(--text-color); opacity: 0.8; margin-bottom:15px; text-align:center;">"είναι ένα είδος..."</div>
+                            <div class="drop-area" id="area-subclass"></div>
+                        </div>
+
+                        <div class="drop-zone zone-property" id="zone-property" id="zone-property" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, 'property')">
+                            <div class="zone-title"><i class="fa-solid fa-list"></i> Ιδιότητες</div>
+                            <div style="font-size:0.85rem; color:var(--text-color); opacity: 0.8; margin-bottom:15px; text-align:center;">"έχει / χαρακτηρίζεται από..."</div>
+                            <div class="drop-area" id="area-property"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="col col-right">
+            <div class="col-header">Περιοχή Εργασίας & Καταγραφή</div>
+            <div class="col-content" style="padding: 1rem;">
+                
+                <div style="font-weight: bold; margin-bottom: 8px; color: var(--code-gray); font-size: 0.9rem; text-transform: uppercase;">
+                    <i class="fa-solid fa-layer-group"></i> Δεξαμενή Λέξεων
+                </div>
+                <div class="bank-area" id="bankArea" ondragover="allowDrop(event)" ondrop="dropReturn(event)">
+                </div>
+
+                <div style="font-weight: bold; margin-bottom: 8px; color: var(--code-gray); font-size: 0.9rem; text-transform: uppercase;">
+                    <i class="fa-solid fa-clipboard-list"></i> Καταγραφή (Console)
+                </div>
+                <div class="terminal" id="terminal">
+                    <div class="term-msg" style="color: #64748b;">> Σύστημα έτοιμο. Σύρε τα πλακίδια από τη δεξαμενή στο διάγραμμα.</div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- ΗΧΟΙ ---
+        const sfxSuccess = new Audio('https://www.myinstants.com/media/sounds/mario-coin.mp3');
+        const sfxError = new Audio('https://www.myinstants.com/media/sounds/error_CDpnjrl.mp3');
+        const sfxWin = new Audio('https://www.myinstants.com/media/sounds/final-fantasy-v-victory-fanfare.mp3');
+        
+        sfxSuccess.volume = 0.4; sfxError.volume = 0.4; sfxWin.volume = 0.3;
+
+        function playSound(sound) {
+            sound.currentTime = 0;
+            sound.play().catch(e => e);
+        }
+
+        // --- ΔΕΔΟΜΕΝΑ (Αυστηρά Σχολικά Σενάρια) ---
+        const SCENARIOS = {
+            'human': {
+                superClass: 'Άνθρωπος',
+                subclasses: ['Μαθητής', 'Φοιτητής', 'Καθηγητής'],
+                properties: ['Όνομα', 'Ηλικία', 'Ύψος', 'Διεύθυνση']
+            },
+            'vehicles': {
+                superClass: 'Όχημα',
+                subclasses: ['Αυτοκίνητο', 'Μοτοσυκλέτα', 'Φορτηγό'],
+                properties: ['Κινητήρας', 'Τιμόνι', 'Ρόδες', 'Χρώμα']
+            },
+            'animal': {
+                superClass: 'Ζώο',
+                subclasses: ['Σκύλος', 'Γάτα', 'Πουλί'],
+                properties: ['Όνομα', 'Ηλικία', 'Βάρος', 'Χρώμα']
+            }
+        };
+
+        let currentScenario = 'human';
+        let totalItems = 0;
+        let placedItems = 0;
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+        }
+
+        function log(msg, type='normal') {
+            const term = document.getElementById('terminal');
+            let cls = 'term-msg';
+            if(type === 'error') cls = 'term-msg term-err';
+            if(type === 'warn') cls = 'term-msg term-warn';
+            if(type === 'conclusion') cls = 'conclusion-box';
+            
+            term.innerHTML += `<div class="${cls}">${msg}</div>`;
+            term.scrollTop = term.scrollHeight;
+        }
+
+        function clearTerminal() {
+            document.getElementById('terminal').innerHTML = '';
+        }
+
+        // --- ΦΟΡΤΩΣΗ ΣΕΝΑΡΙΟΥ ---
+        function loadScenario(key) {
+            currentScenario = key;
+            const data = SCENARIOS[key];
+            
+            // Αλλαγή UI / Ενεργή Καρτέλα
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(`tab-${key}`).classList.add('active');
+            
+            document.getElementById('superClassNode').innerText = data.superClass;
+            
+            // Καθαρισμός Ζωνών
+            document.getElementById('area-subclass').innerHTML = '';
+            document.getElementById('area-property').innerHTML = '';
+            
+            clearTerminal();
+            log(`> Κλάση: "<b>${data.superClass}</b>". Ξεκίνα την ταξινόμηση.`, 'warn');
+
+            // Δημιουργία Δεξαμενής (Με Ανακάτεμα)
+            const allItems = [...data.subclasses, ...data.properties];
+            allItems.sort(() => Math.random() - 0.5); 
+            
+            totalItems = allItems.length;
+            placedItems = 0;
+
+            const bank = document.getElementById('bankArea');
+            bank.innerHTML = '';
+            
+            allItems.forEach((item, index) => {
+                const chip = document.createElement('div');
+                chip.className = 'chip';
+                chip.id = `chip-${index}`;
+                chip.draggable = true;
+                chip.innerText = item;
+                
+                chip.dataset.type = data.subclasses.includes(item) ? 'subclass' : 'property';
+                chip.dataset.text = item;
+
+                chip.addEventListener('dragstart', dragStart);
+                chip.addEventListener('dragend', dragEnd);
+                
+                bank.appendChild(chip);
+            });
+        }
+
+        // --- DRAG & DROP ΛΟΓΙΚΗ ---
+        let draggedItem = null;
+
+        function dragStart(e) {
+            draggedItem = this;
+            e.dataTransfer.setData('text/plain', this.id);
+            setTimeout(() => this.style.opacity = '0.5', 0);
+        }
+
+        function dragEnd(e) {
+            this.style.opacity = '1';
+            draggedItem = null;
+            document.querySelectorAll('.drop-zone').forEach(z => z.classList.remove('drag-over'));
+        }
+
+        function allowDrop(e) {
+            e.preventDefault();
+            const targetZone = e.currentTarget;
+            if (targetZone.classList.contains('drop-zone')) {
+                targetZone.classList.add('drag-over');
+            }
+        }
+
+        function dragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function dropReturn(e) {
+            e.preventDefault();
+            if(!draggedItem) return;
+            if(draggedItem.classList.contains('correct-subclass') || draggedItem.classList.contains('correct-property')) return;
+            document.getElementById('bankArea').appendChild(draggedItem);
+        }
+
+        // Ρίψη στις Ζώνες (Έλεγχος)
+        function drop(e, zoneType) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            
+            if (!draggedItem) return;
+            
+            const itemType = draggedItem.dataset.type;
+            const itemText = draggedItem.dataset.text;
+            const superClass = SCENARIOS[currentScenario].superClass;
+
+            if (itemType === zoneType) {
+                // ΣΩΣΤΟ
+                //playSound(sfxSuccess);
+                document.getElementById(`area-${zoneType}`).appendChild(draggedItem);
+                
+                draggedItem.draggable = false; 
+                draggedItem.classList.add(`correct-${zoneType}`);
+                placedItems++;
+                
+                log(`> Σωστά! Η έννοια "<b>${itemText}</b>" τοποθετήθηκε σωστά.`);
+
+                checkWin();
+
+            } else {
+                // ΛΑΘΟΣ
+                //playSound(sfxError);
+                draggedItem.classList.remove('shake');
+                void draggedItem.offsetWidth; 
+                draggedItem.classList.add('shake');
+                const wrongItem = draggedItem;
+                setTimeout(() => wrongItem.classList.remove('shake'), 500);
+                
+                if (zoneType === 'subclass') {
+                    log(`> Λάθος! Το "<b>${itemText}</b>" λειτουργεί ως Ιδιότητα και όχι ως Υποκλάση. Σκέψου: Είναι ένα είδος ${superClass}; Όχι, είναι κάτι που "έχει".`, 'error');
+                } else {
+                    log(`> Λάθος! Το "<b>${itemText}</b>" δεν είναι ιδιότητα, είναι Υποκλάση. (Είναι ένα είδος ${superClass}).`, 'error');
+                }
+            }
+        }
+
+        function checkWin() {
+            if (placedItems === totalItems) {
+                setTimeout(() => {
+                    playSound(sfxWin);
+                    log(`<b>Μπράβο! Ολοκλήρωσες σωστά την ταξινόμηση.</b><br><br>
+                         <i class="fa-solid fa-thumbtack"></i> <b>ΘΥΜΗΣΟΥ ΤΟΝ ΚΑΝΟΝΑ:</b><br>
+                         • Υποκλάση = "είναι ένα είδος του"<br>
+                         • Ιδιότητα = "έχει / χαρακτηρίζεται από"`, 'conclusion');
+                }, 500);
+            }
+        }
+
+        function resetGame() {
+            loadScenario(currentScenario);
+        }
+
+        window.onload = () => loadScenario('human');
+
+    </script>
+</body>
+</html>
