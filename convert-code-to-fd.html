@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Μετατροπή Δομημένου Κώδικα σε Διάγραμμα Ροής</title>
+    <style>
+        :root {
+            --primary: #3b82f6; 
+            --primary-hover: #2563eb;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --bg-color: #f8fafc;
+            --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --success-color: #10b981; 
+            --danger-color: #ef4444;
+            --highlight-bg: #dcfce7;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        /* --- Toolbar --- */
+        .toolbar {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex; justify-content: flex-end; align-items: center; gap: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            z-index: 100; flex-wrap: wrap;
+        }
+        .toolbar-title {
+            flex: 1; text-align: left; font-weight: bold; font-size: 1.15rem; color: black;
+        }
+
+        .tool-btn {
+            background-color: var(--panel-bg); color: var(--primary);
+            border: 1px solid var(--border-color); padding: 8px 14px;
+            border-radius: 6px; font-size: 0.9rem; font-weight: 600;
+            cursor: pointer; display: flex; align-items: center; gap: 6px;
+            transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .tool-btn:hover:not(:disabled) { background-color: #f1f5f9; border-color: var(--primary); }
+        .tool-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .tool-btn.blue-btn { background-color: #4285f4; color: white; border: none; }
+        .tool-btn.blue-btn:hover:not(:disabled) { background-color: #3367d6; }
+        .tool-btn.blue-btn.playing { background-color: var(--danger-color); }
+
+        .speed-group {
+            display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--text-dark);
+            background: #f8fafc; border: 1px solid #e2e8f0; padding: 5px 12px; border-radius: 6px;
+        }
+        .speed-slider { cursor: pointer; width: 80px; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex; flex: 1; padding: 15px; gap: 15px;
+            height: calc(100% - 130px); box-sizing: border-box;
+        }
+        .col {
+            background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        /* --- Left Column: Tabs & Code --- */
+        .col-side { flex: 0 0 380px; }
+        
+        .tabs-container {
+            display: flex; gap: 5px; margin-bottom: 10px; border-bottom: 2px solid var(--border-color);
+            overflow-x: auto; white-space: nowrap; padding-bottom: 5px;
+        }
+        .tab-btn {
+            padding: 6px 8px; background: transparent; border: none; font-weight: bold; 
+            color: var(--text-light); cursor: pointer; border-bottom: 3px solid transparent; 
+            margin-bottom: -2px; transition: 0.2s; font-size: 0.85rem;
+        }
+        .tab-btn:hover { color: var(--primary); }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+        .code-title { font-weight: bold; font-size: 1.05rem; margin-bottom: 10px; color: var(--primary); padding-bottom: 5px;}
+        
+        .code-content {
+            font-family: monospace; font-size: 0.9rem; 
+            line-height: 1.15; /* Μικρότερο διάστοιχο */
+            flex: 1; overflow-y: auto; 
+            background: var(--bg-color); border-radius: 6px; padding: 10px; border: 1px solid var(--border-color);
+        }
+        
+        .code-line { 
+            padding: 2px 6px; margin: 1px 0; border-radius: 4px; transition: 0.3s; border-left: 4px solid transparent; 
+        }
+        .code-line.active { background: var(--highlight-bg); color: #166534; font-weight: bold; border-left-color: var(--success-color);}
+        .keyword { color: #2563eb; font-weight: bold; }
+
+        .ex-view { display: none; height: 100%; width: 100%; flex-direction: column;}
+        .ex-view.active-ex { display: flex; }
+
+        /* --- Right Column: SVG Flowchart --- */
+        .col-mid { flex: 1; align-items: center; background: #f8fafc; overflow: auto; position: relative;}
+        .svg-container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: flex-start; position: relative;}
+        
+        svg { width: 100%; height: 100%; max-width: 600px; max-height: 700px; display: none;}
+        svg.active-ex { display: block; }
+
+        .fc-elem { opacity: 0; transition: opacity 0.4s ease; }
+        .fc-elem.visible { opacity: 1; }
+        
+        .fc-node { fill: white; stroke: #64748b; stroke-width: 2.5; transition: all 0.3s; }
+        /* Στρογγυλεμένες άκρες για Αρχή/Τέλος */
+        .fc-ellipse { fill: white; stroke: #64748b; stroke-width: 2.5; rx: 20px; ry: 20px; transition: all 0.3s; }
+        .fc-text { font-family: 'Segoe UI', sans-serif; font-size: 13px; font-weight: bold; fill: #1e293b; pointer-events: none; }
+        
+        .fc-edge { fill: none; stroke: #94a3b8; stroke-width: 2.5; }
+        .fc-label { font-family: 'Segoe UI', sans-serif; font-size: 12px; font-weight: bold; }
+
+        .draw-path { stroke-dasharray: 2000; stroke-dashoffset: 2000; animation: draw 0.7s forwards; }
+        @keyframes draw { to { stroke-dashoffset: 0; } }
+
+        .fc-node.active, .fc-ellipse.active { fill: var(--highlight-bg); stroke: var(--success-color); stroke-width: 3.5; }
+        .fc-text.active { fill: #166534; }
+        .fc-edge.active { stroke: var(--success-color); stroke-width: 3.5; }
+
+        /* --- Bottom Panel --- */
+        .explanation-panel {
+            background: var(--panel-bg); border-top: 1px solid var(--border-color);
+            padding: 15px 25px; height: 80px; box-sizing: border-box; display: flex; 
+            align-items: center; justify-content: center; font-size: 1.15rem; 
+            color: var(--text-dark); text-align: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.02);
+        }
+        .explanation-panel strong { color: var(--primary); }
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    <div class="toolbar-title">Μετατροπή Δομημένου Κώδικα σε Διάγραμμα Ροής</div>
+    <button id="btnReset" class="tool-btn" onclick="initApp()">🔄 Αρχή</button>
+    <button id="btnAuto" class="tool-btn blue-btn" onclick="toggleAutoPlay()"><span id="autoIcon">▶</span> <span id="autoText">Αυτόματη Εκτέλεση</span></button>
+    <button id="btnStep" class="tool-btn" onclick="nextStep()">Βήμα ⏭</button>
+    <div class="speed-group">
+        <label>Ταχύτητα:</label>
+        <input type="range" id="speedSlider" class="speed-slider" min="1" max="5" value="3">
+    </div>
+</div>
+
+<div class="main-container">
+    
+    <div class="col col-side">
+        <div class="tabs-container">
+            <button class="tab-btn active" onclick="switchTab(1)">Κώδικας 1</button>
+            <button class="tab-btn" onclick="switchTab(2)">Κώδικας 2</button>
+            <button class="tab-btn" onclick="switchTab(3)">Κώδικας 3</button>
+            <button class="tab-btn" onclick="switchTab(4)">Κώδικας 4</button>
+            <button class="tab-btn" onclick="switchTab(5)">Κώδικας 5</button>
+            <button class="tab-btn" onclick="switchTab(6)">Κώδικας 6</button>
+        </div>
+        <div class="code-title">📝 Δομημένος Κώδικας (ΓΛΩΣΣΑ)</div>
+        
+        <div class="code-content ex-view active-ex" id="code-1">
+            <div class="code-line" id="C1_1"><span class="keyword">Αν</span> x > 1 <span class="keyword">τότε</span></div>
+            <div class="code-line" id="C1_2">&nbsp;&nbsp;&nbsp;&nbsp;y &larr; x</div>
+            <div class="code-line" id="C1_3">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Αρχή_επανάληψης</span></div>
+            <div class="code-line" id="C1_4">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;y &larr; y - 2</div>
+            <div class="code-line" id="C1_5">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Εμφάνισε</span> y</div>
+            <div class="code-line" id="C1_6">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Μέχρις_ότου</span> y &le; 0</div>
+            <div class="code-line" id="C1_7"><span class="keyword">Τέλος_αν</span></div>
+        </div>
+
+        <div class="code-content ex-view" id="code-2">
+            <div class="code-line" id="C2_1"><span class="keyword">Διάβασε</span> Χ</div>
+            <div class="code-line" id="C2_2"><span class="keyword">Αν</span> Χ >= 0 <span class="keyword">τότε</span></div>
+            <div class="code-line" id="C2_3">&nbsp;&nbsp;&nbsp;&nbsp;π &larr; 1</div>
+            <div class="code-line" id="C2_4">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Για</span> i <span class="keyword">από</span> 1 <span class="keyword">μέχρι</span> Χ</div>
+<div class="code-line" id="C2_5">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;π &larr; π * i</div>
+<div class="code-line" id="C2_6">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Τέλος_επανάληψης</span></div>
+            <div class="code-line" id="C2_7">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Εμφάνισε</span> π</div>
+            <div class="code-line" id="C2_8"><span class="keyword">Αλλιώς</span></div>
+            <div class="code-line" id="C2_9">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Εμφάνισε</span> "Δεν υπάρχει..."</div>
+            <div class="code-line" id="C2_10"><span class="keyword">Τέλος_αν</span></div>
+        </div>
+
+        <div class="code-content ex-view" id="code-3">
+            <div class="code-line" id="C3_0"><span class="keyword">Αλγόριθμος</span> Π_Ρ</div>
+            <div class="code-line" id="C3_1"><span class="keyword">Διάβασε</span> Μ1, Μ2</div>
+            <div class="code-line" id="C3_2">P &larr; 0</div>
+            <div class="code-line" id="C3_3"><span class="keyword">Όσο</span> Μ2 > 0 <span class="keyword">επανάλαβε</span></div>
+            <div class="code-line" id="C3_4">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Αν</span> Μ2 mod 2 = 1 <span class="keyword">τότε</span></div>
+            <div class="code-line" id="C3_5">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;P &larr; Ρ + Μ1</div>
+            <div class="code-line" id="C3_6">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Τέλος_Αν</span></div>
+            <div class="code-line" id="C3_7">&nbsp;&nbsp;&nbsp;&nbsp;Μ1 &larr; Μ1 * 2</div>
+            <div class="code-line" id="C3_8">&nbsp;&nbsp;&nbsp;&nbsp;Μ2 &larr; Μ2 div 2</div>
+            <div class="code-line" id="C3_9"><span class="keyword">Τέλος_επανάληψης</span></div>
+            <div class="code-line" id="C3_10"><span class="keyword">Εμφάνισε</span> Ρ</div>
+            <div class="code-line" id="C3_11"><span class="keyword">Τέλος</span> Π_Ρ</div>
+        </div>
+
+        <div class="code-content ex-view" id="code-4">
+            <div class="code-line" id="C4_1">s &larr; 0</div>
+            <div class="code-line" id="C4_2"><span class="keyword">Διάβασε</span> x</div>
+            <div class="code-line" id="C4_3"><span class="keyword">Αν</span> x > 0 <span class="keyword">τότε</span></div>
+            <div class="code-line" id="C4_4">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Αρχή_επανάληψης</span></div>
+            <div class="code-line" id="C4_5">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;s &larr; s + x</div>
+            <div class="code-line" id="C4_6">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Διάβασε</span> x</div>
+            <div class="code-line" id="C4_7">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Μέχρις_ότου</span> x &le; 0</div>
+            <div class="code-line" id="C4_8"><span class="keyword">Τέλος_αν</span></div>
+        </div>
+
+        <div class="code-content ex-view" id="code-5">
+            <div class="code-line" id="C5_1"><span class="keyword">ΑΡΧΗ_ΕΠΑΝΑΛΗΨΗΣ</span></div>
+            <div class="code-line" id="C5_2">&nbsp;&nbsp;&nbsp;&nbsp;Σ &larr; 0</div>
+            <div class="code-line" id="C5_3">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">ΓΙΑ</span> i <span class="keyword">ΑΠΟ</span> 1 <span class="keyword">ΜΕΧΡΙ</span> 10</div>
+            <div class="code-line" id="C5_4">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">ΑΡΧΗ_ΕΠΑΝΑΛΗΨΗΣ</span></div>
+            <div class="code-line" id="C5_5">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">ΔΙΑΒΑΣΕ</span> Β[i]</div>
+            <div class="code-line" id="C5_6">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">ΜΕΧΡΙΣ_ΟΤΟΥ</span> Β[i] > 0</div>
+            <div class="code-line" id="C5_7">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Σ &larr; Σ + Β[i]</div>
+            <div class="code-line" id="C5_8">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span></div>
+            <div class="code-line" id="C5_9"><span class="keyword">ΜΕΧΡΙΣ_ΟΤΟΥ</span> Σ = 200</div>
+        </div>
+
+        <div class="code-content ex-view" id="code-6">
+            <div class="code-line" id="C6_0"><span class="keyword">Αλγόριθμος</span> Παράγοντες</div>
+            <div class="code-line" id="C6_1"><span class="keyword">Διάβασε</span> α</div>
+            <div class="code-line" id="C6_2">K &larr; 2</div>
+            <div class="code-line" id="C6_3"><span class="keyword">Όσο</span> α > 1 <span class="keyword">επανάλαβε</span></div>
+            <div class="code-line" id="C6_4">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Αν</span> α mod k = 0 <span class="keyword">τότε</span></div>
+            <div class="code-line" id="C6_5">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">εμφάνισε</span> k</div>
+            <div class="code-line" id="C6_6">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;α &larr; α div k</div>
+            <div class="code-line" id="C6_7">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Αλλιώς</span></div>
+            <div class="code-line" id="C6_8">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;k &larr; k + 1</div>
+            <div class="code-line" id="C6_9">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Τέλος_αν</span></div>
+            <div class="code-line" id="C6_10"><span class="keyword">Τέλος_επανάληψης</span></div>
+            <div class="code-line" id="C6_11"><span class="keyword">Τέλος</span> Παράγοντες</div>
+        </div>
+    </div>
+
+    <div class="col col-mid">
+        <div class="code-title" style="border:none; color: var(--text-dark);">Οπτικοποίηση (Διάγραμμα Ροής)</div>
+        <div class="svg-container">
+            
+            <svg viewBox="0 0 500 500" id="svg-1" class="active-ex">
+                <defs><marker id="arr1" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto-start-reverse"><path d="M 0 0 L 6 3 L 0 6 z" fill="#94a3b8" /></marker><marker id="arrAct1" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto-start-reverse"><path d="M 0 0 L 6 3 L 0 6 z" fill="#10b981" /></marker></defs>
+                <g class="fc-elem" id="S1_1">
+                    <polygon points="250,20 320,50 250,80 180,50" class="fc-node"/>
+                    <text x="250" y="55" text-anchor="middle" class="fc-text">x > 1</text>
+                </g>
+                <g class="fc-elem" id="S1_1F">
+                    <path d="M 320 50 L 420 50 L 420 400 L 250 400" class="fc-edge" marker-end="url(#arr1)"/>
+                    <text x="350" y="40" class="fc-label" style="fill:var(--danger-color)">ΨΕΥΔΗΣ</text>
+                </g>
+                <g class="fc-elem" id="S1_1T">
+                    <path d="M 250 80 L 250 110" class="fc-edge" marker-end="url(#arr1)"/>
+                    <text x="265" y="100" class="fc-label" style="fill:var(--success-color)">ΑΛΗΘΗΣ</text>
+                </g>
+                <g class="fc-elem" id="S1_2">
+                    <rect x="180" y="110" width="140" height="40" rx="4" class="fc-node"/>
+                    <text x="250" y="135" text-anchor="middle" class="fc-text">y &larr; x</text>
+                </g>
+                <g class="fc-elem" id="S1_2E"><path d="M 250 150 L 250 190" class="fc-edge" marker-end="url(#arr1)"/></g>
+                <g class="fc-elem" id="S1_4">
+                    <rect x="180" y="190" width="140" height="40" rx="4" class="fc-node"/>
+                    <text x="250" y="215" text-anchor="middle" class="fc-text">y &larr; y - 2</text>
+                </g>
+                <g class="fc-elem" id="S1_4E"><path d="M 250 230 L 250 260" class="fc-edge" marker-end="url(#arr1)"/></g>
+                <g class="fc-elem" id="S1_5">
+                    <polygon points="190,260 330,260 310,300 170,300" class="fc-node"/>
+                    <text x="250" y="285" text-anchor="middle" class="fc-text">Εμφάνισε y</text>
+                </g>
+                <g class="fc-elem" id="S1_5E"><path d="M 250 300 L 250 330" class="fc-edge" marker-end="url(#arr1)"/></g>
+                <g class="fc-elem" id="S1_6">
+                    <polygon points="250,330 320,360 250,390 180,360" class="fc-node"/>
+                    <text x="250" y="365" text-anchor="middle" class="fc-text">y &le; 0</text>
+                </g>
+                <g class="fc-elem" id="S1_6F">
+                    <path d="M 180 360 L 100 360 L 100 175 L 250 175" class="fc-edge" marker-end="url(#arr1)"/>
+                    <text x="130" y="350" class="fc-label" style="fill:var(--danger-color)">ΨΕΥΔΗΣ</text>
+                </g>
+                <g class="fc-elem" id="S1_6T">
+                    <path d="M 250 390 L 250 430" class="fc-edge" marker-end="url(#arr1)"/>
+                    <text x="265" y="415" class="fc-label" style="fill:var(--success-color)">ΑΛΗΘΗΣ</text>
+                </g>
+            </svg>
+
+            <svg viewBox="0 0 600 650" id="svg-2">
+                <defs><marker id="arr2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto-start-reverse"><path d="M 0 0 L 6 3 L 0 6 z" fill="#94a3b8" /></marker><marker id="arrAct2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto-start-reverse"><path d="M 0 0 L 6 3 L 0 6 z" fill="#10b981" /></marker></defs>
+                <g class="fc-elem" id="S2_1">
+                    <polygon points="180,20 320,20 300,60 160,60" class="fc-node"/>
+                    <text x="250" y="45" text-anchor="middle" class="fc-text">Διάβασε Χ</text>
+                </g>
+                <g class="fc-elem" id="S2_1E"><path d="M 250 60 L 250 90" class="fc-edge" marker-end="url(#arr2)"/></g>
+                <g class="fc-elem" id="S2_2">
+                    <polygon points="250,90 320,120 250,150 180,120" class="fc-node"/>
+                    <text x="250" y="125" text-anchor="middle" class="fc-text">Χ &gt;= 0</text>
+                </g>
+                <g class="fc-elem" id="S2_2T">
+                    <path d="M 250 150 L 250 180" class="fc-edge" marker-end="url(#arr2)"/>
+                    <text x="265" y="170" class="fc-label" style="fill:var(--success-color)">ΑΛΗΘΗΣ</text>
+                </g>
+                <g class="fc-elem" id="S2_3">
+                    <rect x="180" y="180" width="140" height="40" rx="4" class="fc-node"/>
+                    <text x="250" y="205" text-anchor="middle" class="fc-text">π &larr; 1</text>
+                </g>
+                <g class="fc-elem" id="S2_3E"><path d="M 250 220 L 250 250" class="fc-edge" marker-end="url(#arr2)"/></g>
+                
+                <g class="fc-elem" id="S2_4">
+                    <rect x="180" y="250" width="140" height="40" rx="4" class="fc-node"/>
+                    <text x="250" y="275" text-anchor="middle" class="fc-text">i &larr; 1</text>
+                    <path d="M 250 290 L 250 320" class="fc-edge" marker-end="url(#arr2)"/>
+                    <polygon points="250,320 320,350 250,380 180,350" class="fc-node"/>
+                    <text x="250" y="355" text-anchor="middle" class="fc-text">i &le; X</text>
+                </g>
+                <g class="fc-elem" id="S2_4T">
+                    <path d="M 250 380 L 250 410" class="fc-edge" marker-end="url(#arr2)"/>
+                    <text x="265" y="400" class="fc-label" style="fill:var(--success-color)">ΑΛΗΘΗΣ</text>
+                </g>
+                <g class="fc-elem" id="S2_5">
+                    <rect x="180" y="410" width="140" height="40" rx="4" class="fc-node"/>
+                    <text x="250" y="435" text-anchor="middle" class="fc-text">π &larr; π * i</text>
+                </g>
+                
+                <g class="fc-elem" id="S2_6">
+                    <path d="M 250 450 L 250 480" class="fc-edge" marker-end="url(#arr2)"/>
+                    <rect x="180" y="480" width="140" height="40" rx="4" class="fc-node"/>
+                    <text x="250" y="505" text-anchor="middle" class="fc-text">i &larr; i + 1</text>
+                    <path d="M 250 520 L 250 550 L 80 550 L 80 300 L 250 300" class="fc-edge" marker-end="url(#arr2)"/>
+                </g>
+
+                <g class="fc-elem" id="S2_7">
+                    <path d="M 320 350 L 390 350 L 390 380" class="fc-edge" marker-end="url(#arr2)"/>
+                    <text x="345" y="340" class="fc-label" style="fill:var(--danger-color)">ΨΕΥΔΗΣ</text>
+                    <polygon points="330,380 470,380 450,420 310,420" class="fc-node"/>
+                    <text x="390" y="405" text-anchor="middle" class="fc-text">Εμφάνισε π</text>
+                </g>
+                <g class="fc-elem" id="S2_8">
+                    <path d="M 320 120 L 500 120 L 500 180" class="fc-edge" marker-end="url(#arr2)"/>
+                    <text x="360" y="110" class="fc-label" style="fill:var(--danger-color)">ΨΕΥΔΗΣ</text>
+                </g>
+                <g class="fc-elem" id="S2_9">
+                    <polygon points="430,180 570,180 550,220 410,220" class="fc-node"/>
+                    <text x="490" y="205" text-anchor="middle" class="fc-text">Εμφάνισε "Δεν..."</text>
+                </g>
+                <g class="fc-elem" id="S2_10">
+                    <path d="M 390 420 L 390 570 L 250 570" class="fc-edge" marker-end="url(#arr2)"/>
+                    <path d="M 490 220 L 490 570 L 250 570" class="fc-edge" marker-end="url(#arr2)"/>
+                </g>
+            </svg>
+
+            <svg viewBox="0 0 600 700" id="svg-3">
+                <defs><marker id="arr3" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto-start-reverse"><path d="M 0 0 L 6 3 L 0 6 z" fill="#94a3b8" /></marker><marker id="arrAct3" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto-start-reverse"><path d="M 0 0 L 6 3 L 0 6 z" fill="#10b981" /></marker></defs>
+                <g class="fc-elem" id="S3_0">
+                    <rect x="180" y="20" width="140" height="40" class="fc-ellipse"/>
+                    <text x="250" y="45" text-anchor="middle" class="fc-text">Αρχή</text>
+                </g>
+                <g class="fc-elem" id="S3_0E"><path d="M 250 60 L 250 90" class="fc-edge" marker-end="url(#arr3)"/></g>
+                <g class="fc-elem" id="S3_1">
+                    <polygon points="180,90 320,90 300,130 160,130" class="fc-node"/>
+                    <text x="240" y="115" text-anchor="middle" class="fc-text">Διάβασε M1, M2</text>
+                </g>
+                <g class="fc-elem" id="S3_1E"><path d="M 240 130 L 240 160" class="fc-edge" marker-end="url(#arr3)"/></g>
+                <g class="fc-elem" id="S3_2">
+                    <rect x="170" y="160" width="140" height="40" rx="4" class="fc-node"/>
+                    <text x="240" y="185" text-anchor="middle" class="fc-text">P &larr; 0</text>
+                </g>
+                <g class="fc-elem" id="S3_2E"><path d="M 240 200 L 240 230" class="fc-edge" marker-end="url(#arr3)"/></g>
+                <g class="fc-elem" id="S3_3">
+                    <polygon points="240,230 310,260 240,290 170,260" class="fc-node"/>
+                    <text x="240" y="265" text-anchor="middle" class="fc-text">M2 &gt; 0</text>
+                </g>
+                <g class="fc-elem" id="S3_3T">
+                    <path d="M 240 290 L 240 320" class="fc-edge" marker-end="url(#arr3)"/>
+                    <text x="255" y="310" class="fc-label" style="fill:var(--success-color)">ΑΛΗΘΗΣ</text>
+                </g>
+                <g class="fc-elem" id="S3_4">
+                    <polygon points="240,320 330,350 240,380 150,350" class="fc-node"/>
+                    <text x="240" y="355" text-anchor="middle" class="fc-text">M2 mod 2 = 1</text>
+                </g>
+                <g class="fc-elem" id="S3_5">
+                    <path d="M 330 350 L 390 350 L 390 380" class="fc-edge" marker-end="url(#arr3)"/>
+                    <text x="350" y="340" class="fc-label" style="fill:var(--success-color)">ΑΛΗΘΗΣ</text>
+                    <rect x="320" y="380" width="140" height="40" rx="4" class="fc-node"/>
+                    <text x="390" y="405" text-anchor="middle" class="fc-text">P &larr; P + M1</text>
+                    <path d="M 390 420 L 390 450 L 240 450" class="fc-edge" marker-end="url(#arr3)"/>
+                </g>
+                <g class="fc-elem" id="S3_6">
+                    <path d="M 240 380 L 240 450" class="fc-edge" marker-end="url(#arr3)"/>
+                    <text x="255" y="400" class="fc-label" style="fill:var(--danger-color)">ΨΕΥΔΗΣ</text>
+                </g>
+                <g class="fc-elem" id="S3_7">
+                    <rect x="150" y="450" width="180" height="50" rx="4" class="fc-node"/>
+                    <text x="240" y="470" text-anchor="middle" class="fc-text">Μ1 &larr; Μ1 * 2</text>
+                    <text x="240" y="490" text-anchor="middle" class="fc-text">Μ2 &larr; Μ2 div 2</text>
+                </g>
+                <g class="fc-elem" id="S3_9">
+                    <path d="M 240 500 L 240 530 L 70 530 L 70 215 L 240 215" class="fc-edge" marker-end="url(#arr3)"/>
+                </g>
+                <g class="fc-elem" id="S3_10">
+                    <path d="M 310 260 L 480 260 L 480 540 L 240 540 L 240 560" class="fc-edge" marker-end="url(#arr3)"/>
+                    <text x="340" y="250" class="fc-label" style="fill:var(--danger-color)">ΨΕΥΔΗΣ</text>
+                    <polygon points="180,560 320,560 300,600 160,600" class="fc-node"/>
+                    <text x="240" y="585" text-anchor="middle" class="fc-text">Εμφάνισε P</text>
+                </g>
+                <g class="fc-elem" id="S3_11">
+                    <path d="M 240 600 L 240 630" class="fc-edge" marker-end="url(#arr3)"/>
+                    <rect x="170" y="630" width="140" height="40" class="fc-ellipse"/>
+                    <text x="240" y="655" text-anchor="middle" class="fc-text">Τέλος</text>
+                </g>
+            </svg>
+
+            <svg viewBox="0 0 500 550" id="svg-4">
+                <defs><marker id="arr4" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto-start-reverse"><path d="M 0 0 L 6 3 L 0 6 z" fill="#94a3b8" /></marker><marker id="arrAct4" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto-start-reverse"><path d="M 0 0 L 6 3 L 0 6 z" fill="#10b981" /></marker></defs>
+                <g class="fc-elem" id="S4_1">
+                    <rect x="180" y="20" width="140" height="40" rx="4" class="fc-node"/>
+                    <text x="250" y="45" text-anchor="middle" class="fc-text">s &larr; 0</text>
+                </g>
+                <g class="fc-elem" id="S4_1E"><path d="M 250 60 L 250 90" class="fc-edge" marker-end="url(#arr4)"/></g>
+                <g class="fc-elem" id="S4_2">
+                    <polygon points="190,90 330,90 310,130 170,130" class="fc-node"/>
+                    <text x="250" y="115" text-anchor="middle" class="fc-text">Διάβασε x</text>
+                </g>
+                <g class="fc-elem" id="S4_2E"><path d="M 250 130 L 250 160" class="fc-edge" marker-end="url(#arr4)"/></g>
+                <g class="fc-elem" id="S4_3">
+                    <polygon points="250,160 320,190 250,220 180,190" class="fc-node"/>
+                    <text x="250" y="195" text-anchor="middle" class="fc-text">x &gt; 0</text>
+                </g>
+                <g class="fc-elem" id="S4_3F">
+                    <path d="M 320 190 L 400 190 L 400 480 L 250 480" class="fc-edge" marker-end="url(#arr4)"/>
+                    <text x="350" y="180" class="fc-label" style="fill:var(--danger-color)">ΨΕΥΔΗΣ</text>
+                </g>
+                <g class="fc-elem" id="S4_4">
+                    <path d="M 250 220 L 250 250" class="fc-edge" marker-end="url(#arr4)"/>
+                    <text x="265" y="240" class="fc-label" style="fill:var(--success-color)">ΑΛΗΘΗΣ</text>
+                </g>
+                <g class="fc-elem" id="S4_5">
+                    <rect x="180" y="250" width="140" height="40" rx="4" class="fc-node"/>
+                    <text x="250" y="275" text-anchor="middle" class="fc-text">s &larr; s + x</text>
+                </g>
+                <g class="fc-elem" id="S4_5E"><path d="M 250 290 L 250 320" class="fc-edge" marker-end="url(#arr4)"/></g>
+                <g class="fc-elem" id="S4_6">
+                    <polygon points="190,320 330,320 310,360 170,360" class="fc-node"/>
+                    <text x="250" y="345" text-anchor="middle" class="fc-text">Διάβασε x</text>
+                </g>
+                <g class="fc-elem" id="S4_6E"><path d="M 250 360 L 250 390" class="fc-edge" marker-end="url(#arr4)"/></g>
+                <g class="fc-elem" id="S4_7">
+                    <polygon points="250,390 320,420 250,450 180,420" class="fc-node"/>
+                    <text x="250" y="425" text-anchor="middle" class="fc-text">x &le; 0</text>
+                </g>
+                <g class="fc-elem" id="S4_7F">
+                    <path d="M 180 420 L 100 420 L 100 235 L 250 235" class="fc-edge" marker-end="url(#arr4)"/>
+                    <text x="130" y="410" class="fc-label" style="fill:var(--danger-color)">ΨΕΥΔΗΣ</text>
+                </g>
+                <g class="fc-elem" id="S4_8">
+                    <path d="M 250 450 L 250 500" class="fc-edge" marker-end="url(#arr4)"/>
+                    <text x="265" y="470" class="fc-label" style="fill:var(--success-color)">ΑΛΗΘΗΣ</text>
+                </g>
+            </svg>
+
+            <svg viewBox="0 0 650 700" id="svg-5">
+                <defs><marker id="arr5" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto-start-reverse"><path d="M 0 0 L 6 3 L 0 6 z" fill="#94a3b8" /></marker><marker id="arrAct5" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto-start-reverse"><path d="M 0 0 L 6 3 L 0 6 z" fill="#10b981" /></marker></defs>
+                <g class="fc-elem" id="S5_2">
+                    <rect x="180" y="20" width="140" height="40" rx="4" class="fc-node"/>
+                    <text x="250" y="45" text-anchor="middle" class="fc-text">Σ &larr; 0</text>
+                </g>
+                <g class="fc-elem" id="S5_2E"><path d="M 250 60 L 250 90" class="fc-edge" marker-end="url(#arr5)"/></g>
+                
+                <g class="fc-elem" id="S5_3">
+                    <rect x="180" y="90" width="140" height="40" rx="4" class="fc-node"/>
+                    <text x="250" y="115" text-anchor="middle" class="fc-text">i &larr; 1</text>
+                    <path d="M 250 130 L 250 160" class="fc-edge" marker-end="url(#arr5)"/>
+                    <polygon points="250,160 320,190 250,220 180,190" class="fc-node"/>
+                    <text x="250" y="195" text-anchor="middle" class="fc-text">i &le; 10</text>
+                </g>
+                <g class="fc-elem" id="S5_3T">
+                    <path d="M 250 220 L 250 250" class="fc-edge" marker-end="url(#arr5)"/>
+                    <text x="265" y="235" class="fc-label" style="fill:var(--success-color)">ΑΛΗΘΗΣ</text>
+                </g>
+                
+                <g class="fc-elem" id="S5_5">
+                    <polygon points="190,250 330,250 310,290 170,290" class="fc-node"/>
+                    <text x="250" y="275" text-anchor="middle" class="fc-text">ΔΙΑΒΑΣΕ B[i]</text>
+                </g>
+                <g class="fc-elem" id="S5_5E"><path d="M 250 290 L 250 320" class="fc-edge" marker-end="url(#arr5)"/></g>
+                <g class="fc-elem" id="S5_6">
+                    <polygon points="250,320 320,350 250,380 180,350" class="fc-node"/>
+                    <text x="250" y="355" text-anchor="middle" class="fc-text">B[i] &gt; 0</text>
+                </g>
+                <g class="fc-elem" id="S5_6F">
+                    <path d="M 180 350 L 100 350 L 100 235 L 250 235" class="fc-edge" marker-end="url(#arr5)"/>
+                    <text x="130" y="340" class="fc-label" style="fill:var(--danger-color)">ΨΕΥΔΗΣ</text>
+                </g>
+                <g class="fc-elem" id="S5_7">
+                    <path d="M 250 380 L 250 410" class="fc-edge" marker-end="url(#arr5)"/>
+                    <text x="265" y="400" class="fc-label" style="fill:var(--success-color)">ΑΛΗΘΗΣ</text>
+                    <rect x="180" y="410" width="140" height="40" rx="4" class="fc-node"/>
+                    <text x="250" y="435" text-anchor="middle" class="fc-text">Σ &larr; Σ + B[i]</text>
+                </g>
+                
+                <g class="fc-elem" id="S5_8">
+                    <path d="M 250 450 L 250 480" class="fc-edge" marker-end="url(#arr5)"/>
+                    <rect x="180" y="480" width="140" height="40" rx="4" class="fc-node"/>
+                    <text x="250" y="505" text-anchor="middle" class="fc-text">i &larr; i + 1</text>
+                    <path d="M 250 520 L 250 550 L 40 550 L 40 140 L 250 140" class="fc-edge" marker-end="url(#arr5)"/>
+                </g>
+                
+                <g class="fc-elem" id="S5_9">
+                    <path d="M 320 190 L 480 190 L 480 250" class="fc-edge" marker-end="url(#arr5)"/>
+                    <text x="350" y="180" class="fc-label" style="fill:var(--danger-color)">ΨΕΥΔΗΣ</text>
+                    <polygon points="480,250 550,280 480,310 410,280" class="fc-node"/>
+                    <text x="480" y="285" text-anchor="middle" class="fc-text">Σ = 200</text>
+                </g>
+                <g class="fc-elem" id="S5_9F">
+                    <path d="M 480 310 L 480 620 L 620 620 L 620 10 L 250 10 L 250 20" class="fc-edge" marker-end="url(#arr5)"/>
+                    <text x="495" y="330" class="fc-label" style="fill:var(--danger-color)">ΨΕΥΔΗΣ</text>
+                </g>
+                <g class="fc-elem" id="S5_9T">
+                    <path d="M 410 280 L 380 280 L 380 320" class="fc-edge" marker-end="url(#arr5)"/>
+                    <text x="385" y="270" class="fc-label" style="fill:var(--success-color)">ΑΛΗΘΗΣ</text>
+                </g>
+            </svg>
+
+            <svg viewBox="0 0 650 700" id="svg-6">
+                <defs><marker id="arr6" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto-start-reverse"><path d="M 0 0 L 6 3 L 0 6 z" fill="#94a3b8" /></marker><marker id="arrAct6" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto-start-reverse"><path d="M 0 0 L 6 3 L 0 6 z" fill="#10b981" /></marker></defs>
+                <g class="fc-elem" id="S6_0">
+                    <rect x="180" y="20" width="140" height="40" class="fc-ellipse"/>
+                    <text x="250" y="45" text-anchor="middle" class="fc-text">Αρχή</text>
+                </g>
+                <g class="fc-elem" id="S6_0E"><path d="M 250 60 L 250 90" class="fc-edge" marker-end="url(#arr6)"/></g>
+                <g class="fc-elem" id="S6_1">
+                    <polygon points="190,90 330,90 310,130 170,130" class="fc-node"/>
+                    <text x="250" y="115" text-anchor="middle" class="fc-text">Διάβασε α</text>
+                </g>
+                <g class="fc-elem" id="S6_1E"><path d="M 250 130 L 250 160" class="fc-edge" marker-end="url(#arr6)"/></g>
+                <g class="fc-elem" id="S6_2">
+                    <rect x="180" y="160" width="140" height="40" rx="4" class="fc-node"/>
+                    <text x="250" y="185" text-anchor="middle" class="fc-text">K &larr; 2</text>
+                </g>
+                <g class="fc-elem" id="S6_2E"><path d="M 250 200 L 250 230" class="fc-edge" marker-end="url(#arr6)"/></g>
+                <g class="fc-elem" id="S6_3">
+                    <polygon points="250,230 320,260 250,290 180,260" class="fc-node"/>
+                    <text x="250" y="265" text-anchor="middle" class="fc-text">α &gt; 1</text>
+                </g>
+                <g class="fc-elem" id="S6_3F">
+                    <path d="M 320 260 L 560 260 L 560 550 L 250 550 L 250 570" class="fc-edge" marker-end="url(#arr6)"/>
+                    <text x="350" y="250" class="fc-label" style="fill:var(--danger-color)">ΨΕΥΔΗΣ</text>
+                </g>
+                <g class="fc-elem" id="S6_4">
+                    <path d="M 250 290 L 250 320" class="fc-edge" marker-end="url(#arr6)"/>
+                    <text x="265" y="310" class="fc-label" style="fill:var(--success-color)">ΑΛΗΘΗΣ</text>
+                    <polygon points="250,320 340,350 250,380 160,350" class="fc-node"/>
+                    <text x="250" y="355" text-anchor="middle" class="fc-text">α mod k = 0</text>
+                </g>
+                <g class="fc-elem" id="S6_5">
+                    <path d="M 340 350 L 400 350 L 400 380" class="fc-edge" marker-end="url(#arr6)"/>
+                    <text x="360" y="340" class="fc-label" style="fill:var(--success-color)">ΑΛΗΘΗΣ</text>
+                    <polygon points="340,380 480,380 460,420 320,420" class="fc-node"/>
+                    <text x="400" y="405" text-anchor="middle" class="fc-text">Εμφάνισε k</text>
+                </g>
+                <g class="fc-elem" id="S6_6">
+                    <path d="M 400 420 L 400 450" class="fc-edge" marker-end="url(#arr6)"/>
+                    <rect x="330" y="450" width="140" height="40" rx="4" class="fc-node"/>
+                    <text x="400" y="475" text-anchor="middle" class="fc-text">α &larr; α div k</text>
+                    <path d="M 400 490 L 400 520 L 250 520" class="fc-edge" marker-end="url(#arr6)"/>
+                </g>
+                <g class="fc-elem" id="S6_8">
+                    <path d="M 160 350 L 100 350 L 100 420" class="fc-edge" marker-end="url(#arr6)"/>
+                    <text x="120" y="340" class="fc-label" style="fill:var(--danger-color)">ΨΕΥΔΗΣ</text>
+                    <rect x="30" y="420" width="140" height="40" rx="4" class="fc-node"/>
+                    <text x="100" y="445" text-anchor="middle" class="fc-text">k &larr; k + 1</text>
+                    <path d="M 100 460 L 100 520 L 250 520" class="fc-edge" marker-end="url(#arr6)"/>
+                </g>
+                <g class="fc-elem" id="S6_10">
+                    <path d="M 250 520 L 250 550 L 10 550 L 10 215 L 250 215" class="fc-edge" marker-end="url(#arr6)"/>
+                </g>
+                <g class="fc-elem" id="S6_11">
+                    <rect x="180" y="570" width="140" height="40" class="fc-ellipse"/>
+                    <text x="250" y="595" text-anchor="middle" class="fc-text">Τέλος</text>
+                </g>
+            </svg>
+
+        </div>
+    </div>
+
+</div>
+
+<div class="explanation-panel" id="expPanel">
+    Επιλέξτε κώδικα και πατήστε <strong>Βήμα</strong> για να ξεκινήσει η οπτικοποίηση!
+</div>
+
+<script>
+    // Execution Step Data 
+    const exData = {
+        1: [
+            { c: 'C1_1', s: ['S1_1'], msg: "Αξιολογούμε την αρχική συνθήκη: x > 1." },
+            { c: 'C1_1', s: ['S1_1F'], msg: "Αν ΨΕΥΔΗΣ, η ροή προσπερνά όλη τη δομή της ΑΝ." },
+            { c: 'C1_1', s: ['S1_1T'], msg: "Αν ΑΛΗΘΗΣ, η ροή μπαίνει στο εσωτερικό της ΑΝ." },
+            { c: 'C1_2', s: ['S1_2', 'S1_2E'], msg: "Εκτέλεση της εντολής εκχώρησης y ← x." },
+            { c: 'C1_3', s: [], msg: "Είσοδος στο βρόχο (Η Αρχή_επανάληψης δεν έχει σχήμα)." },
+            { c: 'C1_4', s: ['S1_4', 'S1_4E'], msg: "Εκτέλεση της εντολής y ← y - 2." },
+            { c: 'C1_5', s: ['S1_5', 'S1_5E'], msg: "Εμφάνιση της νέας τιμής του y." },
+            { c: 'C1_6', s: ['S1_6'], msg: "Έλεγχος συνθήκης τερματισμού: y ≤ 0." },
+            { c: 'C1_6', s: ['S1_6F'], msg: "Αν ΨΕΥΔΗΣ, η επανάληψη συνεχίζεται από την αρχή." },
+            { c: 'C1_6', s: ['S1_6T'], msg: "Αν ΑΛΗΘΗΣ, ο βρόχος και η ΑΝ τερματίζουν." },
+            { c: 'C1_7', s: [], msg: "Το Διάγραμμα Ροής ολοκληρώθηκε επιτυχώς!" }
+        ],
+        2: [
+            { c: 'C2_1', s: ['S2_1', 'S2_1E'], msg: "Διαβάζουμε την τιμή του Χ." },
+            { c: 'C2_2', s: ['S2_2'], msg: "Ελέγχουμε αν το Χ είναι θετικό ή μηδέν." },
+            { c: 'C2_2', s: ['S2_2T'], msg: "Αν ΑΛΗΘΗΣ, προχωράμε στον υπολογισμό." },
+            { c: 'C2_3', s: ['S2_3', 'S2_3E'], msg: "Αρχικοποίηση της μεταβλητής π." },
+            { c: 'C2_4', s: ['S2_4'], msg: "Η δομή ΓΙΑ μετατρέπεται σε ΟΣΟ! (Αρχικοποίηση i & Έλεγχος)." },
+            { c: 'C2_4', s: ['S2_4T'], msg: "Αν ΑΛΗΘΗΣ (i <= X), μπαίνουμε στο σώμα του βρόχου." },
+            { c: 'C2_5', s: ['S2_5'], msg: "Για κάθε i, εκτελούμε τον πολλαπλασιασμό." },
+            { c: 'C2_6', s: ['S2_6'], msg: "Στο τέλος της ΓΙΑ προσθέτουμε την αύξηση του i και γυρνάμε πίσω." },
+            { c: 'C2_7', s: ['S2_7'], msg: "Όταν τελειώσει η ΓΙΑ (ψευδής διαδρομή), εμφανίζει το π." },
+            { c: 'C2_8', s: ['S2_8'], msg: "ΑΛΛΙΩΣ (Αν Χ < 0), η ροή ακολουθεί τη διαδρομή ΨΕΥΔΗΣ της ΑΝ." },
+            { c: 'C2_9', s: ['S2_9', 'S2_10'], msg: "Εμφανίζει το αντίστοιχο μήνυμα λάθους και ενώνεται στο Τέλος." },
+            { c: 'C2_10', s: [], msg: "Τέλος επιλογής." }
+        ],
+        3: [
+            { c: 'C3_0', s: ['S3_0', 'S3_0E'], msg: "Ξεκινάει ο Αλγόριθμος (Έλλειψη Αρχής)." },
+            { c: 'C3_1', s: ['S3_1', 'S3_1E'], msg: "Διαβάζουμε τις μεταβλητές Μ1, Μ2." },
+            { c: 'C3_2', s: ['S3_2', 'S3_2E'], msg: "Αρχικοποιούμε το άθροισμα P σε 0." },
+            { c: 'C3_3', s: ['S3_3'], msg: "Συνθήκη της ΟΣΟ: Έλεγχος αν Μ2 > 0." },
+            { c: 'C3_3', s: ['S3_3T'], msg: "Αν ΑΛΗΘΗΣ, μπαίνουμε στο βρόχο." },
+            { c: 'C3_4', s: ['S3_4'], msg: "Εσωτερικός έλεγχος (ΑΝ): Είναι το Μ2 περιττός;" },
+            { c: 'C3_5', s: ['S3_5'], msg: "Αν ΑΛΗΘΗΣ (περιττός), προσθέτουμε το Μ1 στο P." },
+            { c: 'C3_6', s: ['S3_6'], msg: "Αν ΨΕΥΔΗΣ, απλά προσπερνάμε την πρόσθεση." },
+            { c: 'C3_7', s: ['S3_7'], msg: "Οι πράξεις των Μ1 και Μ2 εκτελούνται πάντα." },
+            { c: 'C3_9', s: ['S3_9'], msg: "Το Τέλος_επανάληψης γυρίζει τη ροή πίσω στη συνθήκη ΟΣΟ." },
+            { c: 'C3_10', s: ['S3_10'], msg: "Όταν Μ2>0 γίνει ΨΕΥΔΗΣ, η επανάληψη τελειώνει και εμφανίζει το Ρ." },
+            { c: 'C3_11', s: ['S3_11'], msg: "Ο Αλγόριθμος Τερματίζει (Έλλειψη Τέλους)." }
+        ],
+        4: [
+            { c: 'C4_1', s: ['S4_1', 'S4_1E'], msg: "Αρχικοποίηση της μεταβλητής s." },
+            { c: 'C4_2', s: ['S4_2', 'S4_2E'], msg: "Διαβάζουμε το πρώτο x." },
+            { c: 'C4_3', s: ['S4_3'], msg: "Αξιολογούμε την αρχική συνθήκη (x > 0)." },
+            { c: 'C4_3', s: ['S4_3F'], msg: "Αν ΨΕΥΔΗΣ, η δομή παρακάμπτεται (τέλος)." },
+            { c: 'C4_4', s: ['S4_4'], msg: "Αν ΑΛΗΘΗΣ, μπαίνουμε στον βρόχο (Μέχρις_ότου)." },
+            { c: 'C4_5', s: ['S4_5', 'S4_5E'], msg: "Προσθέτει το x στο άθροισμα s." },
+            { c: 'C4_6', s: ['S4_6', 'S4_6E'], msg: "Διαβάζει το επόμενο x." },
+            { c: 'C4_7', s: ['S4_7'], msg: "Ελέγχει συνθήκη τερματισμού: x ≤ 0." },
+            { c: 'C4_7', s: ['S4_7F'], msg: "Αν ΨΕΥΔΗΣ, ο βρόχος επαναλαμβάνεται." },
+            { c: 'C4_8', s: ['S4_8'], msg: "Αν ΑΛΗΘΗΣ, ο βρόχος (και η ΑΝ) τερματίζει." }
+        ],
+        5: [
+            { c: 'C5_1', s: [], msg: "Ο εξωτερικός βρόχος ξεκινάει (Αρχή επανάληψης)." },
+            { c: 'C5_2', s: ['S5_2', 'S5_2E'], msg: "Αρχικοποίηση αθροίσματος." },
+            { c: 'C5_3', s: ['S5_3'], msg: "Η δομή ΓΙΑ μετατρέπεται σε ΟΣΟ! (Αρχικοποίηση i & Έλεγχος)." },
+            { c: 'C5_3', s: ['S5_3T'], msg: "Αν ΑΛΗΘΗΣ (i <= 10), μπαίνουμε στο σώμα του βρόχου." },
+            { c: 'C5_4', s: [], msg: "Μπαίνουμε στον εσωτερικό βρόχο (Έλεγχος ορθότητας)." },
+            { c: 'C5_5', s: ['S5_5', 'S5_5E'], msg: "Διαβάζει την τιμή B[i]." },
+            { c: 'C5_6', s: ['S5_6'], msg: "Συνθήκη Μέχρις Ότου: B[i] > 0." },
+            { c: 'C5_6', s: ['S5_6F'], msg: "Αν ΨΕΥΔΗΣ (αρνητικός), επαναλαμβάνει την ανάγνωση." },
+            { c: 'C5_7', s: ['S5_7'], msg: "Αν ΑΛΗΘΗΣ (θετικός), τον προσθέτει στο Σ." },
+            { c: 'C5_8', s: ['S5_8'], msg: "Η ΓΙΑ τελειώνει: Προσθέτουμε την αύξηση i<-i+1 και γυρνάμε πίσω." },
+            { c: 'C5_9', s: ['S5_9'], msg: "Όταν η ΓΙΑ τελειώσει, ελέγχει τον εξωτερικό βρόχο: Σ = 200." },
+            { c: 'C5_9', s: ['S5_9F'], msg: "Αν ΨΕΥΔΗΣ, επαναλαμβάνει όλη τη διαδικασία από το Σ ← 0." },
+            { c: 'C5_9', s: ['S5_9T'], msg: "Αν ΑΛΗΘΗΣ, το πρόγραμμα τερματίζει!" }
+        ],
+        6: [
+            { c: 'C6_0', s: ['S6_0', 'S6_0E'], msg: "Ξεκινάει ο Αλγόριθμος (Έλλειψη Αρχής)." },
+            { c: 'C6_1', s: ['S6_1', 'S6_1E'], msg: "Διαβάζει τον αριθμό α." },
+            { c: 'C6_2', s: ['S6_2', 'S6_2E'], msg: "Αρχικοποιεί τον διαιρέτη K σε 2." },
+            { c: 'C6_3', s: ['S6_3'], msg: "Συνθήκη της ΟΣΟ: α > 1." },
+            { c: 'C6_3', s: ['S6_3F'], msg: "Αν ΨΕΥΔΗΣ, η επανάληψη τερματίζει (Η γραμμή αγκαλιάζει όλο το σχήμα)." },
+            { c: 'C6_4', s: ['S6_4'], msg: "Αν ΑΛΗΘΗΣ, ελέγχουμε αν το k είναι παράγοντας." },
+            { c: 'C6_5', s: ['S6_5'], msg: "Αν ΑΛΗΘΗΣ, εμφανίζει το k." },
+            { c: 'C6_6', s: ['S6_6'], msg: "Και υπολογίζει το νέο α." },
+            { c: 'C6_8', s: ['S6_8'], msg: "ΑΛΛΙΩΣ (ΨΕΥΔΗΣ), δεν είναι παράγοντας, άρα αυξάνει το k." },
+            { c: 'C6_10', s: ['S6_10'], msg: "Το Τέλος_επανάληψης επιστρέφει στη συνθήκη ΟΣΟ." },
+            { c: 'C6_11', s: ['S6_11'], msg: "Ο Αλγόριθμος Τερματίζει (Έλλειψη Τέλους)." }
+        ]
+    };
+
+    let currentEx = 1;
+    let step = 0;
+    let isAutoPlaying = false;
+    let autoPlayTimer = null;
+
+    const btnStep = document.getElementById('btnStep');
+    const btnAuto = document.getElementById('btnAuto');
+    const autoIcon = document.getElementById('autoIcon');
+    const autoText = document.getElementById('autoText');
+    const expPanel = document.getElementById('expPanel');
+
+    function switchTab(exNum) {
+        currentEx = exNum;
+        document.querySelectorAll('.tab-btn').forEach((btn, idx) => btn.classList.toggle('active', idx + 1 === exNum));
+        document.querySelectorAll('.ex-view').forEach(el => el.classList.remove('active-ex'));
+        document.querySelectorAll('.svg-container svg').forEach(el => el.classList.remove('active-ex'));
+        
+        document.getElementById(`code-${exNum}`).classList.add('active-ex');
+        document.getElementById(`svg-${exNum}`).classList.add('active-ex');
+        initApp();
+    }
+
+    function initApp() {
+        stopAutoPlay();
+        step = 0;
+        document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.fc-elem').forEach(el => {
+            el.classList.remove('visible');
+            el.classList.remove('draw-path');
+        });
+        expPanel.innerHTML = "Επιλέξτε κώδικα και πατήστε <strong>Βήμα</strong> για να ξεκινήσει η οπτικοποίηση!";
+        btnStep.disabled = false;
+    }
+
+    function toggleAutoPlay() {
+        if (isAutoPlaying) stopAutoPlay();
+        else startAutoPlay();
+    }
+
+    function startAutoPlay() {
+        if (step >= exData[currentEx].length) initApp();
+        isAutoPlaying = true;
+        btnAuto.classList.add('playing');
+        autoIcon.innerText = "⏸";
+        autoText.innerText = "Παύση";
+        btnStep.disabled = true;
+        executeStep();
+    }
+
+    function stopAutoPlay() {
+        isAutoPlaying = false;
+        clearTimeout(autoPlayTimer);
+        btnAuto.classList.remove('playing');
+        autoIcon.innerText = "▶";
+        autoText.innerText = "Αυτόματη Εκτέλεση";
+        if(step < exData[currentEx].length) btnStep.disabled = false;
+    }
+
+    function getSpeed() {
+        const val = document.getElementById('speedSlider').value;
+        const delays = {1: 4500, 2: 3500, 3: 2500, 4: 1500, 5: 900};
+        return delays[val] || 2500;
+    }
+
+    function nextStep() {
+        stopAutoPlay();
+        executeStep();
+    }
+
+    function executeStep() {
+        let max = exData[currentEx].length;
+        if(step >= max) {
+            btnStep.disabled = true; stopAutoPlay(); return;
+        }
+
+        let d = exData[currentEx][step];
+        
+        document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+
+        if(d.c) document.getElementById(d.c).classList.add('active');
+
+        if(d.s && d.s.length > 0) {
+            d.s.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) {
+                    el.classList.add('visible');
+                    el.querySelectorAll('path').forEach(p => p.classList.add('draw-path'));
+                }
+            });
+        }
+
+        if(d.msg) expPanel.innerHTML = `<strong>Βήμα ${step+1}:</strong> ${d.msg}`;
+
+        step++;
+        
+        if (step < max && isAutoPlaying) {
+            autoPlayTimer = setTimeout(executeStep, getSpeed());
+        } else if (step >= max) {
+            btnStep.disabled = true;
+            stopAutoPlay();
+            expPanel.innerHTML = "🎉 <strong>Ολοκληρώθηκε!</strong> Το Διάγραμμα Ροής δημιουργήθηκε πλήρως.";
+        }
+    }
+</script>
+</body>
+</html>
