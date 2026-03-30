@@ -98,7 +98,7 @@
 
     <div id="waiting" class="waiting-screen">
         <h1 id="myTeamTitle"></h1>
-        <div class="loading">ΑΝΑΜΟΝΗ ΓΙΑ ΕΡΩΤΗΣΗ...</div>
+        <div class="loading" id="waitText">ΑΝΑΜΟΝΗ...</div>
     </div>
 
     <div id="game" class="game-screen">
@@ -107,7 +107,7 @@
     </div>
 
     <script>
-        // Η ΔΙΚΗ ΣΟΥ ΣΥΝΔΕΣΗ FIREBASE!
+        // Η σύνδεσή σου στο Firebase
         const firebaseConfig = {
           apiKey: "AIzaSyAHAvqQOxz7ktc23RJlfuyXDFlQJ6hStSI",
           authDomain: "aepp-cyberclash.firebaseapp.com",
@@ -118,7 +118,6 @@
           appId: "1:1023412746258:web:952f88a5ee096049d200cb"
         };
 
-        // Αρχικοποίηση Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
@@ -136,33 +135,38 @@
             myTeam = teamNum;
             document.getElementById('myTeamTitle').innerText = (teamNum === 1) ? "🔵 ΟΜΑΔΑ 1" : "🔴 ΟΜΑΔΑ 2";
             document.getElementById('myTeamTitle').style.color = (teamNum === 1) ? "var(--team1-base)" : "var(--team2-base)";
+            document.getElementById('waitText').innerText = "ΑΝΑΜΟΝΗ ΓΙΑ ΕΡΩΤΗΣΗ...";
             showScreen('waiting');
             listenForQuestions();
         }
 
         function listenForQuestions() {
-            // Ο listener ακούει την τρέχουσα κατάσταση του παιχνιδιού
             db.ref('gameState').on('value', (snapshot) => {
                 const state = snapshot.val();
                 
                 if (!state || state.status === 'waiting' || state.status === 'evaluating') {
+                    document.getElementById('waitText').innerText = "ΑΝΑΛΥΣΗ ΑΠΑΝΤΗΣΗΣ...";
                     showScreen('waiting');
                     return;
                 }
 
-                // Αν το παιχνίδι τρέχει, ελέγχουμε αν είναι η σειρά της ομάδας μας
+                if (state.status === 'finished') {
+                    document.getElementById('waitText').innerText = "ΑΓΩΝΑΣ ΕΛΗΞΕ!";
+                    showScreen('waiting');
+                    return;
+                }
+
                 if (state.status === 'playing') {
                     if (state.turn === myTeam) {
-                        // Είναι η σειρά μας! Φόρτωσε την ερώτηση.
-                        // Για να μην ξαναφορτώσουμε την ίδια αν πατηθεί πολλές φορές, ελέγχουμε το ID (ή το κείμενο)
+                        // ΕΙΝΑΙ Η ΣΕΙΡΑ ΜΑΣ
                         if (currentQuestionId !== state.question.text) {
                             currentQuestionId = state.question.text;
                             renderQuestion(state.question);
                         }
                         showScreen('game');
                     } else {
-                        // Είναι σειρά της άλλης ομάδας
-                        document.querySelector('.loading').innerText = "ΣΕΙΡΑ ΤΟΥ ΑΝΤΙΠΑΛΟΥ...";
+                        // ΕΙΝΑΙ ΣΕΙΡΑ ΤΟΥ ΑΝΤΙΠΑΛΟΥ
+                        document.getElementById('waitText').innerText = "ΣΕΙΡΑ ΤΟΥ ΑΝΤΙΠΑΛΟΥ...";
                         showScreen('waiting');
                     }
                 }
@@ -170,6 +174,10 @@
         }
 
         function renderQuestion(qData) {
+            // *** ΑΥΤΗ ΕΙΝΑΙ Η ΓΡΑΜΜΗ ΠΟΥ ΕΛΥΣΕ ΤΟ ΠΡΟΒΛΗΜΑ ***
+            // Αφαιρούμε το κλείδωμα για να μπορούν να πατήσουν ξανά στη νέα ερώτηση
+            document.getElementById('game').classList.remove('locked');
+            
             document.getElementById('currentQText').innerText = qData.text;
             const container = document.getElementById('optionsContainer');
             container.innerHTML = '';
@@ -184,17 +192,14 @@
         }
 
         function submitAnswer(ans) {
-            // Κλειδώνουμε τα κουμπιά για να μην πατηθούν 2 φορές
+            // Κλειδώνουμε την οθόνη για να μην απαντήσουν 2η φορά στην ΙΔΙΑ ερώτηση
             document.getElementById('game').classList.add('locked');
             
-            // Στέλνουμε την απάντηση στη βάση!
             db.ref('gameState/playerAnswer').set({
                 team: myTeam,
                 answer: ans,
                 timestamp: Date.now()
             });
-
-            // Περιμένουμε τον server (προτζέκτορα) να το αναγνωρίσει
         }
     </script>
 </body>
