@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>📱 CYBER CLASH: Controller</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto+Mono&display=swap');
+
+        :root {
+            --bg-deep: #05050a;
+            --team1-base: #00d2ff;
+            --team2-base: #ff0055;
+            --neutral: #333;
+        }
+
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background-color: var(--bg-deep);
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        h1 { font-size: 2rem; margin-bottom: 10px; color: #fff; }
+        
+        .setup-screen, .waiting-screen, .game-screen {
+            display: none;
+            flex-direction: column;
+            width: 100%;
+            max-width: 400px;
+            gap: 20px;
+        }
+
+        .active-screen { display: flex; }
+
+        .btn-team {
+            padding: 20px;
+            font-size: 1.5rem;
+            font-family: inherit;
+            font-weight: bold;
+            border: 2px solid;
+            background: transparent;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.2s;
+            color: #fff;
+        }
+
+        .btn-team.t1 { border-color: var(--team1-base); box-shadow: 0 0 15px rgba(0, 210, 255, 0.4); }
+        .btn-team.t1:active { background: var(--team1-base); color: #000; }
+        
+        .btn-team.t2 { border-color: var(--team2-base); box-shadow: 0 0 15px rgba(255, 0, 85, 0.4); }
+        .btn-team.t2:active { background: var(--team2-base); color: #000; }
+
+        .loading { font-family: 'Roboto Mono', monospace; font-size: 1.2rem; color: #aaa; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+
+        /* Options for questions */
+        .opt-btn {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid #555;
+            color: #fff;
+            padding: 20px;
+            font-size: 1.2rem;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-bottom: 10px;
+            font-family: inherit;
+        }
+        .opt-btn:active { background: #fff; color: #000; }
+        
+        /* Disable interaction while waiting */
+        .locked { opacity: 0.5; pointer-events: none; }
+        
+        #currentQText { font-family: 'Roboto Mono', monospace; font-size: 1.2rem; margin-bottom: 20px; line-height: 1.5; color: #ddd;}
+
+    </style>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+
+    <div id="setup" class="setup-screen active-screen">
+        <h1>ΕΠΙΛΟΓΗ ΟΜΑΔΑΣ</h1>
+        <p>Συνδέσου στο δίκτυο μάχης.</p>
+        <button class="btn-team t1" onclick="joinTeam(1)">🔵 ΟΜΑΔΑ 1</button>
+        <button class="btn-team t2" onclick="joinTeam(2)">🔴 ΟΜΑΔΑ 2</button>
+    </div>
+
+    <div id="waiting" class="waiting-screen">
+        <h1 id="myTeamTitle"></h1>
+        <div class="loading">ΑΝΑΜΟΝΗ ΓΙΑ ΕΡΩΤΗΣΗ...</div>
+    </div>
+
+    <div id="game" class="game-screen">
+        <div id="currentQText">Φόρτωση...</div>
+        <div id="optionsContainer"></div>
+    </div>
+
+    <script>
+        // Η ΔΙΚΗ ΣΟΥ ΣΥΝΔΕΣΗ FIREBASE!
+        const firebaseConfig = {
+          apiKey: "AIzaSyAHAvqQOxz7ktc23RJlfuyXDFlQJ6hStSI",
+          authDomain: "aepp-cyberclash.firebaseapp.com",
+          databaseURL: "https://aepp-cyberclash-default-rtdb.firebaseio.com",
+          projectId: "aepp-cyberclash",
+          storageBucket: "aepp-cyberclash.firebasestorage.app",
+          messagingSenderId: "1023412746258",
+          appId: "1:1023412746258:web:952f88a5ee096049d200cb"
+        };
+
+        // Αρχικοποίηση Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let myTeam = 0; // 1 or 2
+        let currentQuestionId = null;
+
+        function showScreen(id) {
+            document.getElementById('setup').classList.remove('active-screen');
+            document.getElementById('waiting').classList.remove('active-screen');
+            document.getElementById('game').classList.remove('active-screen');
+            document.getElementById(id).classList.add('active-screen');
+        }
+
+        function joinTeam(teamNum) {
+            myTeam = teamNum;
+            document.getElementById('myTeamTitle').innerText = (teamNum === 1) ? "🔵 ΟΜΑΔΑ 1" : "🔴 ΟΜΑΔΑ 2";
+            document.getElementById('myTeamTitle').style.color = (teamNum === 1) ? "var(--team1-base)" : "var(--team2-base)";
+            showScreen('waiting');
+            listenForQuestions();
+        }
+
+        function listenForQuestions() {
+            // Ο listener ακούει την τρέχουσα κατάσταση του παιχνιδιού
+            db.ref('gameState').on('value', (snapshot) => {
+                const state = snapshot.val();
+                
+                if (!state || state.status === 'waiting' || state.status === 'evaluating') {
+                    showScreen('waiting');
+                    return;
+                }
+
+                // Αν το παιχνίδι τρέχει, ελέγχουμε αν είναι η σειρά της ομάδας μας
+                if (state.status === 'playing') {
+                    if (state.turn === myTeam) {
+                        // Είναι η σειρά μας! Φόρτωσε την ερώτηση.
+                        // Για να μην ξαναφορτώσουμε την ίδια αν πατηθεί πολλές φορές, ελέγχουμε το ID (ή το κείμενο)
+                        if (currentQuestionId !== state.question.text) {
+                            currentQuestionId = state.question.text;
+                            renderQuestion(state.question);
+                        }
+                        showScreen('game');
+                    } else {
+                        // Είναι σειρά της άλλης ομάδας
+                        document.querySelector('.loading').innerText = "ΣΕΙΡΑ ΤΟΥ ΑΝΤΙΠΑΛΟΥ...";
+                        showScreen('waiting');
+                    }
+                }
+            });
+        }
+
+        function renderQuestion(qData) {
+            document.getElementById('currentQText').innerText = qData.text;
+            const container = document.getElementById('optionsContainer');
+            container.innerHTML = '';
+
+            qData.options.forEach(opt => {
+                let btn = document.createElement('button');
+                btn.className = 'opt-btn';
+                btn.innerText = opt;
+                btn.onclick = () => submitAnswer(opt);
+                container.appendChild(btn);
+            });
+        }
+
+        function submitAnswer(ans) {
+            // Κλειδώνουμε τα κουμπιά για να μην πατηθούν 2 φορές
+            document.getElementById('game').classList.add('locked');
+            
+            // Στέλνουμε την απάντηση στη βάση!
+            db.ref('gameState/playerAnswer').set({
+                team: myTeam,
+                answer: ans,
+                timestamp: Date.now()
+            });
+
+            // Περιμένουμε τον server (προτζέκτορα) να το αναγνωρίσει
+        }
+    </script>
+</body>
+</html>
