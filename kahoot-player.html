@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AEPP Kahoot! - Player</title>
+    <style>
+        body { margin: 0; font-family: 'Montserrat', sans-serif; background: #f2f2f2; color: #333; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        .hidden { display: none !important; }
+        
+        /* LOGIN */
+        #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #46178f; }
+        input { font-size: 1.5rem; padding: 15px; border-radius: 5px; border: none; text-align: center; width: 80%; max-width: 300px; margin-bottom: 20px; font-weight: bold; }
+        button.enter { background: #333; color: white; border: none; padding: 15px 40px; font-size: 1.5rem; font-weight: bold; border-radius: 5px; cursor: pointer; }
+        
+        /* WAITING */
+        #wait-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #46178f; color: white; font-size: 1.5rem; font-weight: bold; text-align: center; padding: 20px;}
+        
+        /* PLAY */
+        #play-screen { display: flex; flex-direction: column; height: 100vh; }
+        .btn-ans { flex: 1; border: none; margin: 10px; border-radius: 10px; box-shadow: 0 4px 0 rgba(0,0,0,0.2); cursor: pointer; color: white; font-size: 2rem; font-weight: bold; }
+        .btn-ans:active { transform: translateY(4px); box-shadow: none; }
+        .btn-true { background: #26890c; }
+        .btn-false { background: #e21b3c; }
+        
+        /* REVEAL */
+        #reveal-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; color: white; font-size: 2.5rem; font-weight: bold; text-align: center;}
+        .reveal-correct { background: #26890c; }
+        .reveal-wrong { background: #e21b3c; }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+
+<div id="login-screen">
+    <input type="text" id="playerName" placeholder="Όνομα (Nickname)" autocomplete="off">
+    <button class="enter" onclick="joinGame()">Είσοδος</button>
+</div>
+
+<div id="wait-screen" class="hidden">
+    Είσαι μέσα!<br><br>Κοίτα την οθόνη του καθηγητή.
+</div>
+
+<div id="play-screen" class="hidden">
+    <button class="btn-ans btn-true" onclick="submitAnswer(true)">ΣΩΣΤΟ</button>
+    <button class="btn-ans btn-false" onclick="submitAnswer(false)">ΛΑΘΟΣ</button>
+</div>
+
+<div id="reveal-screen" class="hidden">
+    <div id="reveal-text"></div>
+    <div style="font-size: 1.2rem; margin-top: 20px;">Σκορ: <span id="my-score">0</span></div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyAHAvqQOxz7ktc23RJlfuyXDFlQJ6hStSI",
+        authDomain: "aepp-cyberclash.firebaseapp.com",
+        databaseURL: "https://aepp-cyberclash-default-rtdb.firebaseio.com",
+        projectId: "aepp-cyberclash",
+        storageBucket: "aepp-cyberclash.firebasestorage.app",
+        messagingSenderId: "1023412746258",
+        appId: "1:1023412746258:web:952f88a5ee096049d200cb"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let myName = "";
+    let myScore = 0;
+    let currentCorrectAns = null;
+    let answeredThisRound = false;
+
+    function showScreen(id) {
+        ['login-screen', 'wait-screen', 'play-screen', 'reveal-screen'].forEach(s => document.getElementById(s).classList.add('hidden'));
+        document.getElementById(id).classList.remove('hidden');
+    }
+
+    function joinGame() {
+        myName = document.getElementById('playerName').value.trim();
+        if(!myName) return;
+        
+        db.ref('kahoot/players/' + myName).set({ score: 0 });
+        showScreen('wait-screen');
+        listenToGame();
+    }
+
+    function listenToGame() {
+        db.ref('kahoot').on('value', snap => {
+            const data = snap.val();
+            if(!data) return;
+
+            if(data.state === 'lobby') {
+                showScreen('wait-screen');
+            } 
+            else if(data.state === 'question') {
+                answeredThisRound = false;
+                currentCorrectAns = data.currentQ.correctAnswer;
+                showScreen('play-screen');
+            } 
+            else if(data.state === 'reveal') {
+                const rs = document.getElementById('reveal-screen');
+                document.getElementById('my-score').innerText = myScore;
+                showScreen('reveal-screen');
+                // Αν δεν απάντησε καν, το θεωρούμε λάθος οπτικά
+            }
+            else if(data.state === 'leaderboard') {
+                document.getElementById('reveal-text').innerText = "ΤΕΛΟΣ! Δες την κατάταξη!";
+                showScreen('reveal-screen');
+            }
+        });
+    }
+
+    function submitAnswer(ans) {
+        if(answeredThisRound) return;
+        answeredThisRound = true;
+        
+        showScreen('wait-screen');
+        document.getElementById('wait-screen').innerHTML = "Απάντηση καταγράφηκε!<br><br>Αναμονή...";
+
+        if(ans === currentCorrectAns) {
+            myScore += 100;
+            db.ref('kahoot/players/' + myName).update({ score: myScore });
+            setupReveal(true);
+        } else {
+            setupReveal(false);
+        }
+    }
+
+    function setupReveal(isCorrect) {
+        const rs = document.getElementById('reveal-screen');
+        if(isCorrect) {
+            rs.className = 'reveal-correct';
+            document.getElementById('reveal-text').innerText = "✅ ΣΩΣΤΟ!";
+        } else {
+            rs.className = 'reveal-wrong';
+            document.getElementById('reveal-text').innerText = "❌ ΛΑΘΟΣ!";
+        }
+    }
+</script>
+</body>
+</html>
