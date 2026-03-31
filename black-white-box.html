@@ -231,7 +231,7 @@
 <div class="modal-overlay" id="helpModal" onclick="closeHelp(event)">
     <div class="modal-content">
         <div class="modal-header">
-            <span><i class="fa-solid fa-bug"></i> Οδηγίες: Εκσφαλμάτωση & Testing</span>
+            <span><i class="fa-solid fa-bug"></i> Οδηγίες: Εκφαλμάτωση & Testing</span>
             <button class="btn" style="padding: 2px 8px; background: transparent; border:none; color:white;" onclick="closeHelp(event, true)"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="modal-body">
@@ -398,7 +398,7 @@
         '4': {
             desc: "Να διαβάζονται αριθμοί και να υπολογίζεται το γινόμενο των θετικών. Η διαδικασία τερματίζεται όταν δοθεί αρνητικός αριθμός.",
             codeLines: [
-                { html: `Σ &lt;- <span class="num">0</span>`, isBug: false },
+                { html: `Σ &lt;- <span class="num">1</span>`, isBug: false },
                 { html: `<span class="kw">ΔΙΑΒΑΣΕ</span> Χ`, isBug: false },
                 { html: `<span class="kw">ΟΣΟ</span> Χ &gt;= <span class="num">0</span> <span class="kw">ΕΠΑΝΑΛΑΒΕ</span>`, isBug: true, fixes: ["ΟΣΟ Χ >= 0 ΕΠΑΝΑΛΑΒΕ", "ΟΣΟ Χ > 0 ΕΠΑΝΑΛΑΒΕ"], correctIdx: 1, fixedHtml: `<span class="kw">ΟΣΟ</span> Χ &gt; <span class="num">0</span> <span class="kw">ΕΠΑΝΑΛΑΒΕ</span>` },
                 { html: `  Σ &lt;- Σ * Χ`, isBug: false },
