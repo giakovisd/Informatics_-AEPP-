@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Αντιμετάθεση Τιμών 2 μεταβλητών</title>
+    <style>
+        /* --- CSS VARIABLES (Day/Night) --- */
+        :root {
+            --primary: #3b82f6; --primary-hover: #2563eb;
+            --text-dark: #1e293b; --text-light: #64748b;
+            --bg-color: #f8fafc; --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
+            --box-bg: #eff6ff;
+            /* Colors for examples */
+            --wine-red: #900c3f; --juice-blue: #2980b9; --empty-gray: #cbd5e1;
+            --asphalt: #34495e; --line: #f1c40f;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a; --panel-bg: #1e293b;
+            --text-dark: #f8fafc; --text-light: #cbd5e1;
+            --border-color: #334155;
+            --box-bg: #334155;
+            --wine-red: #c70039; --juice-blue: #3498db; --empty-gray: #475569;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg-color); color: var(--text-dark); height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: background-color 0.3s, color 0.3s; }
+
+        /* --- TOOLBAR --- */
+        .toolbar { background-color: var(--panel-bg); border-bottom: 1px solid var(--border-color); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 100; }
+        .toolbar-title { font-weight: 800; font-size: 1.3rem; color: var(--primary); text-align: left; display: flex; align-items: center; gap: 8px;}
+        .controls-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end;}
+        
+        .tool-btn { background-color: var(--panel-bg); color: var(--text-dark); border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; font-size: 0.9rem; }
+        .tool-btn:hover:not(:disabled) { background-color: var(--border-color); }
+        .tool-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-run { background-color: var(--success); color: white; border-color: var(--success); }
+        .btn-run:hover:not(:disabled) { background-color: #059669; }
+        .btn-step { background-color: var(--primary); color: white; border-color: var(--primary); }
+        .btn-step:hover:not(:disabled) { background-color: var(--primary-hover); }
+
+        .input-group { display: flex; align-items: center; gap: 5px; background: var(--bg-color); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color); }
+        .input-group label { font-weight: bold; font-size: 0.9rem; }
+        .input-group input { width: 50px; padding: 4px; border: 1px solid var(--border-color); border-radius: 4px; text-align: center; font-weight: bold; background: var(--panel-bg); color: var(--text-dark);}
+        
+        /* Αναλογικός Ροοστάτης Ταχύτητας */
+        .speed-slider-container { display: flex; align-items: center; gap: 6px; background: var(--bg-color); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-color); }
+        .speed-icon { font-size: 1rem; }
+        .rheostat { -webkit-appearance: none; width: 80px; height: 6px; border-radius: 3px; background: #cbd5e1; outline: none; cursor: pointer; }
+        .rheostat::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        .rheostat::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--primary); cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.3); border: none; }
+
+        /* --- 3-COLUMN LAYOUT --- */
+        .main-container { display: flex; flex: 1; padding: 15px; gap: 15px; height: calc(100% - 60px); transition: filter 0.3s; }
+        .main-container.blurred { filter: blur(5px); pointer-events: none; } /* Για το Intro */
+
+        .col { background: var(--panel-bg); border-radius: 10px; border: 1px solid var(--border-color); display: flex; flex-direction: column; box-shadow: 0 4px 6px rgba(0,0,0,0.02); overflow: hidden; }
+        
+        /* Left: Theory */
+        .col-left { flex: 0 0 440px; padding: 20px; overflow-y: auto; }
+        .panel-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid var(--border-color); padding-bottom: 5px; color: var(--primary); }
+        
+        .theory-box { background: rgba(59, 130, 246, 0.1); border-left: 4px solid var(--primary); padding: 15px; border-radius: 6px; margin-bottom: 15px; font-size: 0.85rem; line-height: 1.5; }
+        .analogy-box { background: rgba(245, 158, 11, 0.1); border-left: 4px solid var(--warning); padding: 15px; border-radius: 6px; margin-bottom: 15px; font-size: 0.85rem; line-height: 1.5; }
+        
+        .method-selector { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+        .method-btn { padding: 10px; border: 2px solid var(--border-color); background: var(--bg-color); color: var(--text-dark); border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; text-align: left; font-size: 0.9rem;}
+        .method-btn.active { border-color: var(--primary); background: rgba(59, 130, 246, 0.1); color: var(--primary); }
+
+        .status-box { margin-top: auto; margin-bottom: 30px; padding: 15px; background: var(--bg-color); border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.9rem; color: var(--text-dark); text-align: left; min-height: 60px; line-height: 1.5;}
+        .status-box strong { display: block; margin-bottom: 6px; color: var(--primary); font-family: monospace; font-size: 1.1rem; }
+
+        /* Middle: Animation & Code */
+        .col-mid { flex: 1; position: relative; display: flex; flex-direction: column; background: var(--bg-color); padding: 15px; }
+        
+        /* ΛΕΥΚΟ ΦΟΝΤΟ ΣΤΟΝ ΚΩΔΙΚΑ */
+        .code-area { background: #ffffff !important; color: #1e293b !important; padding: 15px; border-radius: 8px; font-family: 'Consolas', 'Monaco', monospace; font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,0.05); overflow: hidden; transition: height 0.3s, padding 0.3s, opacity 0.3s; height: 160px; flex: 0 0 auto; }
+        .code-area.hidden-code { height: 0; padding: 0; margin-bottom: 0; border: none; opacity: 0; }
+        
+        .code-line { padding: 4px 10px; border-radius: 4px; transition: 0.2s; border-left: 4px solid transparent; }
+        .code-line.active { background: #eff6ff !important; border-left-color: #3b82f6 !important; color: #2563eb !important; }
+        .code-comment { color: #64748b; font-style: italic; font-size: 0.9rem; font-weight: normal;}
+
+        .anim-area { flex: 1; background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color); position: relative; overflow: hidden; box-shadow: inset 0 2px 10px rgba(0,0,0,0.05); }
+        
+        /* --- VISUAL MODES --- */
+
+        /* 1 & 2. Memory Boxes (Standard) */
+        #memoryVisuals { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+        .var-box { position: absolute; width: 110px; height: 110px; border: 3px solid var(--border-color); border-radius: 12px; background: var(--box-bg); display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.05); z-index: 10;}
+        .var-box.active { border-color: var(--primary); box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); transform: scale(1.05); }
+        .var-box.active-math { border-color: var(--warning); box-shadow: 0 0 15px rgba(245, 158, 11, 0.4); transform: scale(1.05); }
+        .var-title { position: absolute; top: -30px; font-weight: 800; font-size: 1.2rem; color: var(--text-dark); background: var(--panel-bg); padding: 2px 10px; border-radius: 6px; border: 1px solid var(--border-color);}
+        .var-value { font-size: 2.5rem; font-weight: bold; color: var(--primary); font-family: monospace; }
+        .var-value.empty { color: var(--text-light); font-size: 1.5rem; opacity: 0.5; }
+        
+        #memBoxA { left: 20%; top: 40%; }
+        #memBoxB { right: 20%; top: 40%; }
+        #memBoxTemp { left: 50%; top: 65%; transform: translateX(-50%); }
+
+        .flying-token { position: absolute; width: 60px; height: 60px; background: var(--warning); color: white; font-weight: bold; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; z-index: 100; box-shadow: 0 10px 20px rgba(0,0,0,0.3); pointer-events: none; opacity: 0; font-family: monospace; }
+        .math-bubble-anim { position: absolute; padding: 8px 15px; background: #ffffff; border: 2px solid var(--warning); border-radius: 20px; color: var(--warning); font-weight: bold; font-size: 1rem; opacity: 0; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.1); pointer-events: none;}
+
+        /* 3. Wine Glasses */
+        #wineVisuals { position: absolute; inset: 0; display: none; }
+        .glass-container { position: absolute; display: flex; flex-direction: column; align-items: center; width: 120px; z-index: 10; }
+        .glass-title { font-weight: 800; font-size: 1.3rem; margin-bottom: 20px; color: var(--text-dark); background: var(--panel-bg); padding: 2px 10px; border-radius: 6px; border: 1px solid var(--border-color);}
+        
+        /* Structure of the glass */
+        .glass-body-wrapper { display: flex; flex-direction: column; align-items: center; position: relative; }
+        .goblet-bowl { position: relative; width: 90px; height: 110px; border: 4px solid var(--border-color); border-radius: 5px 5px 45px 45px; background: rgba(255,255,255,0.2); overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.1); z-index: 2; }
+        .goblet-bowl.highlight { border-color: var(--primary); box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+        .goblet-stem { width: 12px; height: 40px; background: var(--border-color); z-index: 1;}
+        .goblet-base { width: 70px; height: 8px; background: var(--border-color); border-radius: 10px 10px 0 0; z-index: 1;}
+
+        /* Liquids */
+        .liquid { position: absolute; bottom: 0; left: 0; width: 100%; display: flex; align-items: center; justify-content: center; }
+        .liquid-val { color: white; font-size: 2.5rem; font-weight: bold; font-family: monospace; text-shadow: 0 2px 4px rgba(0,0,0,0.5); z-index: 5;}
+        .liquid-val.empty { opacity: 0; }
+
+        /* Initial positions */
+        #glassA { left: 15%; top: 25%; }
+        #glassB { right: 15%; top: 25%; }
+        #glassTemp { left: 50%; top: 60%; transform: translateX(-50%); }
+
+        /* The pouring stream */
+        .pour-stream { position: absolute; width: 12px; z-index: 50; border-radius: 10px; opacity: 0; }
+
+        /* 4. Car Parking */
+        #parkingVisuals { position: absolute; inset: 0; background: var(--asphalt); display: none; padding: 30px; }
+        
+        /* Road lines */
+        .road-line { position: absolute; top: 50%; left: 10%; right: 10%; height: 6px; border-top: 6px dashed rgba(255,255,255,0.4); transform: translateY(-50%); z-index: 1; }
+        
+        .parking-spot { position: absolute; width: 140px; height: 90px; border: 5px solid var(--line); border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); z-index: 2; }
+        .parking-spot.active { border-color: var(--success); box-shadow: inset 0 0 20px rgba(16, 185, 129, 0.4); }
+        .spot-label { position: absolute; top: -30px; color: white; font-weight: 900; font-size: 1.2rem; background: #2c3e50; padding: 2px 10px; border-radius: 4px; border: 2px solid var(--line);}
+        
+        #spotA { left: 15%; top: 15%; }
+        #spotB { right: 15%; top: 15%; }
+        #spotTemp { left: 50%; bottom: 15%; transform: translateX(-50%); border-style: dashed; }
+
+        /* CSS Top-Down Cars */
+        .car { position: absolute; width: 110px; height: 60px; border-radius: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.4); z-index: 50; display: flex; align-items: center; justify-content: center;}
+        
+        .car-roof { position: absolute; width: 55px; height: 45px; background: rgba(0,0,0,0.7); border-radius: 10px; border: 2px solid rgba(255,255,255,0.2); }
+        .car-headlight-t, .car-headlight-b { position: absolute; right: -2px; width: 8px; height: 12px; background: #fffacd; border-radius: 4px; box-shadow: 5px 0 15px rgba(255,255,0,0.8); }
+        .car-headlight-t { top: 8px; } .car-headlight-b { bottom: 8px; }
+        
+        .car-taillight-t, .car-taillight-b { position: absolute; left: -2px; width: 6px; height: 14px; background: #ff0000; border-radius: 4px; box-shadow: -3px 0 10px rgba(255,0,0,0.8); }
+        .car-taillight-t { top: 6px; } .car-taillight-b { bottom: 6px; }
+
+        .car-val { position: relative; z-index: 10; font-size: 2rem; font-weight: bold; color: white; font-family: monospace; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+
+        #carA { background: linear-gradient(to right, #c0392b, #e74c3c); } /* Red */
+        #carB { background: linear-gradient(to right, #2980b9, #3498db); } /* Blue */
+
+        /* Right: Console & RAM */
+        .col-right { flex: 0 0 310px; display: flex; flex-direction: column; }
+        
+        .ram-area { padding: 15px; border-bottom: 1px solid var(--border-color); flex: 0 0 auto;}
+        .ram-table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed;}
+        .ram-table th, .ram-table td { border: 1px solid var(--border-color); padding: 8px; text-align: center; font-family: monospace; font-size: 1.1rem; overflow: hidden; text-overflow: ellipsis;}
+        .ram-table th { background: rgba(59, 130, 246, 0.1); color: var(--primary); font-weight: bold;}
+        .ram-cell-updated { animation: highlightFlash 1s; }
+
+        @keyframes highlightFlash {
+            0% { background-color: var(--warning); color: white; }
+            100% { background-color: transparent; color: var(--text-dark); }
+        }
+
+        .console-area { flex: 1; padding: 15px; display: flex; flex-direction: column; }
+        .console-screen { flex: 1; background: #ffffff !important; color: #1e293b !important; border-radius: 6px; padding: 10px; font-family: 'Consolas', 'Monaco', monospace; font-size: 1rem; overflow-y: auto; line-height: 1.5; border: 1px solid var(--border-color); box-shadow: inset 0 2px 5px rgba(0,0,0,0.05); }
+
+        /* --- INTRO OVERLAY (ΓΝΩΣΤΙΚΗ ΣΥΓΚΡΟΥΣΗ) --- */
+        #introOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000; opacity: 1; transition: opacity 0.5s;
+        }
+        .intro-box {
+            background: var(--panel-bg); width: 600px; max-width: 90%;
+            border-radius: 12px; padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            text-align: center; border: 2px solid var(--primary);
+        }
+        .intro-box h1 { color: var(--primary); margin-bottom: 20px; font-size: 1.8rem; }
+        .intro-box p { font-size: 1.1rem; line-height: 1.5; margin-bottom: 15px; color: var(--text-dark); }
+        .intro-code { background: var(--bg-color); border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; font-family: monospace; font-size: 1.4rem; font-weight: bold; margin: 20px auto; width: fit-content; text-align: left; color: var(--primary); }
+        .intro-btn-group { display: flex; gap: 15px; justify-content: center; margin-top: 20px; }
+        .intro-btn { padding: 12px 30px; font-size: 1.2rem; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; color: white;}
+        .intro-btn.yes { background-color: var(--danger); box-shadow: 0 4px #b91c1c; }
+        .intro-btn.yes:active { transform: translateY(4px); box-shadow: 0 0 #b91c1c; }
+        .intro-btn.no { background-color: var(--success); box-shadow: 0 4px #047857; }
+        .intro-btn.no:active { transform: translateY(4px); box-shadow: 0 0 #047857; }
+        
+        /* --- ΝΕΟ INTRO ANIMATION STATE --- */
+        .intro-anim-stage { 
+            display: flex; justify-content: center; gap: 80px; 
+            margin-top: 30px; position: relative; height: 110px; 
+        }
+        .intro-var { 
+            width: 80px; height: 80px; border: 2px solid var(--border-color); 
+            border-radius: 10px; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; 
+            background: var(--box-bg); position: relative; 
+        }
+        .var-title-intro { 
+            position: absolute; top: -15px; background: var(--panel-bg); 
+            padding: 0 10px; font-weight: 900; border: 2px solid var(--primary); 
+            color: var(--primary); border-radius: 6px; font-size: 1.1rem; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .var-val-intro { 
+            font-size: 2.2rem; color: var(--primary); font-family: monospace; 
+            font-weight: bold; transition: all 0.5s ease-in-out; 
+        }
+        #fly10 { 
+            position: absolute; color: var(--warning); z-index: 10; 
+            text-shadow: 0 4px 8px rgba(0,0,0,0.3); 
+        }
+
+        /* Intro MCQ State */
+        .mcq-btn { display: block; width: 100%; text-align: left; padding: 12px; margin-bottom: 10px; border: 2px solid var(--border-color); background: var(--bg-color); border-radius: 8px; font-size: 1rem; cursor: pointer; transition: 0.2s; color: var(--text-dark); font-weight: bold;}
+        .mcq-btn:hover { border-color: var(--primary); background: #eff6ff;}
+        .mcq-btn.wrong { border-color: var(--danger); background: #fef2f2; color: var(--danger); }
+        .mcq-btn.correct { border-color: var(--success); background: #f0fdf4; color: var(--success); }
+
+    </style>
+</head>
+<body>
+
+<div id="introOverlay">
+    <div class="intro-box">
+        <h1>🤔 Σπαζοκεφαλιά Αντιμετάθεσης</h1>
+        <div id="introContent">
+            <p>Έστω ότι έχουμε δύο μεταβλητές με τιμές <b>Α = 5</b> και <b>Β = 10</b>.</p>
+            <p>Θέλουμε να αντιμεταθέσουμε τα περιεχόμενά τους (δηλαδή το Α να γίνει 10 και το Β να γίνει 5). Μπορούμε να το κάνουμε απλά γράφοντας:</p>
+            <div class="intro-code">Α &lt;- Β<br>Β &lt;- Α</div>
+            <p style="font-weight: bold; font-size: 1.2rem;">Είναι σωστή αυτή η λύση;</p>
+            <div class="intro-btn-group">
+                <button class="intro-btn yes" onclick="ansYes()">ΝΑΙ</button>
+                <button class="intro-btn no" onclick="ansNo()">ΟΧΙ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toolbar">
+    <div class="toolbar-title">🔄 Αντιμετάθεση Τιμών</div>
+    <div class="controls-group">
+        <div class="input-group" title="Αρχικές τιμές μνήμης">
+            <label>A:</label><input type="number" id="inputA" value="5">
+            <label>B:</label><input type="number" id="inputB" value="10">
+        </div>
+        <button class="tool-btn" id="btnReset" onclick="resetState()">🔄 Αρχή</button>
+        <button class="tool-btn btn-step" id="btnStep" onclick="step()">👣 Βήμα</button>
+        <button class="tool-btn btn-run" id="btnAuto" onclick="toggleAuto()">▶️ Αυτόματα</button>
+        
+        <div class="speed-slider-container" title="Αναλογική ρύθμιση ταχύτητας">
+            <span class="speed-icon">🐢</span>
+            <input type="range" id="speedSlider" min="1" max="100" value="50" class="rheostat">
+            <span class="speed-icon">🚀</span>
+        </div>
+
+        <button class="tool-btn" id="btnToggleCode" onclick="toggleCode()">👁️ Κώδικας</button>
+        <button class="tool-btn btn-theme" onclick="toggleTheme()" title="Day / Night Mode">🌙</button>
+    </div>
+</div>
+
+<div class="main-container blurred" id="mainApp">
+    
+    <div class="col col-left">
+        <div class="panel-title">📚 Λειτουργίες</div>
+        
+        <div class="method-selector">
+            <button class="method-btn active" id="btnMode1" onclick="changeMode(1)">1. Μνήμη: Με Προσωρινή (temp)</button>
+            <button class="method-btn" id="btnMode2" onclick="changeMode(2)">2. Μνήμη: Χωρίς temp (Μαθηματικά)</button>
+            <button class="method-btn" id="btnMode3" onclick="changeMode(3)">3. Παράδειγμα: Ποτήρια Κρασιού</button>
+            <button class="method-btn" id="btnMode4" onclick="changeMode(4)">4. Παράδειγμα: Parking Αυτοκινήτων</button>
+        </div>
+
+        <div id="theory1">
+            <div class="theory-box">
+                <strong>Κλασική Αντιμετάθεση:</strong><br>
+                Αν γράψουμε <code>Α &lt;- Β</code>, η αρχική τιμή του Α χάνεται. Πρέπει πρώτα να την αποθηκεύσουμε σε μια "τρίτη, άδεια κούπα", την προσωρινή μεταβλητή <code>temp</code>.
+            </div>
+        </div>
+
+        <div id="theory2" style="display:none;">
+            <div class="analogy-box">
+                <strong>Μαθηματικό Τρικ:</strong><br>
+                Δεν έχουμε 3η μεταβλητή. Τι κάνουμε;<br> 
+                Βάζουμε το άθροισμα στο Α. Αφού το Α έχει πλέον το ΣΥΝΟΛΟ, αν του αφαιρέσουμε το Β, μένει η αρχική τιμή του Α (και τη βάζουμε στο Β)!
+            </div>
+        </div>
+
+        <div id="theory3" style="display:none;">
+            <div class="analogy-box">
+                <strong>🍷 Η αναλογία των ποτηριών:</strong><br>
+                Πώς θα βάλεις το Κρασί (Α) στο ποτήρι με τον Χυμό (Β); Αν τα αδειάσεις το ένα μέσα στο άλλο, θα αναμιχθούν!<br>
+                <strong>Λύση:</strong> Χρειάζεσαι ένα 3ο άδειο ποτήρι (temp). Αδειάζεις το Α στο temp, βάζεις τον Χυμό στο άδειο Α, και τέλος το Κρασί από το temp στο Β!
+            </div>
+        </div>
+
+        <div id="theory4" style="display:none;">
+            <div class="analogy-box">
+                <strong>🚗 Η αναλογία του Parking:</strong><br>
+                Το Κόκκινο Αμάξι είναι στη θέση Α και το Μπλε στη Β. Θέλουν να αλλάξουν. Ο δρόμος είναι στενός.<br>
+                <strong>Λύση:</strong> Χρησιμοποιούμε μια 3η άδεια θέση στάθμευσης, την Temporary (T). Το ένα πάει εκεί, το άλλο παίρνει τη θέση του, και ολοκληρώνεται η τράμπα.
+            </div>
+        </div>
+
+        <div class="status-box" id="statusMsg">Έτοιμο. Πατήστε "Βήμα".</div>
+    </div>
+
+    <div class="col col-mid">
+        
+        <div class="code-area" id="codeArea">
+            <div id="codeTempGrp">
+                <div class="code-line" id="c1">ΔΙΑΒΑΣΕ Α, Β  <span class="code-comment">! Αρχικές τιμές</span></div>
+                <div class="code-line" id="c2">temp &lt;- Α   <span class="code-comment">! Σώζουμε το Α στο temp</span></div>
+                <div class="code-line" id="c3">Α &lt;- Β      <span class="code-comment">! Το Β πάει στο Α</span></div>
+                <div class="code-line" id="c4">Β &lt;- temp   <span class="code-comment">! Το temp (παλιό Α) πάει στο Β</span></div>
+                <div class="code-line" id="c5">ΓΡΑΨΕ Α, Β</div>
+            </div>
+            <div id="codeMathGrp" style="display:none;">
+                <div class="code-line" id="cm1">ΔΙΑΒΑΣΕ Α, Β  <span class="code-comment">! Αρχικές τιμές</span></div>
+                <div class="code-line" id="cm2">Α &lt;- Α + Β  <span class="code-comment">! Το Α κρατάει το άθροισμα</span></div>
+                <div class="code-line" id="cm3">Β &lt;- Α - Β  <span class="code-comment">! Στο Β μένει η αρχική τιμή του Α</span></div>
+                <div class="code-line" id="cm4">Α &lt;- Α - Β  <span class="code-comment">! Στο Α μένει η αρχική τιμή του Β</span></div>
+                <div class="code-line" id="cm5">ΓΡΑΨΕ Α, Β</div>
+            </div>
+        </div>
+
+        <div class="anim-area" id="animArea">
+            
+            <div id="memoryVisuals">
+                <div class="flying-token" id="flyToken"></div>
+                <div class="math-bubble-anim" id="mathBubble"></div>
+
+                <div class="var-box" id="memBoxA">
+                    <div class="var-title">Α</div>
+                    <div class="var-value" id="valMemA">5</div>
+                </div>
+                <div class="var-box" id="memBoxB">
+                    <div class="var-title">Β</div>
+                    <div class="var-value" id="valMemB">10</div>
+                </div>
+                <div class="var-box" id="memBoxTemp">
+                    <div class="var-title">temp</div>
+                    <div class="var-value empty" id="valMemTemp">Κενό</div>
+                </div>
+            </div>
+
+            <div id="wineVisuals">
+                <div class="pour-stream" id="pourStream"></div>
+
+                <div class="glass-container" id="glassA">
+                    <div class="glass-title">Α</div>
+                    <div class="glass-body-wrapper" id="glassWrapA">
+                        <div class="goblet-bowl" id="bowlA"><div class="liquid" id="liqA"><span class="liquid-val" id="valWineA">5</span></div></div>
+                        <div class="goblet-stem"></div>
+                        <div class="goblet-base"></div>
+                    </div>
+                </div>
+                
+                <div class="glass-container" id="glassB">
+                    <div class="glass-title">Β</div>
+                    <div class="glass-body-wrapper" id="glassWrapB">
+                        <div class="goblet-bowl" id="bowlB"><div class="liquid" id="liqB"><span class="liquid-val" id="valWineB">10</span></div></div>
+                        <div class="goblet-stem"></div>
+                        <div class="goblet-base"></div>
+                    </div>
+                </div>
+                
+                <div class="glass-container" id="glassTemp">
+                    <div class="glass-title">temp</div>
+                    <div class="glass-body-wrapper" id="glassWrapTemp">
+                        <div class="goblet-bowl" id="bowlTemp"><div class="liquid" id="liqTemp"><span class="liquid-val empty" id="valWineTemp"></span></div></div>
+                        <div class="goblet-stem"></div>
+                        <div class="goblet-base"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="parkingVisuals">
+                <div class="road-line"></div>
+                <div class="parking-spot" id="spotA"><span class="spot-label">A</span></div>
+                <div class="parking-spot" id="spotB"><span class="spot-label">B</span></div>
+                <div class="parking-spot" id="spotTemp"><span class="spot-label">T (temp)</span></div>
+                
+                <div class="car" id="carA">
+                    <div class="car-roof"></div>
+                    <div class="car-headlight-t"></div><div class="car-headlight-b"></div>
+                    <div class="car-taillight-t"></div><div class="car-taillight-b"></div>
+                    <div class="car-val" id="valCarA">5</div>
+                </div>
+                
+                <div class="car" id="carB">
+                    <div class="car-roof"></div>
+                    <div class="car-headlight-t"></div><div class="car-headlight-b"></div>
+                    <div class="car-taillight-t"></div><div class="car-taillight-b"></div>
+                    <div class="car-val" id="valCarB">10</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="col col-right">
+        <div class="ram-area">
+            <div class="panel-title">🧠 Μνήμη (RAM)</div>
+            <table class="ram-table">
+                <tr><th>Μεταβλητή</th><th>Τιμή</th></tr>
+                <tr><td>Α</td><td id="ramA">5</td></tr>
+                <tr><td>Β</td><td id="ramB">10</td></tr>
+                <tr id="rowTemp"><td>temp</td><td id="ramTemp">-</td></tr>
+            </table>
+        </div>
+        
+        <div class="console-area">
+            <div class="panel-title">🖥️ Οθόνη</div>
+            <div class="console-screen" id="consoleScreen">
+                > Πρόγραμμα...<br>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // ==========================================
+    // --- INTRO LOGIC (ΓΝΩΣΤΙΚΗ ΣΥΓΚΡΟΥΣΗ) ---
+    // ==========================================
+    const introContent = document.getElementById('introContent');
+    const introOverlay = document.getElementById('introOverlay');
+    const mainApp = document.getElementById('mainApp');
+
+    function ansYes() {
+        // Animation State - Nέα δομή με Flexbox & Translate
+        introContent.innerHTML = `
+            <p style="color:var(--danger); font-weight:bold; font-size:1.2rem;">Λάθος! Ας δούμε γιατί...</p>
+            <p>Εκτελείται η πρώτη εντολή: <code>Α &lt;- Β</code></p>
+            
+            <div class="intro-anim-stage">
+                <div class="intro-var">
+                    <span class="var-title-intro">Α</span>
+                    <span class="var-val-intro" id="lost5">5</span>
+                </div>
+                <div class="intro-var">
+                    <span class="var-title-intro">Β</span>
+                    <span class="var-val-intro">10</span>
+                    <span class="var-val-intro" id="fly10">10</span>
+                </div>
+            </div>
+
+            <div id="introFeedback" style="opacity:0; transition:0.5s; margin-top:20px;">
+                <p>Ουπς! Το 10 αντέγραψε τον εαυτό του και <b style="color:var(--danger);">"πάτησε" το 5, το οποίο χάθηκε οριστικά!</b></p>
+                <p>Αν τώρα κάνουμε <code>Β &lt;- Α</code>, το Β θα πάρει απλώς πάλι το 10. Και οι δύο μεταβλητές έμειναν με την τιμή 10!</p>
+                <button class="tool-btn btn-step" style="margin: 20px auto 0; font-size:1.1rem; padding: 10px 20px;" onclick="closeIntro()">Κατάλαβα! Πάμε στη σωστή λύση</button>
+            </div>
+        `;
+
+        // Run animation
+        setTimeout(() => {
+            const fly10 = document.getElementById('fly10');
+            const lost5 = document.getElementById('lost5');
+            
+            // Το 10 πετάει προς το Α. Η απόσταση είναι πλάτος(80) + κενό(80) = -160px
+            fly10.style.transform = 'translateX(-160px)';
+            
+            // Μόλις φτάσει, το 5 εκσφενδονίζεται!
+            setTimeout(() => {
+                lost5.style.color = 'var(--danger)';
+                lost5.style.transform = 'translate(-30px, 60px) rotate(-45deg)';
+                lost5.style.opacity = '0';
+                
+                document.getElementById('introFeedback').style.opacity = '1';
+            }, 500);
+        }, 800);
+    }
+
+    function ansNo() {
+        introContent.innerHTML = `
+            <p style="color:var(--success); font-weight:bold; font-size:1.3rem;">Πολύ σωστά! 👏</p>
+            <p>Γιατί όμως δεν λειτουργεί αυτή η απλή λύση;</p>
+            <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px;">
+                <button class="mcq-btn" onclick="checkMCQ(this, false)">1. Επειδή οι υπολογιστές δεν μπορούν να κάνουν δύο εντολές ταυτόχρονα.</button>
+                <button class="mcq-btn" onclick="checkMCQ(this, true)">2. Επειδή με την εντολή Α &lt;- Β, η αρχική πληροφορία του Α διαγράφεται οριστικά.</button>
+                <button class="mcq-btn" onclick="checkMCQ(this, false)">3. Επειδή οι μεταβλητές κρατούν πάντα αναλλοίωτη την αρχική τους τιμή.</button>
+                <button class="mcq-btn" onclick="checkMCQ(this, false)">4. Επειδή το Β είναι μεγαλύτερο από το Α.</button>
+            </div>
+            <div id="mcqFeedback" style="opacity:0; transition:0.5s; margin-top:20px;">
+                <p style="font-weight:bold; color:var(--primary);">Ακριβώς!</p>
+                <p>Αν δεν αποθηκεύσουμε το "5" κάπου αλλού πρώτα (σε μια προσωρινή μεταβλητή), το "10" θα το πατήσει και θα χαθεί για πάντα.</p>
+                <button class="tool-btn btn-step" style="margin: 20px auto 0; font-size:1.1rem; padding: 10px 20px;" onclick="closeIntro()">Πάμε να δούμε τη σωστή λύση!</button>
+            </div>
+        `;
+    }
+
+    function checkMCQ(btn, isCorrect) {
+        // Reset all buttons
+        document.querySelectorAll('.mcq-btn').forEach(b => {
+            b.classList.remove('wrong', 'correct');
+            b.disabled = true; // Κλειδώνουμε τα κουμπιά μετά την 1η επιλογή
+        });
+
+        if (isCorrect) {
+            btn.classList.add('correct');
+            document.getElementById('mcqFeedback').style.opacity = '1';
+        } else {
+            btn.classList.add('wrong');
+            // Βρίσκουμε το σωστό για να το δείξουμε
+            document.querySelectorAll('.mcq-btn')[1].classList.add('correct');
+            document.getElementById('mcqFeedback').style.opacity = '1';
+            document.getElementById('mcqFeedback').querySelector('p').innerText = "Όχι ακριβώς. Η σωστή απάντηση είναι η 2η:";
+            document.getElementById('mcqFeedback').querySelector('p').style.color = "var(--danger)";
+        }
+    }
+
+    function closeIntro() {
+        introOverlay.style.opacity = '0';
+        mainApp.classList.remove('blurred');
+        setTimeout(() => {
+            introOverlay.style.display = 'none';
+            changeMode(1); // Ξεκινάει καθαρή η εφαρμογή
+        }, 500);
+    }
+
+
+    // ==========================================
+    // --- ΚΥΡΙΩΣ ΕΦΑΡΜΟΓΗ (Ο ΔΙΚΟΣ ΣΟΥ ΚΩΔΙΚΑΣ) ---
+    // ==========================================
+    let currentMode = 1; // 1:MemTemp, 2:MemMath, 3:Wine, 4:Cars
+    let stepIndex = 0;
+    let isPlaying = false;
+    let autoInterval = null;
+    let isAnimating = false;
+    let codeVisible = true;
+
+    let mem = { A: null, B: null, temp: null };
+    let carCoords = { spotA: {}, spotB: {}, spotTemp: {}, roadY: 0 };
+
+    // --- DOM ELEMENTS ---
+    const codeArea = document.getElementById('codeArea');
+    const cons = document.getElementById('consoleScreen');
+    const statusMsg = document.getElementById('statusMsg');
+    const btnStep = document.getElementById('btnStep');
+    const btnAuto = document.getElementById('btnAuto');
+    const speedSlider = document.getElementById('speedSlider');
+    const inpA = document.getElementById('inputA');
+    const inpB = document.getElementById('inputB');
+    
+    // RAM Elements
+    const ramA = document.getElementById('ramA');
+    const ramB = document.getElementById('ramB');
+    const ramTemp = document.getElementById('ramTemp');
+
+    // Visual Containers
+    const vMem = document.getElementById('memoryVisuals');
+    const vWine = document.getElementById('wineVisuals');
+    const vCars = document.getElementById('parkingVisuals');
+
+    // CSS Colors mapping
+    const colWine = "var(--wine-red)";
+    const colJuice = "var(--juice-blue)";
+    const colEmpty = "var(--empty-gray)";
+
+    window.addEventListener('resize', calcCarCoords); 
+
+    // --- HELPERS ---
+    function getDelay() {
+        let sliderVal = parseInt(speedSlider.value);
+        return 2500 - ((sliderVal - 1) * (2100 / 99)); // Range: ~400ms to 2500ms
+    }
+
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+
+    function toggleCode() {
+        codeVisible = !codeVisible;
+        if (codeVisible) {
+            codeArea.classList.remove('hidden-code');
+            document.getElementById('btnToggleCode').innerHTML = '👁️ Κώδικας';
+        } else {
+            codeArea.classList.add('hidden-code');
+            document.getElementById('btnToggleCode').innerHTML = '🙈 Κώδικας';
+        }
+    }
+
+    function logConsole(msg) {
+        cons.innerHTML += `> ${msg}<br>`;
+        cons.scrollTop = cons.scrollHeight;
+    }
+
+    // --- MODE SELECTION & RESET ---
+    function changeMode(m) {
+        currentMode = m;
+        stopAuto();
+        
+        // Buttons Update
+        for(let i=1; i<=4; i++) {
+            document.getElementById(`btnMode${i}`).classList.toggle('active', m === i);
+            document.getElementById(`theory${i}`).style.display = m === i ? 'block' : 'none';
+        }
+        
+        // Code Update
+        document.getElementById('codeTempGrp').style.display = (m !== 2) ? 'block' : 'none';
+        document.getElementById('codeMathGrp').style.display = (m === 2) ? 'block' : 'none';
+        document.getElementById('rowTemp').style.display = (m !== 2) ? 'table-row' : 'none';
+
+        // Visuals Update
+        vMem.style.display = (m === 1 || m === 2) ? 'flex' : 'none';
+        vWine.style.display = (m === 3) ? 'block' : 'none';
+        vCars.style.display = (m === 4) ? 'block' : 'none';
+
+        if(m === 4) setTimeout(calcCarCoords, 100);
+
+        resetState();
+    }
+
+    function resetState() {
+        stopAuto();
+        isAnimating = false;
+        stepIndex = 0;
+        
+        mem.A = parseFloat(inpA.value) || 0;
+        mem.B = parseFloat(inpB.value) || 0;
+        mem.temp = null;
+
+        cons.innerHTML = '> Πρόγραμμα Αντιμετάθεσης...<br>';
+        statusMsg.innerHTML = 'Έτοιμο. Πατήστε "Βήμα" για να ξεκινήσετε.';
+        btnStep.disabled = false;
+        btnAuto.disabled = false;
+        inpA.disabled = false;
+        inpB.disabled = false;
+
+        document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+
+        updateRAM(true);
+
+        if (currentMode === 1 || currentMode === 2) resetMemVisuals();
+        if (currentMode === 3) resetWineVisuals();
+        if (currentMode === 4) resetCarVisuals();
+    }
+
+    function updateRAM(isReset = false) {
+        ramA.innerText = mem.A;
+        ramB.innerText = mem.B;
+        ramTemp.innerText = mem.temp !== null ? mem.temp : '-';
+
+        if (!isReset) {
+            let targetCell = null;
+            if (currentMode !== 2) {
+                if (stepIndex === 2) targetCell = ramTemp;
+                if (stepIndex === 3) targetCell = ramA;
+                if (stepIndex === 4) targetCell = ramB;
+            } else {
+                if (stepIndex === 2) targetCell = ramA;
+                if (stepIndex === 3) targetCell = ramB;
+                if (stepIndex === 4) targetCell = ramA;
+            }
+            
+            if(targetCell) {
+                targetCell.classList.remove('ram-cell-updated');
+                void targetCell.offsetWidth; 
+                targetCell.classList.add('ram-cell-updated');
+            }
+        }
+    }
+
+    // --- ANIMATION ROUTINES PER MODE ---
+    function resetMemVisuals() {
+        document.getElementById('memBoxTemp').style.display = (currentMode === 1) ? 'flex' : 'none';
+        
+        document.getElementById('valMemA').innerText = mem.A;
+        document.getElementById('valMemB').innerText = mem.B;
+        document.getElementById('valMemTemp').innerText = 'Κενό';
+        document.getElementById('valMemTemp').classList.add('empty');
+        
+        document.getElementById('memBoxA').classList.remove('active', 'active-math');
+        document.getElementById('memBoxB').classList.remove('active', 'active-math');
+        document.getElementById('memBoxTemp').classList.remove('active');
+        document.getElementById('mathBubble').style.opacity = '0';
+    }
+
+    function animateFlyingToken(startBox, endBox, value) {
+        return new Promise(resolve => {
+            const token = document.getElementById('flyToken');
+            const areaRect = animArea.getBoundingClientRect();
+            const startRect = startBox.getBoundingClientRect();
+            const endRect = endBox.getBoundingClientRect();
+
+            const startX = startRect.left - areaRect.left + (startRect.width / 2) - 30; 
+            const startY = startRect.top - areaRect.top + (startRect.height / 2) - 30;
+            const endX = endRect.left - areaRect.left + (endRect.width / 2) - 30;
+            const endY = endRect.top - areaRect.top + (endRect.height / 2) - 30;
+
+            const speed = getDelay() * 0.6; 
+
+            token.innerText = value;
+            token.style.transition = 'none';
+            token.style.left = startX + 'px';
+            token.style.top = startY + 'px';
+            token.style.opacity = '1';
+
+            void token.offsetWidth; 
+
+            token.style.transition = `all ${speed}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+            token.style.left = endX + 'px';
+            token.style.top = endY + 'px';
+
+            setTimeout(() => {
+                token.style.opacity = '0';
+                resolve();
+            }, speed);
+        });
+    }
+
+    function resetWineVisuals() {
+        const liqA = document.getElementById('liqA'); const valA = document.getElementById('valWineA');
+        const liqB = document.getElementById('liqB'); const valB = document.getElementById('valWineB');
+        const liqT = document.getElementById('liqTemp'); const valT = document.getElementById('valWineTemp');
+        const wrapA = document.getElementById('glassWrapA');
+        const wrapB = document.getElementById('glassWrapB');
+        const wrapT = document.getElementById('glassWrapTemp');
+        
+        wrapA.style.transition = 'none'; wrapA.style.transform = 'translate(0,0) rotate(0deg)'; wrapA.style.zIndex = '1';
+        wrapB.style.transition = 'none'; wrapB.style.transform = 'translate(0,0) rotate(0deg)'; wrapB.style.zIndex = '1';
+        wrapT.style.transition = 'none'; wrapT.style.transform = 'translate(0,0) rotate(0deg)'; wrapT.style.zIndex = '1';
+
+        liqA.style.transition = 'none'; liqA.style.height = '70%'; liqA.style.backgroundColor = colWine; valA.innerText = mem.A; valA.classList.remove('empty');
+        liqB.style.transition = 'none'; liqB.style.height = '70%'; liqB.style.backgroundColor = colJuice; valB.innerText = mem.B; valB.classList.remove('empty');
+        liqT.style.transition = 'none'; liqT.style.height = '0%'; liqT.style.backgroundColor = colEmpty; valT.innerText = ''; valT.classList.add('empty');
+        
+        document.getElementById('bowlA').classList.remove('highlight');
+        document.getElementById('bowlB').classList.remove('highlight');
+        document.getElementById('bowlTemp').classList.remove('highlight');
+    }
+
+    function animateGlassPour(srcId, destId, color, newVal) {
+        return new Promise(resolve => {
+            const delay = getDelay();
+            
+            const srcWrap = document.getElementById('glassWrap' + srcId);
+            const destWrap = document.getElementById('glassWrap' + destId);
+            const srcLiq = document.getElementById('liq' + srcId);
+            const destLiq = document.getElementById('liq' + destId);
+            const destVal = document.getElementById('valWine' + destId);
+            const stream = document.getElementById('pourStream');
+
+            const areaRect = animArea.getBoundingClientRect();
+            const srcRect = srcWrap.getBoundingClientRect();
+            const destRect = destWrap.getBoundingClientRect();
+
+            const goRight = destRect.left > srcRect.left;
+            const dx = (destRect.left - srcRect.left) + (goRight ? -40 : 40);
+            const dy = (destRect.top - srcRect.top) - 60; 
+            const rot = goRight ? 45 : -45;
+
+            srcWrap.style.zIndex = '50';
+            srcWrap.style.transition = `transform ${delay * 0.3}ms ease-in-out`;
+            srcWrap.style.transform = `translate(${dx}px, ${dy}px) rotate(${rot}deg)`;
+
+            setTimeout(() => {
+                const sRect = srcWrap.getBoundingClientRect();
+                const dRect = destWrap.getBoundingClientRect();
+                
+                stream.style.transition = 'none';
+                stream.style.left = (goRight ? sRect.right - 40 : sRect.left + 20) - areaRect.left + 'px';
+                stream.style.top = sRect.bottom - areaRect.top - 40 + 'px';
+                stream.style.height = '0px';
+                stream.style.backgroundColor = color;
+                stream.style.opacity = '1';
+                
+                void stream.offsetWidth;
+
+                const pourDistance = dRect.top - sRect.bottom + 60;
+                stream.style.transition = `height ${delay*0.15}ms linear`;
+                stream.style.height = pourDistance + 'px';
+
+                setTimeout(() => {
+                    srcLiq.style.transition = `height ${delay*0.4}ms linear`;
+                    destLiq.style.transition = `height ${delay*0.4}ms linear, background-color 0.1s`;
+                    
+                    srcLiq.style.height = '0%';
+                    destLiq.style.height = '70%';
+                    destLiq.style.backgroundColor = color;
+
+                    setTimeout(() => {
+                        destVal.innerText = newVal;
+                        destVal.classList.remove('empty');
+                        document.getElementById('valWine' + srcId).innerText = '';
+                        document.getElementById('valWine' + srcId).classList.add('empty');
+                        
+                        stream.style.transition = 'opacity 0.2s';
+                        stream.style.opacity = '0';
+
+                        setTimeout(() => {
+                            srcWrap.style.transform = `translate(0,0) rotate(0deg)`;
+                            setTimeout(() => {
+                                srcWrap.style.zIndex = '1';
+                                resolve();
+                            }, delay * 0.3);
+                        }, 200);
+
+                    }, delay * 0.4);
+                }, delay * 0.15);
+            }, delay * 0.35); 
+        });
+    }
+
+    function calcCarCoords() {
+        if(currentMode !== 4) return;
+        const areaRect = animArea.getBoundingClientRect();
+        
+        const getC = (el) => {
+            const r = el.getBoundingClientRect();
+            return { x: r.left - areaRect.left + (r.width/2) - 55, y: r.top - areaRect.top + (r.height/2) - 30 };
+        };
+
+        carCoords.spotA = getC(document.getElementById('spotA'));
+        carCoords.spotB = getC(document.getElementById('spotB'));
+        carCoords.spotTemp = getC(document.getElementById('spotTemp'));
+        carCoords.roadY = (carCoords.spotA.y + carCoords.spotTemp.y) / 2;
+
+        if (stepIndex === 0) {
+            const cA = document.getElementById('carA');
+            const cB = document.getElementById('carB');
+            cA.style.transition = 'none'; cA.style.left = carCoords.spotA.x + 'px'; cA.style.top = carCoords.spotA.y + 'px'; cA.style.transform = 'rotate(0deg)';
+            cB.style.transition = 'none'; cB.style.left = carCoords.spotB.x + 'px'; cB.style.top = carCoords.spotB.y + 'px'; cB.style.transform = 'rotate(0deg)';
+        }
+    }
+
+    function resetCarVisuals() {
+        document.getElementById('valCarA').innerText = mem.A;
+        document.getElementById('valCarB').innerText = mem.B;
+        calcCarCoords();
+    }
+
+    async function driveCarAnim(carId, targetCoordKey) {
+        const car = document.getElementById(carId);
+        const target = carCoords[targetCoordKey];
+        const delay = getDelay();
+        const segment = delay * 0.3; 
+
+        car.style.transition = `all ${segment}ms ease-in-out`;
+
+        const currentX = parseFloat(car.style.left);
+        let turnAngle = target.x > currentX ? 90 : -90;
+        
+        car.style.top = carCoords.roadY + 'px';
+        await new Promise(r => setTimeout(r, segment));
+
+        car.style.transform = `rotate(${turnAngle}deg)`;
+        car.style.left = target.x + 'px';
+        await new Promise(r => setTimeout(r, segment));
+
+        car.style.transform = 'rotate(0deg)';
+        car.style.top = target.y + 'px';
+        await new Promise(r => setTimeout(r, segment));
+    }
+
+
+    // ==========================================
+    // MAIN STEP EXECUTION MANAGER
+    // ==========================================
+    async function step() {
+        if (isAnimating) return; 
+        
+        stepIndex++;
+        document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+        
+        let delay = getDelay();
+        isAnimating = true;
+        btnStep.disabled = true;
+        inpA.disabled = true; inpB.disabled = true;
+
+        let linePrefix = (currentMode === 2) ? 'cm' : 'c';
+        document.getElementById(`${linePrefix}${stepIndex}`).classList.add('active');
+
+        if (currentMode === 1) await execMemTemp(delay);
+        else if (currentMode === 2) await execMemMath(delay);
+        else if (currentMode === 3) await execWine(delay);
+        else if (currentMode === 4) await execCars(delay);
+
+        isAnimating = false;
+        if(stepIndex < 5) btnStep.disabled = false;
+
+        if (isPlaying && stepIndex < 5) {
+            autoInterval = setTimeout(step, delay * 0.2); 
+        } else if (isPlaying && stepIndex >= 5) {
+            stopAuto();
+            inpA.disabled = false; inpB.disabled = false;
+        }
+    }
+
+    // --- Exec: Mem Temp ---
+    async function execMemTemp(delay) {
+        const bA = document.getElementById('memBoxA'); const bB = document.getElementById('memBoxB'); const bT = document.getElementById('memBoxTemp');
+        const vA = document.getElementById('valMemA'); const vB = document.getElementById('valMemB'); const vT = document.getElementById('valMemTemp');
+
+        if (stepIndex === 1) {
+            statusMsg.innerHTML = "Διαβάζουμε τις αρχικές τιμές στη μνήμη.";
+            logConsole(`Είσοδος: Α=${mem.A}, Β=${mem.B}`);
+            await new Promise(r => setTimeout(r, delay/2));
+        } 
+        else if (stepIndex === 2) {
+            bA.classList.add('active'); bT.classList.add('active');
+            statusMsg.innerHTML = "<strong>temp &lt;- Α </strong> Η τιμή του Α αντιγράφεται στο temp.";
+            await animateFlyingToken(bA, bT, mem.A);
+            mem.temp = mem.A;
+            vT.innerText = mem.temp; vT.classList.remove('empty');
+            updateRAM(); bA.classList.remove('active'); bT.classList.remove('active');
+        }
+        else if (stepIndex === 3) {
+            bB.classList.add('active'); bA.classList.add('active');
+            statusMsg.innerHTML = "<strong>Α &lt;- Β </strong> Η τιμή του Β αντιγράφεται στο Α. <em>Η παλιά τιμή του Α χάθηκε!</em>";
+            await animateFlyingToken(bB, bA, mem.B);
+            mem.A = mem.B;
+            vA.innerText = mem.A;
+            updateRAM(); bB.classList.remove('active'); bA.classList.remove('active');
+        }
+        else if (stepIndex === 4) {
+            bT.classList.add('active'); bB.classList.add('active');
+            statusMsg.innerHTML = "<strong>Β &lt;- temp </strong> Το temp δίνει την παλιά τιμή του Α στο Β.";
+            await animateFlyingToken(bT, bB, mem.temp);
+            mem.B = mem.temp;
+            vB.innerText = mem.B;
+            updateRAM(); bT.classList.remove('active'); bB.classList.remove('active');
+        }
+        else if (stepIndex === 5) {
+            statusMsg.innerHTML = "🎉 Αντιμετάθεση Ολοκληρώθηκε!";
+            logConsole(`Έξοδος: Α=${mem.A}, Β=${mem.B}`);
+            btnStep.disabled = true;
+        }
+    }
+
+    // --- Exec: Mem Math ---
+    async function execMemMath(delay) {
+        const bA = document.getElementById('memBoxA'); const bB = document.getElementById('memBoxB');
+        const vA = document.getElementById('valMemA'); const vB = document.getElementById('valMemB');
+        const bubble = document.getElementById('mathBubble');
+        const aRect = animArea.getBoundingClientRect();
+
+        const showBubble = (targetBox, text) => {
+            const rect = targetBox.getBoundingClientRect();
+            bubble.innerText = text;
+            bubble.style.left = (rect.left - aRect.left + rect.width/2 - 60) + 'px';
+            bubble.style.top = (rect.top - aRect.top - 50) + 'px';
+            bubble.style.opacity = '1';
+        };
+
+        if (stepIndex === 1) {
+            statusMsg.innerHTML = "Διαβάζουμε τις αρχικές τιμές.";
+            logConsole(`Είσοδος: Α=${mem.A}, Β=${mem.B}`);
+            await new Promise(r => setTimeout(r, delay/2));
+        } 
+        else if (stepIndex === 2) {
+            bA.classList.add('active-math');
+            let oldA = mem.A; mem.A = mem.A + mem.B;
+            showBubble(bA, `${oldA} + ${mem.B} = ${mem.A}`);
+            statusMsg.innerHTML = "<strong>Α &lt;- Α + Β </strong> Βάζουμε και τις 2 τιμές μαζί στο Α.";
+            await new Promise(r => setTimeout(r, delay));
+            bubble.style.opacity = '0'; vA.innerText = mem.A; updateRAM(); bA.classList.remove('active-math');
+        }
+        else if (stepIndex === 3) {
+            bB.classList.add('active-math');
+            let oldA = mem.A; mem.B = mem.A - mem.B;
+            showBubble(bB, `${oldA} - B = ${mem.B}`);
+            statusMsg.innerHTML = "<strong>Β &lt;- Α - Β </strong> Αφαιρούμε το Β από το 'συνολικό' Α. Μένει η αρχική τιμή του Α!";
+            await new Promise(r => setTimeout(r, delay));
+            bubble.style.opacity = '0'; vB.innerText = mem.B; updateRAM(); bB.classList.remove('active-math');
+        }
+        else if (stepIndex === 4) {
+            bA.classList.add('active-math');
+            let oldA = mem.A; mem.A = mem.A - mem.B;
+            showBubble(bA, `${oldA} - ${mem.B} = ${mem.A}`);
+            statusMsg.innerHTML = "<strong>Α &lt;- Α - Β </strong> Αφαιρούμε το νέο Β από το συνολικό Α. Μένει η αρχική τιμή του Β!";
+            await new Promise(r => setTimeout(r, delay));
+            bubble.style.opacity = '0'; vA.innerText = mem.A; updateRAM(); bA.classList.remove('active-math');
+        }
+        else if (stepIndex === 5) {
+            statusMsg.innerHTML = "🎉 Αντιμετάθεση με Μαθηματικά Ολοκληρώθηκε!";
+            logConsole(`Έξοδος: Α=${mem.A}, Β=${mem.B}`);
+            btnStep.disabled = true;
+        }
+    }
+
+    // --- Exec: Wine ---
+    async function execWine(delay) {
+        if (stepIndex === 1) {
+            statusMsg.innerHTML = "Έχουμε Κρασί (Α) και Χυμό (Β). Πρέπει να αλλάξουν ποτήρια.";
+            logConsole(`Είσοδος: Α=${mem.A}, Β=${mem.B}`);
+            await new Promise(r => setTimeout(r, delay/2));
+        }
+        else if (stepIndex === 2) {
+            statusMsg.innerHTML = "<strong>temp &lt;- Α </strong> Αδειάζουμε το Κρασί στο άδειο ποτήρι temp.";
+            await animateGlassPour('A', 'Temp', colWine, mem.A);
+            mem.temp = mem.A; updateRAM();
+        }
+        else if (stepIndex === 3) {
+            statusMsg.innerHTML = "<strong>Α &lt;- Β </strong> Αδειάζουμε τον Χυμό στο άδειο ποτήρι Α.";
+            await animateGlassPour('B', 'A', colJuice, mem.B);
+            mem.A = mem.B; updateRAM();
+        }
+        else if (stepIndex === 4) {
+            statusMsg.innerHTML = "<strong>Β &lt;- temp </strong> Αδειάζουμε το Κρασί από το temp στο ποτήρι Β.";
+            document.getElementById('liqTemp').style.backgroundColor = colWine; 
+            await animateGlassPour('Temp', 'B', colWine, mem.temp);
+            mem.B = mem.temp; updateRAM();
+        }
+        else if (stepIndex === 5) {
+            statusMsg.innerHTML = "🎉 Στην υγειά μας! Τα υγρά άλλαξαν ποτήρια.";
+            logConsole(`Έξοδος: Α=${mem.A}, Β=${mem.B}`);
+            btnStep.disabled = true;
+        }
+    }
+
+    // --- Exec: Cars ---
+    async function execCars(delay) {
+        const sA = document.getElementById('spotA'); const sB = document.getElementById('spotB'); const sT = document.getElementById('spotTemp');
+        
+        if (stepIndex === 1) {
+            statusMsg.innerHTML = "Τα αυτοκίνητα είναι παρκαρισμένα. Ο δρόμος είναι στενός.";
+            logConsole(`Είσοδος: Α=${mem.A}, Β=${mem.B}`);
+            await new Promise(r => setTimeout(r, delay/2));
+        }
+        else if (stepIndex === 2) {
+            sA.classList.add('active'); sT.classList.add('active');
+            statusMsg.innerHTML = "<strong>temp &lt;- Α </strong> Το Κόκκινο αμάξι πάει στην προσωρινή θέση Τ.";
+            await driveCarAnim('carA', 'spotTemp');
+            mem.temp = mem.A; updateRAM();
+            sA.classList.remove('active'); sT.classList.remove('active');
+        }
+        else if (stepIndex === 3) {
+            sB.classList.add('active'); sA.classList.add('active');
+            statusMsg.innerHTML = "<strong>Α &lt;- Β </strong> Το Μπλε αμάξι ελευθερώνει το Β και παρκάρει στο Α.";
+            await driveCarAnim('carB', 'spotA');
+            mem.A = mem.B; updateRAM();
+            sB.classList.remove('active'); sA.classList.remove('active');
+        }
+        else if (stepIndex === 4) {
+            sT.classList.add('active'); sB.classList.add('active');
+            statusMsg.innerHTML = "<strong>Β &lt;- temp </strong> Το Κόκκινο αμάξι φεύγει από το Τ και παρκάρει στο Β.";
+            await driveCarAnim('carA', 'spotB');
+            mem.B = mem.temp; updateRAM();
+            sT.classList.remove('active'); sB.classList.remove('active');
+        }
+        else if (stepIndex === 5) {
+            statusMsg.innerHTML = "🎉 Τέλεια! Τα αυτοκίνητα άλλαξαν θέσεις parking.";
+            logConsole(`Έξοδος: Α=${mem.A}, Β=${mem.B}`);
+            btnStep.disabled = true;
+        }
+    }
+
+    // --- AUTO-PLAY ---
+    function toggleAuto() {
+        if (isPlaying) {
+            stopAuto();
+        } else {
+            if (stepIndex >= 5) resetState();
+            isPlaying = true;
+            btnAuto.innerHTML = "⏸️ Παύση";
+            btnAuto.style.backgroundColor = "var(--warning)";
+            btnAuto.style.borderColor = "var(--warning)";
+            step();
+        }
+    }
+
+    function stopAuto() {
+        isPlaying = false;
+        clearTimeout(autoInterval);
+        btnAuto.innerHTML = "▶️ Αυτόματα";
+        btnAuto.style.backgroundColor = "var(--success)";
+        btnAuto.style.borderColor = "var(--success)";
+    }
+
+</script>
+</body>
+</html>
