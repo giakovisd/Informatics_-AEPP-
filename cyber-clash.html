@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ CYBER CLASH: Πανελλαδικές Arena</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto+Mono:wght@400;700&display=swap');
+
+        :root {
+            --bg-deep: #05050a;
+            --bg-panel: #11111a;
+            --team1-base: #00d2ff;
+            --team1-glow: #3a7bd5;
+            --team2-base: #ff0055;
+            --team2-glow: #a80038;
+            --neutral: #94a3b8;
+            --success: #00ff88;
+            --warning: #ffaa00;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background-color: var(--bg-deep);
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(0, 210, 255, 0.08), transparent 25%),
+                radial-gradient(circle at 85% 50%, rgba(255, 0, 85, 0.08), transparent 25%),
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 30px 30px, 30px 30px;
+            background-position: center center;
+        }
+
+        /* --- SCREEN SHAKE EFFECT --- */
+        .shake { animation: shake-anim 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake-anim {
+            0%, 100% { transform: translate3d(0, 0, 0); }
+            10%, 30%, 50%, 70%, 90% { transform: translate3d(-10px, 5px, 0); }
+            20%, 40%, 60%, 80% { transform: translate3d(10px, -5px, 0); }
+        }
+
+        /* --- SETUP SCREEN --- */
+        #setup-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5, 5, 10, 0.95); backdrop-filter: blur(10px);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 1000;
+        }
+
+        .setup-box {
+            background: var(--bg-panel); border: 2px solid #333; padding: 40px;
+            border-radius: 20px; text-align: center; max-width: 800px; width: 90%;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            position: relative; overflow: hidden;
+        }
+
+        .setup-box::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 2px;
+            background: linear-gradient(90deg, transparent, #fff, transparent);
+            animation: scanline 3s linear infinite;
+        }
+        @keyframes scanline { 0% { left: -50%; } 100% { left: 150%; } }
+
+        .setup-title { font-size: 3rem; font-weight: 900; margin-bottom: 10px; letter-spacing: 3px; text-shadow: 0 0 15px rgba(255,255,255,0.5); }
+        .setup-subtitle { color: var(--neutral); font-family: 'Roboto Mono', monospace; margin-bottom: 40px; font-size: 1.1rem; }
+
+        .team-inputs { display: flex; gap: 30px; margin-bottom: 40px; justify-content: center; }
+        .input-wrapper { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+        .input-wrapper label { font-size: 1.2rem; font-weight: 700; text-transform: uppercase; }
+        .input-wrapper.t1 label { color: var(--team1-base); text-shadow: 0 0 10px var(--team1-glow); }
+        .input-wrapper.t2 label { color: var(--team2-base); text-shadow: 0 0 10px var(--team2-glow); }
+        
+        input[type="text"] {
+            background: #000; border: 2px solid #333; padding: 15px; font-size: 1.5rem;
+            color: #fff; text-align: center; border-radius: 10px; font-family: 'Orbitron', sans-serif;
+            outline: none; transition: 0.3s;
+        }
+        .input-wrapper.t1 input:focus { border-color: var(--team1-base); box-shadow: 0 0 15px var(--team1-glow); }
+        .input-wrapper.t2 input:focus { border-color: var(--team2-base); box-shadow: 0 0 15px var(--team2-glow); }
+
+        .btn-start {
+            background: linear-gradient(45deg, #ffaa00, #ff5500); border: none; padding: 15px 50px;
+            font-size: 1.5rem; font-family: 'Orbitron', sans-serif; font-weight: 900; color: #fff;
+            border-radius: 50px; cursor: pointer; text-transform: uppercase; letter-spacing: 2px;
+            box-shadow: 0 10px 20px rgba(255, 85, 0, 0.4); transition: 0.2s;
+        }
+        .btn-start:hover { transform: scale(1.05) translateY(-5px); box-shadow: 0 15px 30px rgba(255, 85, 0, 0.6); }
+
+        /* --- GAME ARENA --- */
+        #game-screen { display: none; flex-direction: column; height: 100vh; position: relative; }
+
+        /* HEADER / TUG OF WAR BAR */
+        .arena-header {
+            padding: 30px 40px; display: flex; flex-direction: column; gap: 20px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.8), transparent); z-index: 10;
+        }
+
+        .team-names-row { display: flex; justify-content: space-between; align-items: flex-end; }
+        .team-name-disp { font-size: 2.5rem; font-weight: 900; text-transform: uppercase; transition: 0.3s; }
+        .team-name-disp.t1 { color: var(--team1-base); text-shadow: 0 0 15px var(--team1-glow); }
+        .team-name-disp.t2 { color: var(--team2-base); text-shadow: 0 0 15px var(--team2-glow); }
+        
+        .active-turn-glow.t1 { animation: pulseT1 1.5s infinite; }
+        .active-turn-glow.t2 { animation: pulseT2 1.5s infinite; }
+        @keyframes pulseT1 { 0%, 100% { text-shadow: 0 0 15px var(--team1-glow); transform: scale(1); } 50% { text-shadow: 0 0 30px var(--team1-base); transform: scale(1.05); } }
+        @keyframes pulseT2 { 0%, 100% { text-shadow: 0 0 15px var(--team2-glow); transform: scale(1); } 50% { text-shadow: 0 0 30px var(--team2-base); transform: scale(1.05); } }
+
+        /* The Tug of War Track */
+        .tug-track {
+            width: 100%; height: 30px; background: #111; border-radius: 15px; border: 2px solid #333;
+            position: relative; overflow: visible; box-shadow: inset 0 5px 10px rgba(0,0,0,0.5);
+        }
+        .tug-track::before { /* Center marker */
+            content: ''; position: absolute; top: -10px; bottom: -10px; left: 50%; width: 4px;
+            background: #fff; transform: translateX(-50%); opacity: 0.3; z-index: 1;
+        }
+
+        .tug-fill-t1 { position: absolute; top: 0; left: 0; height: 100%; background: linear-gradient(90deg, var(--team1-glow), var(--team1-base)); border-radius: 15px 0 0 15px; transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .tug-fill-t2 { position: absolute; top: 0; right: 0; height: 100%; background: linear-gradient(-90deg, var(--team2-glow), var(--team2-base)); border-radius: 0 15px 15px 0; transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+        /* The Energy Core */
+        .energy-core {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 70px; height: 70px; background: #fff; border-radius: 50%;
+            box-shadow: 0 0 30px #fff, inset 0 0 15px #000;
+            z-index: 5; transition: left 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .energy-core::after {
+            content: ''; width: 40px; height: 40px; background: #000; border-radius: 50%;
+            animation: coreSpin 2s linear infinite;
+        }
+        @keyframes coreSpin { 0% { transform: scale(0.8); opacity: 0.5;} 50% { transform: scale(1.1); opacity: 1;} 100% { transform: scale(0.8); opacity: 0.5;} }
+
+        /* MIDDLE: QUESTION BOARD */
+        .arena-middle { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; position: relative; z-index: 5;}
+        
+        .q-count-badge { position: absolute; top: 0; font-family: 'Roboto Mono', monospace; color: var(--neutral); font-size: 1.1rem; background: rgba(255,255,255,0.05); padding: 5px 15px; border-radius: 20px;}
+
+        .question-card {
+            background: var(--bg-panel); border: 2px solid #333; border-radius: 20px;
+            width: 100%; max-width: 900px; padding: 40px; text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5); position: relative;
+        }
+
+        .q-source-tag {
+            position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
+            background: var(--warning); color: #000; font-family: 'Roboto Mono', monospace;
+            font-weight: bold; padding: 5px 20px; border-radius: 10px; font-size: 0.9rem;
+            box-shadow: 0 5px 15px rgba(255, 170, 0, 0.3);
+        }
+
+        .q-text { font-size: 1.8rem; line-height: 1.5; margin: 20px 0 40px 0; font-family: 'Roboto Mono', monospace; color: #e2e8f0; min-height: 120px; display: flex; align-items: center; justify-content: center;}
+
+        /* Options Grid */
+        .options-grid { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+        .opt-btn {
+            flex: 1; min-width: 300px; background: rgba(255,255,255,0.05); border: 2px solid #333;
+            color: #fff; padding: 20px; font-size: 1.2rem; font-family: 'Orbitron', sans-serif;
+            border-radius: 12px; cursor: pointer; transition: 0.2s; position: relative; overflow: hidden;
+        }
+        .opt-btn:hover { background: rgba(255,255,255,0.1); border-color: #fff; transform: translateY(-3px); }
+        .opt-btn:active { transform: translateY(0); }
+        
+        .opt-btn.locked { cursor: not-allowed; opacity: 0.5; pointer-events: none; }
+
+        /* --- SUSPENSE MODAL (The magic) --- */
+        #suspense-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 500; display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+        }
+        
+        .processing-text { font-size: 3rem; color: #fff; font-family: 'Roboto Mono', monospace; letter-spacing: 5px; margin-bottom: 30px; animation: glitch 0.2s linear infinite; }
+        @keyframes glitch { 0% { transform: translate(0) } 20% { transform: translate(-5px, 5px) } 40% { transform: translate(-5px, -5px) } 60% { transform: translate(5px, 5px) } 80% { transform: translate(5px, -5px) } 100% { transform: translate(0) } }
+
+        .progress-bar-container { width: 400px; height: 10px; background: #333; border-radius: 5px; overflow: hidden; position: relative;}
+        .progress-bar-fill { position: absolute; top: 0; left: 0; height: 100%; background: #fff; width: 0%; box-shadow: 0 0 15px #fff; }
+
+        /* --- RESULT REVEAL MODAL --- */
+        #result-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 600; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px);
+        }
+
+        .res-icon { font-size: 8rem; margin-bottom: 20px; animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .res-title { font-size: 4rem; font-weight: 900; text-transform: uppercase; margin-bottom: 10px; text-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        .res-pts { font-size: 2rem; font-family: 'Roboto Mono', monospace; background: rgba(0,0,0,0.5); padding: 10px 30px; border-radius: 50px; }
+
+        @keyframes popIn { 0% { transform: scale(0); } 80% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+        .res-correct { color: var(--success); }
+        .res-wrong { color: var(--danger); }
+
+        /* --- END SCREEN --- */
+        #end-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-deep); z-index: 1000; display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+        }
+        .end-trophy { font-size: 8rem; margin-bottom: 20px; filter: drop-shadow(0 0 20px #ffaa00); animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+        
+        .end-winner { font-size: 5rem; font-weight: 900; text-transform: uppercase; margin-bottom: 40px; }
+
+    </style>
+</head>
+<body>
+
+<div id="setup-screen">
+    <div class="setup-box">
+        <div class="setup-title">CYBER CLASH</div>
+        <div class="setup-subtitle">ΔΙΕΛΚΥΣΤΙΝΔΑ (TUG OF WAR) | 103 ΕΡΩΤΗΣΕΙΣ ΠΑΝΕΛΛΑΔΙΚΩΝ</div>
+        
+        <div class="team-inputs">
+            <div class="input-wrapper t1">
+                <label>Ομαδα Μπλε (Τ1)</label>
+                <input type="text" id="t1Name" placeholder="HACKERS" autocomplete="off">
+            </div>
+            <div class="input-wrapper t2">
+                <label>Ομαδα Κοκκινη (Τ2)</label>
+                <input type="text" id="t2Name" placeholder="VIRUSES" autocomplete="off">
+            </div>
+        </div>
+        
+        <button class="btn-start" onclick="startGame()">ΕΝΑΡΞΗ ΣΥΓΚΡΟΥΣΗΣ</button>
+    </div>
+</div>
+
+<div id="game-screen">
+    
+    <div class="arena-header">
+        <div class="team-names-row">
+            <div class="team-name-disp t1 active-turn-glow" id="dispT1">TEAM 1</div>
+            <div class="team-name-disp t2" id="dispT2">TEAM 2</div>
+        </div>
+        
+        <div class="tug-track">
+            <div class="tug-fill-t1" id="fillT1" style="width: 50%;"></div>
+            <div class="tug-fill-t2" id="fillT2" style="width: 50%;"></div>
+            <div class="energy-core" id="energyCore" style="left: 50%;"></div>
+        </div>
+    </div>
+
+    <div class="arena-middle">
+        <div class="q-count-badge">ΕΡΩΤΗΣΕΙΣ: <span id="qRemaining">103</span></div>
+
+        <div class="question-card">
+            <div class="q-source-tag" id="qSource">ΠΗΓΗ ΕΡΩΤΗΣΗΣ</div>
+            <div class="q-text" id="qText">Το κείμενο της ερώτησης θα εμφανιστεί εδώ...</div>
+            
+            <div class="options-grid" id="optionsGrid">
+                </div>
+        </div>
+    </div>
+
+    <div id="suspense-overlay">
+        <div class="processing-text" id="suspenseText">ΑΝΑΛΥΣΗ...</div>
+        <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="suspenseBar"></div>
+        </div>
+    </div>
+
+    <div id="result-overlay">
+        <div class="res-icon" id="resIcon">✔️</div>
+        <div class="res-title" id="resTitle">ΣΩΣΤΟ</div>
+        <div class="res-pts" id="resPts">+15 ΕΝΕΡΓΕΙΑ</div>
+    </div>
+
+</div>
+
+<div id="end-screen">
+    <div class="end-trophy">🏆</div>
+    <div class="end-winner" id="endWinnerName" style="color: #fff;">ΟΜΑΔΑ 1 ΝΙΚΑΕΙ!</div>
+    <button class="btn-start" onclick="location.reload()">ΝΕΑ ΑΝΑΜΕΤΡΗΣΗ</button>
+</div>
+
+<script>
+    // --- 100% AUTHENTIC DATABASE (From User Files) ---
+    const rawTF = [
+        {q: "Η περατότητα ενός αλγορίθμου αναφέρεται στο γεγονός ότι καταλήγει στη λύση του προβλήματος μετά από πεπερασμένο αριθμό βημάτων.", a: "Σωστό", src: "Πανελλαδικές 00-02"},
+        {q: "Για να αναπαραστήσουμε τα δεδομένα και τα αποτελέσματα σ’ έναν αλγόριθμο, χρησιμοποιούμε μόνο σταθερές.", a: "Λάθος", src: "Πανελλαδικές 00-02"},
+        {q: "Όλα τα προβλήματα μπορούν να λυθούν με τη βοήθεια ηλεκτρονικού υπολογιστή.", a: "Λάθος", src: "Πανελλαδικές 00-02"},
+        {q: "Το διάγραμμα ροής (flow chart) είναι ένας τρόπος περιγραφής αλγορίθμου.", a: "Σωστό", src: "Πανελλαδικές 00-02"},
+        {q: "Η ομάδα εντολών που περιέχεται σε μια δομή επιλογής μπορεί να μην εκτελεστεί.", a: "Σωστό", src: "Πανελλαδικές 00-02"},
+        {q: "Τα στοιχεία ενός πίνακα μπορεί να είναι διαφορετικού τύπου.", a: "Λάθος", src: "Πανελλαδικές 00-02"},
+        {q: "Στο διάγραμμα ροής το σχήμα του ρόμβου δηλώνει το τέλος ενός αλγορίθμου.", a: "Λάθος", src: "Πανελλαδικές 00-02"},
+        {q: "Η εντολή εκχώρησης τιμής αποδίδει το αποτέλεσμα μιας έκφρασης σε μια μεταβλητή.", a: "Σωστό", src: "Πανελλαδικές 00-02"},
+        {q: "Η συνθήκη που ελέγχεται σε μια δομή επιλογής μπορεί να πάρει περισσότερες από δύο διαφορετικές τιμές.", a: "Λάθος", src: "Πανελλαδικές 00-02"},
+        {q: "Σε μια εντολή εκχώρησης είναι δυνατόν μια παράσταση στο δεξιό μέλος να περιέχει τη μεταβλητή που βρίσκεται στο αριστερό μέλος.", a: "Σωστό", src: "Πανελλαδικές 00-02"},
+        {q: "Η τιμή μιας μεταβλητής δε μπορεί να αλλάξει κατά τη διάρκεια εκτέλεσης ενός αλγορίθμου.", a: "Λάθος", src: "Πανελλαδικές 00-02"},
+        {q: "Με τον όρο δεδομένο αναφέρεται οποιοδήποτε γνωσιακό στοιχείο προέρχεται από επεξεργασία δεδομένων.", a: "Λάθος", src: "Πανελλαδικές 00-02"},
+        {q: "Σκοπός της συγχώνευσης δύο ταξινομημένων πινάκων είναι η δημιουργία ενός τρίτου ταξινομημένου πίνακα.", a: "Σωστό", src: "Πανελλαδικές 00-02"},
+        {q: "Τα λογικά λάθη είναι συνήθως λάθη σχεδιασμού και δεν προκαλούν τη διακοπή της εκτέλεσης του προγράμματος.", a: "Σωστό", src: "Πανελλαδικές 00-02"},
+        {q: "Σε ένα μεγάλο πρόγραμμα, η άσκοπη χρήση μεγάλων πινάκων μπορεί να οδηγήσει σε αδυναμία εκτέλεσης.", a: "Σωστό", src: "Πανελλαδικές 00-02"},
+        {q: "Οι δυναμικές δομές έχουν σταθερό μέγεθος.", a: "Λάθος", src: "Πανελλαδικές 00-02"},
+        {q: "Η δυαδική αναζήτηση στοιχείου σε ταξινομημένο πίνακα ακολουθεί τη μέθοδο σχεδίασης «ΔΙΑΙΡΕΙ ΚΑΙ ΒΑΣΙΛΕΥΕ».", a: "Σωστό", src: "Πανελλαδικές 2025"},
+        {q: "Στην περίπτωση που κατά την ανάγνωση ενός ακεραίου εισαχθεί γράμμα, προκύπτει λάθος που οδηγεί σε αντικανονικό τερματισμό.", a: "Σωστό", src: "Πανελλαδικές 2025"},
+        {q: "Ο διερμηνευτής παράγει το αντικείμενο πρόγραμμα.", a: "Λάθος", src: "Πανελλαδικές 2025"},
+        {q: "Η εντολή X <- 'α' < 'β' είναι έγκυρη εντολή της ΓΛΩΣΣΑΣ.", a: "Σωστό", src: "Πανελλαδικές 2025"},
+        {q: "Σε μια λογική έκφραση οι λογικές πράξεις εκτελούνται πριν τις αριθμητικές πράξεις.", a: "Λάθος", src: "Πανελλαδικές 2025"},
+        {q: "Ο μεταγλωττιστής εντοπίζει τα λογικά λάθη.", a: "Λάθος", src: "Πανελλαδικές 2025"},
+        {q: "Η παράλειψη δήλωσης μιας μεταβλητής αποτελεί συντακτικό λάθος.", a: "Σωστό", src: "Πανελλαδικές 2025"},
+        {q: "Με τον όρο δομή ενός προβλήματος αναφερόμαστε στον επακριβή προσδιορισμό των δεδομένων και των ζητούμενων.", a: "Σωστό", src: "Πανελλαδικές 2025"},
+        {q: "Ένα από τα πλεονεκτήματα του δομημένου προγραμματισμού είναι η ευκολότερη διόρθωση και συντήρηση.", a: "Σωστό", src: "Πανελλαδικές 2025"},
+        {q: "Δεν είναι δυνατό να υπάρχει τυχαία προσπέλαση σε μια απλά συνδεδεμένη λίστα.", a: "Σωστό", src: "Πανελλαδικές 2025"},
+        {q: "Στην πολλαπλή επιλογή ΑΝ…ΤΟΤΕ…ΑΛΛΙΩΣ_ΑΝ θα ελεγχθούν υποχρεωτικά όλες οι συνθήκες.", a: "Λάθος", src: "Πανελλαδικές 2024"},
+        {q: "Οι δυναμικές δομές αποθηκεύονται σε συνεχόμενες θέσεις μνήμης.", a: "Λάθος", src: "Πανελλαδικές 2024"},
+        {q: "Η απώθηση είναι μια από τις λειτουργίες της ουράς.", a: "Λάθος", src: "Πανελλαδικές 2024"},
+        {q: "Το στάδιο κατανόησης ενός προβλήματος προηγείται από το στάδιο ανάλυσής του.", a: "Σωστό", src: "Πανελλαδικές 2024"},
+        {q: "Κάθε δένδρο είναι γράφος.", a: "Σωστό", src: "Πανελλαδικές 2024"},
+        {q: "Το αντικείμενο πρόγραμμα παράγεται από τον μεταγλωττιστή.", a: "Σωστό", src: "Πανελλαδικές 2024"},
+        {q: "Σε ένα δυαδικό δένδρο κάθε κόμβος έχει 0, 1 ή 2 υποδένδρα.", a: "Σωστό", src: "Πανελλαδικές 2024"},
+        {q: "Η ενθυλάκωση υποδηλώνει ότι οι εσωτερικές λειτουργίες ενός αντικειμένου είναι ορατές στον έξω κόσμο.", a: "Λάθος", src: "Πανελλαδικές 2024"},
+        {q: "Η ώθηση ενός στοιχείου γίνεται στην κορυφή της στοίβας.", a: "Σωστό", src: "Πανελλαδικές 2024"},
+        {q: "Το όχημα είναι υποκλάση του αυτοκινήτου.", a: "Λάθος", src: "Πανελλαδικές 2024"},
+        {q: "Οποιαδήποτε εντολή επανάληψης ΟΣΟ…ΕΠΑΝΑΛΑΒΕ μπορεί να μετατραπεί σε εντολή ΓΙΑ.", a: "Λάθος", src: "Πανελλαδικές 2023"},
+        {q: "Η μέθοδος επεξεργασίας «πρώτο μέσα πρώτο έξω» (FIFO) εφαρμόζεται στη δομή δεδομένων ΟΥΡΑ.", a: "Σωστό", src: "Πανελλαδικές 2023"},
+        {q: "Κάθε συνάρτηση επιστρέφει μόνο μια τιμή.", a: "Σωστό", src: "Πανελλαδικές 2023"},
+        {q: "Η έκφραση A MOD 5 είναι συντακτικά σωστή στη ΓΛΩΣΣΑ, όταν το Α είναι πραγματική μεταβλητή.", a: "Λάθος", src: "Πανελλαδικές 2023"},
+        {q: "Σε μια λίστα τα στοιχεία δεν μπορούν να προστεθούν στην αρχή ή στο τέλος της, παρά μόνο στη μέση της.", a: "Λάθος", src: "Πανελλαδικές 2023"},
+        {q: "Σε μια λίστα δεν χρειάζεται να οριστεί ένα αρχικό μέγεθος.", a: "Σωστό", src: "Πανελλαδικές 2023"},
+        {q: "Ο έλεγχος «μαύρο κουτί» μπορεί να εφαρμοστεί και σε υποπρογράμματα.", a: "Σωστό", src: "Πανελλαδικές 2023"},
+        {q: "Ο δομημένος προγραμματισμός στηρίζεται στη χρήση δύο και μόνο στοιχειωδών λογικών δομών.", a: "Λάθος", src: "Πανελλαδικές 2023"},
+        {q: "Ο βρόχος ΓΙΑ κ ΑΠΟ 5 ΜΕΧΡΙ 1 δεν εκτελείται καμία φορά (χωρίς βήμα).", a: "Σωστό", src: "Πανελλαδικές 2023"},
+        {q: "Η τεχνική ελέγχου μαύρου κουτιού βασίζεται στην αναζήτηση λαθών με εξέταση του κώδικα.", a: "Λάθος", src: "Πανελλαδικές 2022"},
+        {q: "Ένα από τα πλεονεκτήματα του τμηματικού προγραμματισμού είναι ότι απαιτεί λιγότερο χρόνο και προσπάθεια.", a: "Σωστό", src: "Πανελλαδικές 2022"},
+        {q: "Η σειριακή αναζήτηση ακολουθεί την τεχνική «διαίρει και βασίλευε».", a: "Λάθος", src: "Πανελλαδικές 2022"},
+        {q: "Μια απλά συνδεδεμένη λίστα μπορούμε να την διατρέξουμε και προς τις δύο κατευθύνσεις.", a: "Λάθος", src: "Πανελλαδικές 2022"},
+        {q: "Η χρήση του διερμηνευτή καθιστά την εκτέλεση του προγράμματος πιο αργή.", a: "Σωστό", src: "Πανελλαδικές 2022"},
+        {q: "Η συνδεδεμένη λίστα αποτελείται από κόμβους που βρίσκονται υποχρεωτικά σε συνεχόμενες θέσεις μνήμης.", a: "Λάθος", src: "Πανελλαδικές 2022"},
+        {q: "Η ώθηση ενός στοιχείου σε γεμάτη στοίβα είναι συντακτικό λάθος.", a: "Λάθος", src: "Πανελλαδικές 2022"},
+        {q: "Τα ονόματα των μεταβλητών είναι χρήσιμο να παραπέμπουν στο περιεχόμενό τους.", a: "Σωστό", src: "Πανελλαδικές 2022"},
+        {q: "Η δυαδική αναζήτηση σε ταξινομημένο πίνακα εκτελεί πάντα λιγότερες επαναλήψεις από τη σειριακή.", a: "Λάθος", src: "Πανελλαδικές 2022"},
+        {q: "Η μέθοδος σχεδίασης «διαίρει και βασίλευε» ακολουθεί την προσέγγιση «από πάνω προς τα κάτω».", a: "Σωστό", src: "Πανελλαδικές 2022"},
+        {q: "Η σύγκριση ‘ΠΕΝΤΕ’ < ‘ΕΠΤΑ’ δίνει την τιμή ΑΛΗΘΗΣ.", a: "Λάθος", src: "Πανελλαδικές 2021"},
+        {q: "Σε ένα πρόγραμμα σε ΓΛΩΣΣΑ η δήλωση των σταθερών προηγείται της δήλωσης των μεταβλητών.", a: "Σωστό", src: "Πανελλαδικές 2021"},
+        {q: "Η λίστα των τυπικών παραμέτρων καθορίζει τις παραμέτρους στη δήλωση του υποπρογράμματος.", a: "Σωστό", src: "Πανελλαδικές 2021"},
+        {q: "Η μέθοδος επεξεργασίας ‘Τελευταίο Μέσα, Πρώτο Έξω’ (LIFO) εφαρμόζεται στη στοίβα.", a: "Σωστό", src: "Πανελλαδικές 2021"},
+        {q: "Οι εντολές που βρίσκονται στον βρόχο μιας εντολής ΓΙΑ εκτελούνται τουλάχιστον μία φορά.", a: "Λάθος", src: "Πανελλαδικές 2021"},
+        {q: "Σε έναν αλγόριθμο στον οποίο υπάρχει μόνο η δομή ακολουθίας κάθε εντολή εκτελείται ακριβώς μια φορά.", a: "Σωστό", src: "Πανελλαδικές 2021"},
+        {q: "Ένας αλγόριθμος είναι μία πεπερασμένη σειρά ενεργειών.", a: "Σωστό", src: "Πανελλαδικές 2003"},
+        {q: "Οι ενέργειες που ορίζει ένας αλγόριθμος είναι αυστηρά καθορισμένες.", a: "Σωστό", src: "Πανελλαδικές 2003"},
+        {q: "Η έννοια του αλγόριθμου συνδέεται αποκλειστικά με την Πληροφορική.", a: "Λάθος", src: "Πανελλαδικές 2003"},
+        {q: "Ο αλγόριθμος τελειώνει μετά από πεπερασμένα βήματα.", a: "Σωστό", src: "Πανελλαδικές 2003"},
+        {q: "Ένα πρόγραμμα σε γλώσσα μηχανής είναι μια ακολουθία δυαδικών ψηφίων.", a: "Σωστό", src: "Πανελλαδικές 2004"},
+        {q: "Ο μεταγλωττιστής δέχεται πρόγραμμα σε γλώσσα υψηλού επιπέδου και παράγει ισοδύναμο σε γλώσσα μηχανής.", a: "Σωστό", src: "Πανελλαδικές 2004"},
+        {q: "Ο διερμηνευτής διαβάζει μία προς μία τις εντολές και εκτελεί αμέσως.", a: "Σωστό", src: "Πανελλαδικές 2004"},
+        {q: "Η ουρά και η στοίβα μπορούν να υλοποιηθούν με δομή πίνακα.", a: "Σωστό", src: "Πανελλαδικές 2004"},
+        {q: "Η εξαγωγή στοιχείου γίνεται από το εμπρός άκρο της ουράς.", a: "Σωστό", src: "Πανελλαδικές 2004"},
+        {q: "Η λογική πράξη 'ή' είναι ψευδής, όταν οποιαδήποτε από τις δύο προτάσεις είναι ψευδής.", a: "Λάθος", src: "Πανελλαδικές 2004"},
+        {q: "Η ταξινόμηση φυσαλίδας είναι ο πιο απλός και ταυτόχρονα ο πιο γρήγορος αλγόριθμος ταξινόμησης.", a: "Λάθος", src: "Πανελλαδικές 2006"},
+        {q: "Ενώ η τιμή μίας μεταβλητής μπορεί να αλλάζει, ο τύπος της μένει αναλλοίωτος.", a: "Σωστό", src: "Πανελλαδικές 2006"},
+        {q: "Η στοίβα χρησιμοποιεί δύο δείκτες.", a: "Λάθος", src: "Πανελλαδικές 2007"},
+        {q: "Η σύγκριση λογικών δεδομένων έχει έννοια μόνο στην περίπτωση του ίσου (=) και του διάφορου (<>).", a: "Σωστό", src: "Πανελλαδικές 2007"},
+        {q: "Όταν ένα υποπρόγραμμα καλείται, η διεύθυνση επιστροφής αποθηκεύεται σε μια ουρά.", a: "Λάθος", src: "Πανελλαδικές 2007"},
+        {q: "Η καταγραφή της δομής ενός προβλήματος σημαίνει ότι έχει αρχίσει η ανάλυση σε απλούστερα.", a: "Σωστό", src: "Πανελλαδικές 2008"},
+        {q: "Στη διαδικασία η λίστα παραμέτρων είναι υποχρεωτική.", a: "Λάθος", src: "Πανελλαδικές 2008"},
+        {q: "Τα προβλήματα διακρίνονται σε τρεις κατηγορίες: επιλύσιμα, ανοικτά και άλυτα.", a: "Σωστό", src: "Πανελλαδικές 2008"},
+        {q: "Η εγγραφή είναι δομή δεδομένων η οποία αποτελείται από πεδία.", a: "Σωστό", src: "Πανελλαδικές 2008"},
+        {q: "Η αντικειμενοστραφής σχεδίαση εκλαμβάνει τις «ενέργειες» ως πρωτεύοντα δομικά στοιχεία.", a: "Λάθος", src: "Πανελλαδικές 2008"},
+        {q: "Ο τελεστής ΚΑΙ αντιστοιχεί στη λογική πράξη της σύζευξης.", a: "Σωστό", src: "Πανελλαδικές 2009"},
+        {q: "Σε μια λογική έκφραση, οι συγκριτικοί τελεστές έχουν χαμηλότερη ιεραρχία από τους λογικούς.", a: "Λάθος", src: "Πανελλαδικές 2009"},
+        {q: "Η ταξινόμηση φυσαλίδας βασίζεται στην αντιμετάθεση ζευγών γειτονικών στοιχείων.", a: "Σωστό", src: "Πανελλαδικές 2010"},
+        {q: "Ένα δομημένο πρόβλημα είναι επιλύσιμο.", a: "Σωστό", src: "Πανελλαδικές 2011"},
+        {q: "Η λογική έκφραση Χ Ή (ΟΧΙ Χ) είναι πάντα αληθής.", a: "Σωστό", src: "Πανελλαδικές 2011"},
+        {q: "Ένας πίνακας έχει σταθερό περιεχόμενο αλλά μεταβλητό μέγεθος.", a: "Λάθος", src: "Πανελλαδικές 2012"},
+        {q: "Ένας αλγόριθμος μπορεί να μην έχει έξοδο.", a: "Λάθος", src: "Πανελλαδικές 2012"},
+        {q: "Ο τελεστής DIV χρησιμοποιείται για τον υπολογισμό του υπολοίπου της ακέραιας διαίρεσης.", a: "Λάθος", src: "Πανελλαδικές 2015"}
+    ];
+
+    const rawCh6 = [
+        {q: "Ποιο πρόγραμμα συνδέει το Αντικείμενο Πρόγραμμα με τις έτοιμες Βιβλιοθήκες;", opts: ["Ο Μεταγλωττιστής", "Ο Συνδέτης", "Ο Συντάκτης", "Ο Διερμηνευτής"], a: "Ο Συνδέτης", src: "Θεωρία Κεφ. 6"},
+        {q: "Τι συμβαίνει αν ο Μεταγλωττιστής εντοπίσει Συντακτικά Λάθη στο πηγαίο πρόγραμμα;", opts: ["Παράγει το Εκτελέσιμο αλλά με σφάλματα.", "Αγνοεί τα λάθη και συνεχίζει στο Αντικείμενο πρόγραμμα.", "Δεν προχωράει και επιστρέφει λίστα λαθών."], a: "Δεν προχωράει και επιστρέφει λίστα λαθών.", src: "Θεωρία Κεφ. 6"},
+        {q: "Αν το Εκτελέσιμο Πρόγραμμα βγάζει λάθος αποτελέσματα (Λογικό Λάθος), από πού ξεκινάει πάλι η διαδικασία;", opts: ["Από τον Συνδέτη", "Από τον Μεταγλωττιστή", "Από την αρχή (στον Συντάκτη)"], a: "Από την αρχή (στον Συντάκτη)", src: "Θεωρία Κεφ. 6"},
+        {q: "Ποια είναι η διαφορά Μεταγλωττιστή και Διερμηνευτή;", opts: ["Ο Διερμηνευτής εκτελεί το πρόγραμμα εντολή-εντολή.", "Δεν υπάρχει διαφορά.", "Ο Διερμηνευτής παράγει Εκτελέσιμο πρόγραμμα."], a: "Ο Διερμηνευτής εκτελεί το πρόγραμμα εντολή-εντολή.", src: "Θεωρία Κεφ. 6"},
+        {q: "Στον Δομημένο Προγραμματισμό, ποιες είναι οι 3 βασικές λογικές δομές;", opts: ["Είσοδος, Επεξεργασία, Έξοδος", "Ακολουθία, Επιλογή, Επανάληψη", "Κλάσεις, Ιδιότητες, Μέθοδοι"], a: "Ακολουθία, Επιλογή, Επανάληψη", src: "Θεωρία Κεφ. 6"},
+        {q: "Το αντικείμενο πρόγραμμα είναι σε γλώσσα μηχανής.", opts: ["Σωστό", "Λάθος"], a: "Σωστό", src: "Θεωρία Κεφ. 6"},
+        {q: "Η χρήση του διερμηνευτή καθιστά την εκτέλεση του προγράμματος πιο αργή.", opts: ["Σωστό", "Λάθος"], a: "Σωστό", src: "Θεωρία Κεφ. 6"},
+        {q: "Ο μεταγλωττιστής εντοπίζει τα λογικά λάθη.", opts: ["Σωστό", "Λάθος"], a: "Λάθος", src: "Θεωρία Κεφ. 6"},
+        {q: "Τα λογικά λάθη δεν προκαλούν τη διακοπή της εκτέλεσης του προγράμματος.", opts: ["Σωστό", "Λάθος"], a: "Σωστό", src: "Θεωρία Κεφ. 6"},
+        {q: "Η δημιουργία του εκτελέσιμου προγράμματος γίνεται μόνο αν το αρχικό δεν περιέχει λογικά λάθη.", opts: ["Σωστό", "Λάθος"], a: "Λάθος", src: "Θεωρία Κεφ. 6"},
+        {q: "Τα λογικά λάθη εμφανίζονται στο στάδιο της μεταγλώττισης.", opts: ["Σωστό", "Λάθος"], a: "Λάθος", src: "Θεωρία Κεφ. 6"},
+        {q: "Το πρόγραμμα Συντάκτης εντοπίζει τα συντακτικά λάθη.", opts: ["Σωστό", "Λάθος"], a: "Λάθος", src: "Θεωρία Κεφ. 6"},
+        {q: "Το πρόγραμμα που παράγεται από το μεταγλωττιστή λέγεται εκτελέσιμο.", opts: ["Σωστό", "Λάθος"], a: "Λάθος", src: "Θεωρία Κεφ. 6"},
+        {q: "Ένα πρόγραμμα σε γλώσσα μηχανής είναι μια ακολουθία δυαδικών ψηφίων.", opts: ["Σωστό", "Λάθος"], a: "Σωστό", src: "Θεωρία Κεφ. 6"},
+        {q: "Το πηγαίο πρόγραμμα εκτελείται από τον υπολογιστή χωρίς μεταγλώττιση.", opts: ["Σωστό", "Λάθος"], a: "Λάθος", src: "Θεωρία Κεφ. 6"}
+    ];
+
+    // Combine all into the final Deck
+    let deck = [];
+    rawTF.forEach(i => deck.push({ q: i.q, opts: ["Σωστό", "Λάθος"], a: i.a, src: i.src }));
+    rawCh6.forEach(i => deck.push({ q: i.q, opts: i.opts, a: i.a, src: i.src }));
+
+    // --- GAME STATE ---
+    let t1Name = "TEAM 1", t2Name = "TEAM 2";
+    let score = 50; // Tug of War: 0 = T1 Wins, 100 = T2 Wins. Starts at 50.
+    let turn = 1; // 1 = T1, 2 = T2
+    let currQ = null;
+
+    // --- SOUND SYSTEM (Robust & Fail-safe) ---
+    let audioCtx = null;
+
+    function playBeep(freq, type, duration) {
+        try {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = type;
+            osc.frequency.value = freq;
+            
+            // Safe envelope to avoid popping and errors
+            gain.gain.setValueAtTime(1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        } catch (e) {
+            // Silently fail if audio is blocked by browser policies
+            console.warn("Audio skipped: Browser policy or unsupported.");
+        }
+    }
+
+    // --- INITIALIZATION ---
+    function startGame() {
+        let n1 = document.getElementById('t1Name').value.trim();
+        let n2 = document.getElementById('t2Name').value.trim();
+        if(n1) t1Name = n1.toUpperCase();
+        if(n2) t2Name = n2.toUpperCase();
+
+        document.getElementById('dispT1').innerText = t1Name;
+        document.getElementById('dispT2').innerText = t2Name;
+
+        deck.sort(() => 0.5 - Math.random()); // Shuffle questions
+
+        document.getElementById('setup-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = 'flex';
+        
+        // Initialize AudioContext safely on first user click
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) audioCtx = new AudioContext();
+        } catch(e) {}
+
+        updateUI();
+        loadNextQuestion();
+    }
+
+    function updateUI() {
+        let fill1 = document.getElementById('fillT1');
+        let fill2 = document.getElementById('fillT2');
+        let core = document.getElementById('energyCore');
+
+        // Update Tug of War Bar
+        fill1.style.width = score + '%';
+        fill2.style.width = (100 - score) + '%';
+        core.style.left = score + '%';
+
+        // Update Turn Highlight
+        const disp1 = document.getElementById('dispT1');
+        const disp2 = document.getElementById('dispT2');
+        
+        if (turn === 1) {
+            disp1.classList.add('active-turn-glow');
+            disp2.classList.remove('active-turn-glow');
+        } else {
+            disp2.classList.add('active-turn-glow');
+            disp1.classList.remove('active-turn-glow');
+        }
+
+        document.getElementById('qRemaining').innerText = deck.length;
+    }
+
+    function loadNextQuestion() {
+        if(deck.length === 0) {
+            endGame(score < 50 ? t1Name : t2Name);
+            return;
+        }
+
+        currQ = deck.pop();
+        document.getElementById('qSource').innerText = currQ.src;
+        document.getElementById('qText').innerText = currQ.q;
+
+        const grid = document.getElementById('optionsGrid');
+        grid.innerHTML = '';
+
+        let opts = [...currQ.opts];
+        if (opts.length > 2) opts.sort(() => 0.5 - Math.random());
+
+        opts.forEach(opt => {
+            let btn = document.createElement('button');
+            btn.className = 'opt-btn';
+            btn.innerText = opt;
+            btn.onclick = () => handleAnswer(opt);
+            grid.appendChild(btn);
+        });
+    }
+
+    async function handleAnswer(selectedAns) {
+        // 1. Lock UI
+        const btns = document.querySelectorAll('.opt-btn');
+        btns.forEach(b => b.classList.add('locked'));
+
+        // 2. Play Suspense Modal
+        const suspense = document.getElementById('suspense-overlay');
+        const sBar = document.getElementById('suspenseBar');
+        suspense.style.display = 'flex';
+        
+        playBeep(300, 'square', 0.2); // Beep works safely now!
+        
+        sBar.style.transition = 'width 0s';
+        sBar.style.width = '0%';
+        await new Promise(r => setTimeout(r, 50));
+        
+        sBar.style.transition = 'width 2s cubic-bezier(0.4, 0, 0.2, 1)';
+        sBar.style.width = '100%';
+        
+        // Wait for suspense bar
+        await new Promise(r => setTimeout(r, 2000));
+        suspense.style.display = 'none';
+
+        // 3. Evaluate
+        const isCorrect = (selectedAns === currQ.a);
+        
+        const resOverlay = document.getElementById('result-overlay');
+        const resTitle = document.getElementById('resTitle');
+        const resIcon = document.getElementById('resIcon');
+        const resPts = document.getElementById('resPts');
+
+        resOverlay.style.display = 'flex';
+
+        if (isCorrect) {
+            playBeep(800, 'sine', 0.5);
+            resIcon.innerText = '✔️';
+            resTitle.innerText = 'ΣΩΣΤΟ';
+            resTitle.className = 'res-title res-correct';
+            resPts.innerText = 'Ο ΠΥΡΗΝΑΣ ΤΡΑΒΗΧΤΗΚΕ (+15%)';
+            resPts.style.color = 'var(--success)';
+            
+            // Move Score
+            if(turn === 1) score = Math.max(0, score - 15); // T1 pulls left
+            else score = Math.min(100, score + 15);         // T2 pulls right
+            
+        } else {
+            playBeep(150, 'sawtooth', 0.8);
+            document.body.classList.add('shake');
+            setTimeout(() => document.body.classList.remove('shake'), 500);
+
+            resIcon.innerText = '❌';
+            resTitle.innerText = 'ΛΑΘΟΣ';
+            resTitle.className = 'res-title res-wrong';
+            resPts.innerText = 'Ο ΠΥΡΗΝΑΣ ΓΛΙΣΤΡΗΣΕ (-10%)';
+            resPts.style.color = 'var(--danger)';
+            
+            // Penalty
+            if(turn === 1) score = Math.min(100, score + 10); 
+            else score = Math.max(0, score - 10);             
+        }
+
+        updateUI();
+
+        // Check Win Condition immediately
+        if (score <= 0) {
+            await new Promise(r => setTimeout(r, 1500));
+            endGame(t1Name);
+            return;
+        } else if (score >= 100) {
+            await new Promise(r => setTimeout(r, 1500));
+            endGame(t2Name);
+            return;
+        }
+
+        // 4. Wait and move to next turn
+        await new Promise(r => setTimeout(r, 2500));
+        resOverlay.style.display = 'none';
+        
+        turn = (turn === 1) ? 2 : 1;
+        updateUI();
+        loadNextQuestion();
+    }
+
+    function endGame(winnerName) {
+        document.getElementById('game-screen').style.display = 'none';
+        document.getElementById('suspense-overlay').style.display = 'none';
+        document.getElementById('result-overlay').style.display = 'none';
+        
+        const endScreen = document.getElementById('end-screen');
+        endScreen.style.display = 'flex';
+        
+        const winTitle = document.getElementById('endWinnerName');
+        winTitle.innerText = `ΚΥΡΙΑΡΧΙΑ: ${winnerName}!`;
+        
+        if(winnerName === t1Name) winTitle.style.color = 'var(--team1-base)';
+        else winTitle.style.color = 'var(--team2-base)';
+
+        playBeep(400, 'sine', 0.2);
+        setTimeout(() => playBeep(600, 'sine', 0.4), 200);
+        setTimeout(() => playBeep(800, 'sine', 1), 600);
+    }
+
+</script>
+</body>
+</html>
