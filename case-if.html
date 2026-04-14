@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Πολλαπλή Δομή Επιλογής: ΕΠΙΛΕΞΕ</title>
+    <style>
+        :root {
+            --primary: #3b82f6; 
+            --primary-hover: #2563eb;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --bg-color: #f1f5f9;
+            --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            
+            --success-color: #10b981; 
+            --highlight: #fde047;
+            --highlight-text: #000000;
+            
+            --code-kw: #0000CD; 
+            --code-str: #A020F0;
+            --code-num: #008000;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --text-dark: #f1f5f9;
+            --text-light: #94a3b8;
+            --panel-bg: #1e293b;
+            --border-color: #334155;
+            --code-kw: #60a5fa;
+            --code-str: #f472b6;
+            --code-num: #34d399;
+            --highlight: #475569;
+            --highlight-text: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            margin: 0; padding: 10px; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* --- Header / Toolbar --- */
+        header {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 15px;
+            display: flex; justify-content: space-between; align-items: center;
+            height: 60px; box-sizing: border-box; flex-shrink: 0;
+            margin-bottom: 10px; z-index: 100;
+        }
+
+        .header-title { font-weight: 800; font-size: 1.1rem; color: var(--primary); display: flex; align-items: center; }
+        .toolbar-spacer { flex: 1; }
+
+        .controls-area { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+        .tool-btn {
+            background-color: var(--panel-bg); color: var(--text-dark); border: 1px solid var(--border-color);
+            padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;
+            transition: 0.2s; font-size: 0.85rem; display: flex; align-items: center; gap: 5px;
+        }
+        .tool-btn:hover:not(:disabled) { background-color: var(--border-color); }
+        .tool-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-run { background-color: var(--success-color); color: white; border-color: var(--success-color); }
+        .btn-run:hover:not(:disabled) { filter: brightness(0.9); }
+        
+        .convert-btn-group {
+            display: flex; gap: 10px; justify-content: center; margin-top: 15px;
+        }
+        .btn-convert { 
+            background-color: #8b5cf6; color: white; border: none; padding: 10px 15px; 
+            font-size: 0.95rem; border-radius: 6px; cursor: pointer; transition: 0.2s;
+            box-shadow: 0 4px 6px rgba(139, 92, 246, 0.3); font-weight: bold;
+        }
+        .btn-convert:hover:not(:disabled) { background-color: #7c3aed; transform: translateY(-2px); }
+        .btn-convert:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none;}
+
+        .input-group {
+            display: flex; align-items: center; gap: 5px;
+            background: rgba(59, 130, 246, 0.1); padding: 4px 8px;
+            border-radius: 6px; border: 1px solid var(--primary);
+        }
+        .input-group label { font-weight: bold; font-size: 0.85rem; color: var(--primary); }
+        .input-group input {
+            width: 45px; padding: 4px; border: 1px solid var(--border-color);
+            border-radius: 4px; font-weight: bold; text-align: center;
+            background: var(--panel-bg); color: var(--text-dark);
+        }
+
+        .speed-group { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin-left: 5px;}
+        .speed-slider { width: 70px; cursor: pointer; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex; flex: 1; padding: 0; gap: 10px; min-height: 0; box-sizing: border-box;
+        }
+
+        .col {
+            background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: 0.3s;
+        }
+
+        /* LEFT: Syntax & Rules */
+        .col-left { flex: 0 0 250px; padding: 15px; overflow-y: auto; }
+        .panel-title { font-size: 1.05rem; font-weight: bold; margin-bottom: 12px; color: var(--primary); border-bottom: 2px solid var(--border-color); padding-bottom: 5px;}
+        
+        .syntax-box { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; font-family: monospace; font-size: 0.85rem; line-height: 1.5; margin-bottom: 15px; font-weight: bold;}
+        .syntax-box .kw { color: var(--code-kw); }
+
+        .info-block { font-size: 0.85rem; line-height: 1.5; color: var(--text-dark); }
+        .info-block strong { color: var(--primary); }
+        .info-block ul { padding-left: 20px; margin-top: 5px; margin-bottom: 10px;}
+        .info-block li { margin-bottom: 8px; }
+        .info-block em { color: var(--text-light); font-size: 0.8rem; display: block; margin-top: 2px;}
+
+        /* MID: Conversion Area */
+        .col-mid { flex: 1; display: flex; flex-direction: column; padding: 15px; }
+        
+        .tabs { display: flex; background: var(--bg-color); border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); margin-bottom: 15px; flex-shrink: 0;}
+        .tab { flex: 1; text-align: center; padding: 10px; font-size: 0.9rem; cursor: pointer; font-weight: bold; color: var(--text-light); transition: 0.2s;}
+        .tab.active { background: var(--primary); color: white; }
+
+        .narrative {
+            padding: 10px 15px; margin-bottom: 15px; background: rgba(245, 158, 11, 0.1); 
+            border-left: 4px solid #f59e0b; font-size: 0.95rem; font-style: italic; min-height: 40px;
+            display: flex; align-items: center; flex-shrink: 0; font-weight: bold; color: var(--text-dark);
+            transition: all 0.3s ease;
+        }
+
+        .code-compare-area { display: flex; gap: 15px; flex: 1; min-height: 0; }
+        .code-box-wrapper { flex: 1; display: flex; flex-direction: column; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background: #fff;}
+        .code-box-title { background: #f1f5f9; padding: 8px; font-weight: bold; text-align: center; border-bottom: 1px solid var(--border-color); color: #1e293b; font-size: 0.9rem;}
+        body.dark-mode .code-box-wrapper { background: #1e293b; }
+        body.dark-mode .code-box-title { background: #0f172a; color: #f1f5f9; }
+        
+        .code-content { flex: 1; padding: 10px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 0.9rem; line-height: 1.6; white-space: pre; }
+        
+        /* 100% πιο αργή μετάβαση όταν ενεργοποιείται το "Βήμα-Βήμα" */
+        .code-line { padding: 1px 6px; border-radius: 3px; border-left: 3px solid transparent; transition: all 0.3s ease; }
+        .slow-anim .code-line { transition: all 0.6s ease; } /* 0.6s αντί για 0.3s */
+        
+        .code-line.active { background-color: var(--highlight); color: var(--highlight-text); font-weight: bold; border-left-color: #f59e0b;}
+
+        /* RIGHT: Trace & Console */
+        .col-right { flex: 0 0 240px; display: flex; flex-direction: column; background: #ffffff !important;}
+        body.dark-mode .col-right { background: #0f172a !important; }
+        
+        .trace-area { padding: 15px; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
+        .trace-table { width: 100%; border-collapse: collapse; text-align: center; font-size: 0.95rem; margin-top: 10px;}
+        .trace-table th { background: rgba(59, 130, 246, 0.1); color: var(--primary); padding: 8px; border: 1px solid var(--border-color); }
+        .trace-table td { padding: 8px; border: 1px solid var(--border-color); font-weight: bold; font-family: monospace; font-size: 1.1rem; color: var(--text-dark);}
+
+        .console-area { flex: 1; padding: 15px; display: flex; flex-direction: column; min-height: 0;}
+        .console-screen { flex: 1; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; font-family: monospace; font-size: 0.9rem; overflow-y: auto; color: #1e293b;}
+        body.dark-mode .console-screen { background: #1e293b; color: #f1f5f9; }
+        .log-item { border-bottom: 1px solid rgba(0,0,0,0.05); padding: 3px 0; }
+
+        .kw { color: #0000CD; font-weight: bold; } body.dark-mode .kw { color: #60a5fa; }
+        .str { color: #A020F0; } body.dark-mode .str { color: #f472b6; }
+        .num { color: #008000; font-weight: bold; } body.dark-mode .num { color: #34d399; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">Πολλαπλή δομή επιλογής: ΕΠΙΛΕΞΕ</div>
+    <div class="toolbar-spacer"></div>
+
+    <div class="controls-area">
+        <div class="input-group">
+            <label id="lblVar">χ:</label>
+            <input type="number" id="inpX" value="4">
+        </div>
+        
+        <button class="tool-btn" id="btnReset" onclick="initApp()">🔄 Αρχή</button>
+        <button class="tool-btn btn-run" id="btnAuto" onclick="toggleAutoExec()" disabled>▶ Αυτόματη Εκτέλεση</button>
+        <button class="tool-btn" id="btnStep" onclick="stepExec()" disabled>⏭ Βήμα Εκτέλεσης</button>
+        
+        <div class="speed-group">
+            <label>Ταχύτητα:</label>
+            <input type="range" id="speedSlider" class="speed-slider" min="1" max="5" value="3">
+        </div>
+        
+        <button class="tool-btn" id="btnTheme" onclick="toggleTheme()" style="margin-left: 5px;" title="Αλλαγή Θέματος">🌙</button>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col col-left">
+        <div class="panel-title">Σύνταξη</div>
+        
+        <div class="syntax-box">
+            <span class="kw">ΕΠΙΛΕΞΕ</span> έκφραση<br>
+            &nbsp;&nbsp;<span class="kw">ΠΕΡΙΠΤΩΣΗ</span> λίστα_τιμών_1<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;εντολές_1<br>
+            &nbsp;&nbsp;...<br>
+            &nbsp;&nbsp;<span class="kw">ΠΕΡΙΠΤΩΣΗ ΑΛΛΙΩΣ</span><br>
+            &nbsp;&nbsp;&nbsp;&nbsp;εντολές_αλλιώς<br>
+            <span class="kw">ΤΕΛΟΣ_ΕΠΙΛΟΓΩΝ</span>
+        </div>
+
+        <div class="info-block">
+            <strong>Όπου έκφραση:</strong><br>
+            μεταβλητή, ή αριθμητική πράξη, ή λογική πράξη.<br><br>
+            
+            <strong>Όπου λίστα τιμών:</strong>
+            <ul>
+                <li><strong>Διακριτές τιμές:</strong> π.χ. 3, 7, 11 ή 'ΛΑΡΙΣΑ', 'ΠΑΤΡΑ'.
+                    <em>(Ισοδυναμεί με το <b>Ή</b> στη σύνθετη λογική έκφραση μιας ΑΝ)</em>
+                </li>
+                <li><strong>Διάστημα τιμών:</strong> π.χ. 10..100.
+                    <em>(Ισοδυναμεί με το <b>ΚΑΙ</b> στη σύνθετη λογική έκφραση μιας ΑΝ)</em>
+                </li>
+                <li><strong>Σύγκριση:</strong> π.χ. &gt;10.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="col col-mid">
+        <div class="tabs">
+            <div class="tab active" id="tab1" onclick="setScenario(1)">Σενάριο 1: ΑΝ ➔ ΕΠΙΛΕΞΕ</div>
+            <div class="tab" id="tab2" onclick="setScenario(2)">Σενάριο 2: ΕΠΙΛΕΞΕ ➔ ΑΝ</div>
+        </div>
+
+        <div class="narrative" id="narrativeBox">Επιλέξτε μέθοδο μετατροπής για να ξεκινήσετε.</div>
+
+        <div class="code-compare-area">
+            <div class="code-box-wrapper" id="boxSourceWrap">
+                <div class="code-box-title" id="lblSourceCode">Πηγαίος Κώδικας (ΑΝ)</div>
+                <div class="code-content" id="boxSource"></div>
+            </div>
+            <div class="code-box-wrapper" id="boxTargetWrap">
+                <div class="code-box-title" id="lblTargetCode">Ισοδύναμος Κώδικας (ΕΠΙΛΕΞΕ)</div>
+                <div class="code-content" id="boxTarget"></div>
+            </div>
+        </div>
+
+        <div class="convert-btn-group" id="convertButtonGroup">
+            <button class="btn-convert" id="btnAutoConvert" onclick="startAutoConversion()">▶ Αυτόματη Μετατροπή</button>
+            <button class="btn-convert" id="btnStepConvert" onclick="stepConversion()">⏭ Μετατροπή Βήμα-Βήμα</button>
+        </div>
+    </div>
+
+    <div class="col col-right">
+        <div class="trace-area">
+            <div class="panel-title" style="margin-bottom: 5px;">Πίνακας Τιμών</div>
+            <table class="trace-table">
+                <thead><tr><th>Μεταβλητή</th><th>Τιμή</th></tr></thead>
+                <tbody><tr><td id="traceVarName">χ</td><td id="traceVarVal">-</td></tr></tbody>
+            </table>
+        </div>
+        
+        <div class="console-area">
+            <div class="panel-title" style="margin-bottom: 5px;">Έξοδος</div>
+            <div class="console-screen" id="outputLog"></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- Data Definitions ---
+    const sc1_Src = [
+        "<span class='kw'>ΔΙΑΒΑΣΕ</span> χ",
+        "<span class='kw'>ΑΝ</span> (χ=<span class='num'>2</span>) <span class='kw'>Ή</span> (χ=<span class='num'>4</span>) <span class='kw'>Ή</span> (χ=<span class='num'>6</span>) <span class='kw'>Ή</span> (χ=<span class='num'>8</span>) <span class='kw'>ΤΟΤΕ</span>",
+        "  <span class='kw'>ΓΡΑΨΕ</span> <span class='str'>'Άρτιος'</span>",
+        "<span class='kw'>ΑΛΛΙΩΣ_ΑΝ</span> (χ=<span class='num'>1</span>) <span class='kw'>Ή</span> (χ=<span class='num'>3</span>) <span class='kw'>Ή</span> (χ=<span class='num'>5</span>) <span class='kw'>Ή</span> (χ=<span class='num'>7</span>) <span class='kw'>Ή</span> (χ=<span class='num'>9</span>) <span class='kw'>ΤΟΤΕ</span>",
+        "  <span class='kw'>ΓΡΑΨΕ</span> <span class='str'>'Περιττός'</span>",
+        "<span class='kw'>ΑΛΛΙΩΣ_ΑΝ</span> χ=<span class='num'>0</span> <span class='kw'>ΤΟΤΕ</span>",
+        "  <span class='kw'>ΓΡΑΨΕ</span> <span class='str'>'Μηδέν'</span>",
+        "<span class='kw'>ΑΛΛΙΩΣ</span>",
+        "  <span class='kw'>ΓΡΑΨΕ</span> <span class='str'>'Ο αριθμός δεν είναι μονοψήφιος...'</span>",
+        "<span class='kw'>ΤΕΛΟΣ_ΑΝ</span>"
+    ];
+
+    const sc1_Tgt = [
+        "<span class='kw'>ΔΙΑΒΑΣΕ</span> χ",
+        "<span class='kw'>ΕΠΙΛΕΞΕ</span> χ",
+        "  <span class='kw'>ΠΕΡΙΠΤΩΣΗ</span> <span class='num'>2</span>, <span class='num'>4</span>, <span class='num'>6</span>, <span class='num'>8</span>",
+        "    <span class='kw'>ΓΡΑΨΕ</span> <span class='str'>'Άρτιος'</span>",
+        "  <span class='kw'>ΠΕΡΙΠΤΩΣΗ</span> <span class='num'>1</span>, <span class='num'>3</span>, <span class='num'>5</span>, <span class='num'>7</span>, <span class='num'>9</span>",
+        "    <span class='kw'>ΓΡΑΨΕ</span> <span class='str'>'Περιττός'</span>",
+        "  <span class='kw'>ΠΕΡΙΠΤΩΣΗ</span> <span class='num'>0</span>",
+        "    <span class='kw'>ΓΡΑΨΕ</span> <span class='str'>'Μηδέν'</span>",
+        "  <span class='kw'>ΠΕΡΙΠΤΩΣΗ ΑΛΛΙΩΣ</span>",
+        "    <span class='kw'>ΓΡΑΨΕ</span> <span class='str'>'Ο αριθμός δεν είναι μονοψήφιος...'</span>",
+        "<span class='kw'>ΤΕΛΟΣ_ΕΠΙΛΟΓΩΝ</span>"
+    ];
+
+    const sc1_ConvSteps = [
+        { src: 0, tgt: [0], msg: "Η εντολή εισόδου παραμένει ίδια." },
+        { src: 1, tgt: [1,2], msg: "Το ΑΝ γίνεται ΕΠΙΛΕΞΕ χ. Οι διακριτές τιμές με 'Ή' ομαδοποιούνται σε μια ΠΕΡΙΠΤΩΣΗ με κόμμα." },
+        { src: 2, tgt: [3], msg: "Η εντολή εκτυπώνεται κανονικά κάτω από την περίπτωσή της." },
+        { src: 3, tgt: [4], msg: "Το ΑΛΛΙΩΣ_ΑΝ ορίζει μια νέα ΠΕΡΙΠΤΩΣΗ με τις δικές της τιμές." },
+        { src: 4, tgt: [5], msg: "Μεταφορά εντολής εκτύπωσης." },
+        { src: 5, tgt: [6], msg: "Ακόμα και μία μοναδική τιμή αποτελεί αυτόνομη ΠΕΡΙΠΤΩΣΗ." },
+        { src: 6, tgt: [7], msg: "Μεταφορά εντολής εκτύπωσης." },
+        { src: 7, tgt: [8], msg: "Το τελικό ΑΛΛΙΩΣ καλύπτει όλες τις υπόλοιπες πιθανές τιμές της μεταβλητής." },
+        { src: 8, tgt: [9], msg: "Μεταφορά εντολής εκτύπωσης." },
+        { src: 9, tgt: [10], msg: "Η δομή επιλογής κλείνει με το ΤΕΛΟΣ_ΕΠΙΛΟΓΩΝ. Η μετατροπή ολοκληρώθηκε!" }
+    ];
+
+
+    const sc2_Src = [
+        "<span class='kw'>ΕΠΙΛΕΞΕ</span> Χ",
+        "  <span class='kw'>ΠΕΡΙΠΤΩΣΗ</span> <span class='num'>7</span>",
+        "    <span class='kw'>ΓΡΑΨΕ</span> <span class='str'>'Α'</span>",
+        "  <span class='kw'>ΠΕΡΙΠΤΩΣΗ</span> <span class='num'>11</span>, <span class='num'>13</span>",
+        "    <span class='kw'>ΓΡΑΨΕ</span> <span class='str'>'Β'</span>",
+        "  <span class='kw'>ΠΕΡΙΠΤΩΣΗ</span> <span class='kw'>&lt;</span> <span class='num'>20</span>",
+        "    <span class='kw'>ΓΡΑΨΕ</span> <span class='str'>'Γ'</span>",
+        "  <span class='kw'>ΠΕΡΙΠΤΩΣΗ</span> <span class='num'>50</span>..<span class='num'>100</span>",
+        "    <span class='kw'>ΓΡΑΨΕ</span> <span class='str'>'Δ'</span>",
+        "  <span class='kw'>ΠΕΡΙΠΤΩΣΗ ΑΛΛΙΩΣ</span>",
+        "    <span class='kw'>ΓΡΑΨΕ</span> <span class='str'>'Ε'</span>",
+        "<span class='kw'>ΤΕΛΟΣ_ΕΠΙΛΟΓΩΝ</span>"
+    ];
+
+    const sc2_Tgt = [
+        "<span class='kw'>ΑΝ</span> Χ = <span class='num'>7</span> <span class='kw'>ΤΟΤΕ</span>",
+        "  <span class='kw'>ΓΡΑΨΕ</span> <span class='str'>'Α'</span>",
+        "<span class='kw'>ΑΛΛΙΩΣ_ΑΝ</span> Χ = <span class='num'>11</span> <span class='kw'>Ή</span> Χ = <span class='num'>13</span> <span class='kw'>ΤΟΤΕ</span>",
+        "  <span class='kw'>ΓΡΑΨΕ</span> <span class='str'>'Β'</span>",
+        "<span class='kw'>ΑΛΛΙΩΣ_ΑΝ</span> Χ &lt; <span class='num'>20</span> <span class='kw'>ΤΟΤΕ</span>",
+        "  <span class='kw'>ΓΡΑΨΕ</span> <span class='str'>'Γ'</span>",
+        "<span class='kw'>ΑΛΛΙΩΣ_ΑΝ</span> Χ &gt;= <span class='num'>50</span> <span class='kw'>ΚΑΙ</span> Χ &lt;= <span class='num'>100</span> <span class='kw'>ΤΟΤΕ</span>",
+        "  <span class='kw'>ΓΡΑΨΕ</span> <span class='str'>'Δ'</span>",
+        "<span class='kw'>ΑΛΛΙΩΣ</span>",
+        "  <span class='kw'>ΓΡΑΨΕ</span> <span class='str'>'Ε'</span>",
+        "<span class='kw'>ΤΕΛΟΣ_ΑΝ</span>"
+    ];
+
+    const sc2_ConvSteps = [
+        { src: [0, 1], tgt: [0], msg: "Το ΕΠΙΛΕΞΕ Χ και η 1η ΠΕΡΙΠΤΩΣΗ δημιουργούν την αρχική συνθήκη ΑΝ Χ = 7." },
+        { src: 2, tgt: [1], msg: "Η εντολή της περίπτωσης εκτελείται κανονικά." },
+        { src: 3, tgt: [2], msg: "Οι διακριτές τιμές με κόμμα (11, 13) αντιστοιχούν σε λογικό 'Ή' στη συνθήκη ΑΛΛΙΩΣ_ΑΝ." },
+        { src: 4, tgt: [3], msg: "Μεταφορά εντολής." },
+        { src: 5, tgt: [4], msg: "Η συγκριτική πράξη (< 20) περνάει άμεσα στη συνθήκη του ΑΛΛΙΩΣ_ΑΝ." },
+        { src: 6, tgt: [5], msg: "Μεταφορά εντολής." },
+        { src: 7, tgt: [6], msg: "Το διάστημα τιμών (50..100) μεταφράζεται με τον λογικό τελεστή 'ΚΑΙ'." },
+        { src: 8, tgt: [7], msg: "Μεταφορά εντολής." },
+        { src: 9, tgt: [8], msg: "Η ΠΕΡΙΠΤΩΣΗ ΑΛΛΙΩΣ αντιστοιχεί στο τελικό ΑΛΛΙΩΣ της δομής επιλογής." },
+        { src: 10, tgt: [9], msg: "Μεταφορά εντολής." },
+        { src: 11, tgt: [10], msg: "Το ΤΕΛΟΣ_ΕΠΙΛΟΓΩΝ μετατρέπεται σε ΤΕΛΟΣ_ΑΝ. Η μετατροπή ολοκληρώθηκε!" }
+    ];
+
+    // --- State ---
+    let scenario = 1;
+    let isConverted = false;
+    let conversionStarted = false;
+    let isAutoConverting = false;
+    let isExecuting = false;
+    let isAutoPlaying = false;
+    
+    let convIndex = 0;
+    let execIndex = 0;
+    let execSteps = [];
+    
+    let autoTimer = null;
+    let convTimer = null;
+
+    // --- Core Functions ---
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+
+    function setScenario(sc) {
+        scenario = sc;
+        document.getElementById('tab1').classList.toggle('active', sc === 1);
+        document.getElementById('tab2').classList.toggle('active', sc === 2);
+        
+        document.getElementById('lblSourceCode').innerText = sc === 1 ? "Πηγαίος Κώδικας (ΑΝ)" : "Πηγαίος Κώδικας (ΕΠΙΛΕΞΕ)";
+        document.getElementById('lblTargetCode').innerText = sc === 1 ? "Ισοδύναμος Κώδικας (ΕΠΙΛΕΞΕ)" : "Ισοδύναμος Κώδικας (ΑΝ)";
+        document.getElementById('lblVar').innerText = sc === 1 ? "χ:" : "Χ:";
+        document.getElementById('traceVarName').innerText = sc === 1 ? "χ" : "Χ";
+        
+        document.getElementById('inpX').value = sc === 1 ? "4" : "15";
+
+        initApp();
+    }
+
+    function getDelay() {
+        return 2000 - (document.getElementById('speedSlider').value * 300);
+    }
+
+    function initApp() {
+        stopAll();
+        isConverted = false;
+        conversionStarted = false;
+        isAutoConverting = false;
+        isExecuting = false;
+
+        document.getElementById('convertButtonGroup').style.display = 'flex';
+        document.getElementById('btnAutoConvert').disabled = false;
+        document.getElementById('btnStepConvert').disabled = false;
+        
+        document.getElementById('btnAuto').disabled = true;
+        document.getElementById('btnStep').disabled = true;
+
+        document.getElementById('boxSource').classList.remove('slow-anim');
+        document.getElementById('boxTarget').classList.remove('slow-anim');
+
+        document.getElementById('narrativeBox').innerHTML = "Επιλέξτε μέθοδο μετατροπής για να ξεκινήσετε.";
+        document.getElementById('traceVarVal').innerText = "-";
+        document.getElementById('outputLog').innerHTML = "";
+
+        renderCodes();
+    }
+
+    function stopAll() {
+        clearTimeout(autoTimer);
+        clearTimeout(convTimer);
+        isAutoPlaying = false;
+        document.getElementById('btnAuto').innerHTML = "▶ Αυτόματη Εκτέλεση";
+        document.getElementById('btnAuto').classList.remove('btn-danger');
+    }
+
+    function renderCodes() {
+        const srcData = scenario === 1 ? sc1_Src : sc2_Src;
+        const srcHtml = srcData.map((l, i) => `<div class="code-line" id="src-line-${i}">${l}</div>`).join('');
+        document.getElementById('boxSource').innerHTML = srcHtml;
+
+        const tgtData = scenario === 1 ? sc1_Tgt : sc2_Tgt;
+        const tgtHtml = tgtData.map((l, i) => `<div class="code-line" id="tgt-line-${i}" style="display:none;">${l}</div>`).join('');
+        document.getElementById('boxTarget').innerHTML = tgtHtml;
+    }
+
+    // --- Conversion Logic ---
+    function initConversion() {
+        stopAll();
+        conversionStarted = true;
+        convIndex = 0;
+        document.querySelectorAll("[id^='tgt-line-']").forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+    }
+
+    function startAutoConversion() {
+        if (!conversionStarted) initConversion();
+        
+        document.getElementById('btnAutoConvert').disabled = true;
+        document.getElementById('btnStepConvert').disabled = true;
+        
+        // Επαναφορά κανονικής ταχύτητας στα CSS animations
+        document.getElementById('boxSource').classList.remove('slow-anim');
+        document.getElementById('boxTarget').classList.remove('slow-anim');
+        
+        isAutoConverting = true;
+        executeConvStep();
+    }
+
+    function stepConversion() {
+        if (!conversionStarted) initConversion();
+        isAutoConverting = false;
+        
+        // 100% πιο αργή αλλαγή στα CSS animations για το "Βήμα-Βήμα"
+        document.getElementById('boxSource').classList.add('slow-anim');
+        document.getElementById('boxTarget').classList.add('slow-anim');
+        
+        executeConvStep();
+    }
+
+    function executeConvStep() {
+        const steps = scenario === 1 ? sc1_ConvSteps : sc2_ConvSteps;
+        
+        if (convIndex >= steps.length) {
+            isConverted = true;
+            conversionStarted = false;
+            isAutoConverting = false;
+            
+            document.getElementById('narrativeBox').innerHTML = "✅ <b>Μετατροπή Ολοκληρώθηκε!</b> Τώρα πατήστε <b>▶ Αυτόματη Εκτέλεση</b> ή <b>Βήμα</b> (επάνω δεξιά) για να εκτελέσετε και τους δύο κώδικες ταυτόχρονα!";
+            document.getElementById('convertButtonGroup').style.display = 'none';
+            
+            document.getElementById('btnAuto').disabled = false;
+            document.getElementById('btnStep').disabled = false;
+            
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+            
+            // Αφαιρούμε το slow-anim για να είναι γρήγορη η μετέπειτα εκτέλεση
+            document.getElementById('boxSource').classList.remove('slow-anim');
+            document.getElementById('boxTarget').classList.remove('slow-anim');
+            return;
+        }
+
+        const step = steps[convIndex];
+        
+        // Clear previous highlights
+        document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+
+        // Highlight SRC
+        if (Array.isArray(step.src)) {
+            step.src.forEach(i => {
+                const el = document.getElementById(`src-line-${i}`);
+                if(el) { el.classList.add('active'); el.scrollIntoView({block:'nearest', behavior:'smooth'}); }
+            });
+        } else if (step.src !== null) {
+            const el = document.getElementById(`src-line-${step.src}`);
+            if(el) { el.classList.add('active'); el.scrollIntoView({block:'nearest', behavior:'smooth'}); }
+        }
+
+        // Show and Highlight TGT
+        step.tgt.forEach(i => {
+            const el = document.getElementById(`tgt-line-${i}`);
+            if(el) { 
+                el.style.display = 'block'; 
+                // Μικρή καθυστέρηση για να φανεί καλύτερα το εφέ εμφάνισης/χρωματισμού
+                setTimeout(() => {
+                    el.classList.add('active'); 
+                    el.scrollIntoView({block:'nearest', behavior:'smooth'});
+                }, 50);
+            }
+        });
+
+        document.getElementById('narrativeBox').innerHTML = step.msg;
+
+        convIndex++;
+        
+        if (isAutoConverting) {
+            // Μείωση ταχύτητας κατά 50% (πολλαπλασιασμός του χρόνου καθυστέρησης με 1.5)
+            convTimer = setTimeout(executeConvStep, (getDelay() + 500) * 1.5); 
+        }
+    }
+
+
+    // --- Execution Logic ---
+    function buildExecSteps() {
+        execSteps = [];
+        let x = parseInt(document.getElementById('inpX').value) || 0;
+        
+        if (scenario === 1) {
+            execSteps.push({ src: 0, tgt: 0, msg: `Διάβασε χ (${x})`, val: x });
+            
+            execSteps.push({ src: 1, tgt: [1,2], msg: `Ελέγχεται αν το χ είναι άρτιος...` });
+            if ([2,4,6,8].includes(x)) {
+                execSteps.push({ src: 2, tgt: 3, msg: `Η συνθήκη είναι ΑΛΗΘΗΣ!`, print: 'Άρτιος' });
+            } else {
+                execSteps.push({ src: 3, tgt: 4, msg: `Όχι. Ελέγχεται αν είναι περιττός...` });
+                if ([1,3,5,7,9].includes(x)) {
+                    execSteps.push({ src: 4, tgt: 5, msg: `ΑΛΗΘΗΣ!`, print: 'Περιττός' });
+                } else {
+                    execSteps.push({ src: 5, tgt: 6, msg: `Όχι. Μήπως είναι 0;` });
+                    if (x === 0) {
+                        execSteps.push({ src: 6, tgt: 7, msg: `ΑΛΗΘΗΣ!`, print: 'Μηδέν' });
+                    } else {
+                        execSteps.push({ src: 7, tgt: 8, msg: `Σε κάθε άλλη περίπτωση (ΑΛΛΙΩΣ)...` });
+                        execSteps.push({ src: 8, tgt: 9, msg: `Εκτελείται το ΑΛΛΙΩΣ.`, print: 'Ο αριθμός δεν είναι μονοψήφιος...' });
+                    }
+                }
+            }
+            execSteps.push({ src: 9, tgt: 10, msg: `Τέλος επιλογής.` });
+        } 
+        else {
+            execSteps.push({ src: null, tgt: null, msg: `Εισαγωγή Χ (${x})`, val: x });
+            execSteps.push({ src: [0,1], tgt: 0, msg: `Ελέγχεται αν Χ = 7` });
+            if (x === 7) {
+                execSteps.push({ src: 2, tgt: 1, msg: `ΑΛΗΘΗΣ!`, print: 'Α' });
+            } else {
+                execSteps.push({ src: 3, tgt: 2, msg: `Όχι. Ελέγχεται αν Χ = 11 ή 13` });
+                if (x === 11 || x === 13) {
+                    execSteps.push({ src: 4, tgt: 3, msg: `ΑΛΗΘΗΣ!`, print: 'Β' });
+                } else {
+                    execSteps.push({ src: 5, tgt: 4, msg: `Όχι. Ελέγχεται αν Χ < 20` });
+                    if (x < 20) {
+                        execSteps.push({ src: 6, tgt: 5, msg: `ΑΛΗΘΗΣ!`, print: 'Γ' });
+                    } else {
+                        execSteps.push({ src: 7, tgt: 6, msg: `Όχι. Ελέγχεται αν Χ στο [50, 100]` });
+                        if (x >= 50 && x <= 100) {
+                            execSteps.push({ src: 8, tgt: 7, msg: `ΑΛΗΘΗΣ!`, print: 'Δ' });
+                        } else {
+                            execSteps.push({ src: 9, tgt: 8, msg: `Σε κάθε άλλη περίπτωση (ΑΛΛΙΩΣ)...` });
+                            execSteps.push({ src: 10, tgt: 9, msg: `Εκτελείται το ΑΛΛΙΩΣ.`, print: 'Ε' });
+                        }
+                    }
+                }
+            }
+            execSteps.push({ src: 11, tgt: 10, msg: `Τέλος επιλογής.` });
+        }
+    }
+
+    function toggleAutoExec() {
+        if (!isConverted) return;
+        
+        if (isAutoPlaying) {
+            stopAll();
+        } else {
+            if (!isExecuting || execIndex >= execSteps.length) {
+                document.getElementById('outputLog').innerHTML = "";
+                buildExecSteps();
+                execIndex = 0;
+                isExecuting = true;
+            }
+            isAutoPlaying = true;
+            document.getElementById('btnAuto').innerHTML = "⏸ Παύση";
+            document.getElementById('btnAuto').style.backgroundColor = '#f59e0b';
+            document.getElementById('btnAuto').style.borderColor = '#f59e0b';
+            execLoop();
+        }
+    }
+
+    function stepExec() {
+        if (!isConverted) return;
+        stopAll();
+        
+        if (!isExecuting || execIndex >= execSteps.length) {
+            document.getElementById('outputLog').innerHTML = "";
+            buildExecSteps();
+            execIndex = 0;
+            isExecuting = true;
+        }
+        
+        execLoop();
+    }
+
+    function execLoop() {
+        if (execIndex >= execSteps.length) {
+            stopAll();
+            isExecuting = false;
+            document.getElementById('narrativeBox').innerHTML = "🏁 <b>Τέλος Εκτέλεσης.</b> Μπορείτε να αλλάξετε το 'χ' και να τρέξετε ξανά.";
+            document.getElementById('btnAuto').style.backgroundColor = 'var(--success-color)';
+            document.getElementById('btnAuto').style.borderColor = 'var(--success-color)';
+            return;
+        }
+
+        const step = execSteps[execIndex];
+
+        // Clear highlights
+        document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+
+        // Highlight SRC
+        if (step.src !== null) {
+            if (Array.isArray(step.src)) {
+                step.src.forEach(i => document.getElementById(`src-line-${i}`).classList.add('active'));
+            } else {
+                document.getElementById(`src-line-${step.src}`).classList.add('active');
+            }
+        }
+        // Highlight TGT
+        if (step.tgt !== null) {
+            if (Array.isArray(step.tgt)) {
+                step.tgt.forEach(i => document.getElementById(`tgt-line-${i}`).classList.add('active'));
+            } else {
+                document.getElementById(`tgt-line-${step.tgt}`).classList.add('active');
+            }
+        }
+
+        document.getElementById('narrativeBox').innerHTML = step.msg;
+
+        if (step.val !== undefined) {
+            document.getElementById('traceVarVal').innerText = step.val;
+            document.getElementById('traceVarVal').style.color = "var(--primary)";
+        }
+
+        if (step.print) {
+            const log = document.getElementById('outputLog');
+            log.innerHTML += `<div class="log-item">${step.print}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        execIndex++;
+
+        if (isAutoPlaying) {
+            autoTimer = setTimeout(execLoop, getDelay());
+        }
+    }
+
+    // Initialize on load
+    setScenario(1);
+
+</script>
+</body>
+</html>
