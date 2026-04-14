@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Πολλαπλασιασμός αλά Ρωσικά - Διαδραστικό Animation</title>
+    <style>
+        :root {
+            --primary: #3b82f6; 
+            --primary-hover: #2563eb;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --bg-color: #f1f5f9;
+            --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            
+            --num-a-color: #0284c7; 
+            --num-b-color: #dc2626; 
+            --success-color: #10b981; 
+            
+            --code-hl-bg: #dcfce7;
+            --code-hl-text: #166534;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --text-dark: #f1f5f9;
+            --text-light: #94a3b8;
+            --panel-bg: #1e293b;
+            --border-color: #334155;
+            
+            --num-a-color: #60a5fa;
+            --num-b-color: #f87171;
+            --success-color: #34d399;
+            
+            --code-hl-bg: rgba(16, 185, 129, 0.2);
+            --code-hl-text: #34d399;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .blurred { filter: blur(5px); pointer-events: none; transition: filter 0.5s; }
+
+        /* --- Toolbar --- */
+        .toolbar {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex; justify-content: flex-end; align-items: center; gap: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            z-index: 100; flex-wrap: wrap;
+            transition: background-color 0.3s, border-color 0.3s, filter 0.5s;
+        }
+
+        .toolbar-spacer { flex: 1; }
+
+        .tool-btn {
+            background-color: var(--panel-bg);
+            color: var(--primary);
+            border: 1px solid var(--border-color);
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex; align-items: center; gap: 6px;
+            transition: all 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .tool-btn:hover:not(:disabled) { filter: brightness(0.95); }
+        .tool-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .tool-btn.blue-btn { background-color: #4285f4; color: white; border: none; }
+        .tool-btn.blue-btn:hover:not(:disabled) { background-color: #3367d6; }
+        .tool-btn.blue-btn.playing { background-color: #ef4444; }
+
+        .tool-icon { font-size: 1.1rem; }
+
+        .inputs-group {
+            display: flex; align-items: center; gap: 8px;
+            background: var(--bg-color); border: 1px solid var(--border-color);
+            padding: 4px 12px; border-radius: 6px;
+        }
+        .inputs-group label { font-weight: bold; color: var(--primary); font-size: 0.9rem;}
+        .inputs-group input[type="number"] {
+            width: 50px; padding: 4px 6px; border: 1px solid var(--border-color);
+            border-radius: 4px; font-size: 0.95rem; font-weight: bold; text-align: center;
+            background: var(--panel-bg); color: var(--text-dark);
+        }
+        .inputs-group input:focus { outline: none; border-color: var(--primary); }
+
+        .speed-group {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 0.9rem; color: var(--text-dark);
+            background: var(--bg-color); border: 1px solid var(--border-color);
+            padding: 5px 12px; border-radius: 6px;
+        }
+        .speed-slider { cursor: pointer; width: 80px; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex; flex: 1; padding: 15px; gap: 15px;
+            height: calc(100% - 60px); box-sizing: border-box;
+            transition: filter 0.5s;
+        }
+
+        .col {
+            background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; overflow-y: auto; padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        /* Αριστερή Στήλη */
+        .col-left { flex: 0 0 300px; transition: 0.3s; }
+        .col-left.hidden { display: none; }
+        
+        .problem-info { margin-bottom: 15px; font-size: 0.9rem; line-height: 1.5; color: var(--text-light);}
+        .problem-info h3 { margin-top: 0; color: var(--primary); font-size: 1.05rem; margin-bottom:5px;}
+
+        .code-box {
+            background: var(--panel-bg); color: var(--text-dark); padding: 12px; border-radius: 8px;
+            font-family: monospace; font-size: 0.85rem; line-height: 1.6; border: 1px solid var(--border-color);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .code-line { padding: 2px 5px; border-radius: 4px; transition: 0.2s; border-left: 3px solid transparent;}
+        .code-line.active { background: var(--code-hl-bg); color: var(--code-hl-text); font-weight: bold; border-left-color: var(--success-color);}
+
+        /* Κεντρική Στήλη */
+        .col-mid { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 15px;}
+        
+        .stage-title { text-align: center; font-size: 1.1rem; font-weight: bold; color: var(--primary); margin: 0;}
+
+        /* --- BINARY ANIMATION ELEMENTS --- */
+        .animation-area {
+            display: flex; flex-direction: column; justify-content: center; gap: 30px;
+            padding: 30px 15px; background: var(--bg-color); border-radius: 8px; border: 1px dashed var(--border-color);
+            flex-shrink: 0; 
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .number-display { display: flex; flex-direction: column; align-items: center; width: 100%;}
+        .num-label { font-size: 0.95rem; font-weight: bold; margin-bottom: 2px;}
+        .label-a { color: var(--num-a-color);}
+        .label-b { color: var(--num-b-color);}
+
+        .decimal-value { font-size: 2rem; font-weight: 900; line-height: 1; margin-bottom: 10px; color: var(--text-dark);}
+
+        /* Register Wrapper */
+        .binary-register {
+            display: flex; gap: 4px; border: 2px solid var(--border-color);
+            padding: 8px; border-radius: 6px; background: var(--panel-bg);
+            position: relative; overflow: hidden; 
+            min-width: 250px; justify-content: flex-end;
+        }
+
+        /* Η στήλη κάθε ψηφίου */
+        .bit-slot {
+            display: flex; flex-direction: column; align-items: center;
+            width: 22px; flex-shrink: 0; gap: 3px;
+        }
+
+        /* Το κινούμενο κουτάκι */
+        .bit-box {
+            width: 22px; height: 32px; background: var(--bg-color);
+            border: 1px solid var(--border-color); border-radius: 4px;
+            display: flex; justify-content: center; align-items: center;
+            font-family: monospace; font-size: 1.1rem; font-weight: bold;
+            position: relative; z-index: 2; color: var(--text-dark);
+        }
+
+        .bit-0 { color: var(--text-light); }
+        .bit-1 { color: var(--text-dark); background: var(--border-color); border-color: var(--text-light);}
+
+        .bit-box.lsb-check { border-color: #f59e0b; border-width: 2px; background: #fffbeb; color: #b45309;}
+        body.dark-mode .bit-box.lsb-check { background: #422006; border-color: #f59e0b; color: #fcd34d;}
+
+        /* Ετικέτες θέσης & δύναμης */
+        .bit-index { font-size: 0.75rem; color: var(--text-light); font-weight: bold; }
+        .bit-power { font-size: 0.85rem; font-weight: bold; min-height: 16px; display: flex; align-items: center;}
+        .bit-power sup { font-size: 0.6rem; }
+
+        /* Shift Animations */
+        .shift-left .bit-box { animation: shiftLeftAnim 0.8s ease-in-out forwards; }
+        @keyframes shiftLeftAnim { 100% { transform: translateX(-26px); } }
+
+        .shift-right .bit-box { animation: shiftRightAnim 0.8s ease-in-out forwards; }
+        @keyframes shiftRightAnim { 100% { transform: translateX(26px); } }
+
+        /* --- Πίνακας Ιστορικού --- */
+        .table-area {
+            background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            padding: 10px 15px; flex: 1; display: flex; flex-direction: column; overflow-y: auto;
+        }
+        .table-title { text-align: left; font-size: 1rem; font-weight: bold; margin-bottom: 10px; color: var(--text-dark);}
+        table { width: 100%; border-collapse: collapse; font-size: 1rem; text-align: center; }
+        th { background: var(--bg-color); padding: 10px; border-bottom: 2px solid var(--border-color); color: var(--text-light); position: sticky; top: 0;}
+        td { padding: 10px; border-bottom: 1px solid var(--border-color); font-weight: bold; transition: 0.3s;}
+        
+        tr.keep td { background-color: rgba(16, 185, 129, 0.15); color: var(--success-color);}
+        tr.drop td { color: var(--text-light); text-decoration: line-through; background-color: var(--bg-color);}
+        tr.active-row td { outline: 2px solid var(--primary); outline-offset: -2px; }
+
+        /* --- Δεξιά Στήλη --- */
+        /* Αυξήθηκε το πλάτος κατά 40%: 280px * 1.4 = 392px */
+        .col-right { flex: 0 0 392px; background: transparent; border: none; padding: 0; gap: 15px; box-shadow: none;}
+
+        .s-box {
+            background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color);
+            padding: 20px 15px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .s-title { font-size: 0.9rem; font-weight: bold; color: var(--text-light); text-transform: uppercase;}
+        .s-value { font-size: 4rem; font-weight: 900; color: var(--success-color); line-height: 1; margin-top: 10px; transition: 0.3s;}
+        .s-value.bump { transform: scale(1.15); }
+
+        /* --- INTRO OVERLAY (MODAL) --- */
+        #introOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000; opacity: 1; transition: opacity 0.5s;
+        }
+        .intro-box {
+            background: var(--panel-bg); 
+            width: 615px; 
+            max-width: 95%;
+            border-radius: 12px; 
+            padding: 25px; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            text-align: center; border: 2px solid var(--primary);
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .intro-box h1 { color: var(--primary); margin-top: 0; margin-bottom: 12px; font-size: 1.45rem; } 
+        .intro-box p { font-size: 0.85rem; line-height: 1.5; margin-bottom: 12px; color: var(--text-dark); text-align: justify; }
+        
+        .intro-table {
+            border-collapse: collapse;
+            margin: 12px 0 5px 0;
+            width: 60%;
+            max-width: 290px; 
+            font-size: 0.95rem; 
+            border: 2px solid #55788d; 
+        }
+        .intro-table td {
+            border: 1px solid #55788d;
+            padding: 6px 4px; 
+            text-align: center;
+            color: var(--text-dark);
+            width: 33.3%;
+        }
+        .intro-table .dimmed-td { color: var(--text-light); }
+        .intro-table .sum-row td {
+            text-align: center;
+            font-weight: bold;
+            color: var(--text-dark);
+            padding: 8px;
+        }
+        .intro-table .highlight-orange { color: #d35400; font-weight:bold; }
+        .intro-caption {
+            font-size: 0.8rem;
+            color: var(--text-dark);
+            font-style: italic;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .intro-btn { 
+            padding: 10px 20px; 
+            font-size: 0.9rem; 
+            font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; background-color: var(--primary); color: white; margin-top: 10px; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+        }
+        .intro-btn:hover { background-color: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 6px 12px rgba(59, 130, 246, 0.4);}
+
+    </style>
+</head>
+<body>
+
+<div id="introOverlay">
+    <div class="intro-box">
+        <h1>🇷🇺 Πολλαπλασιασμός αλά Ρωσικά</h1>
+        <p>Η μέθοδος του πολλαπλασιασμού αλά ρωσικά βασίζεται στον διαδοχικό <b>διπλασιασμό</b> του πρώτου αριθμού και στην <b>ακέραια διαίρεση διά 2</b> του δεύτερου.</p>
+        <p>Από τις τιμές που προκύπτουν, χρησιμοποιούνται μόνο εκείνες στις οποίες ο δεύτερος αριθμός είναι <b>περιττός</b>. Το άθροισμα των αντίστοιχων τιμών του πρώτου αριθμού δίνει το τελικό γινόμενο.</p>
+        <p>Η διαδικασία αυτή συνδέεται στενά με την <b>ολίσθηση bit (shift)</b> στη δυαδική αναπαράσταση, όπου η <i>αριστερή ολίσθηση</i> ισοδυναμεί με πολλαπλασιασμό με το 2, και η <i>δεξιά ολίσθηση</i> με ακέραια διαίρεση με το 2.</p>
+        
+        <table class="intro-table">
+            <tr><td class="highlight-orange">45</td><td>19</td><td class="highlight-orange">45</td></tr>
+            <tr><td class="highlight-orange">90</td><td>9</td><td class="highlight-orange">90</td></tr>
+            <tr><td class="highlight-orange">180</td><td>4</td><td></td></tr>
+            <tr><td class="highlight-orange">360</td><td>2</td><td></td></tr>
+            <tr><td class="highlight-orange">720</td><td>1</td><td class="highlight-orange">720</td></tr>
+            <tr class="sum-row"><td colspan="3">Άθροισμα = 855</td></tr>
+        </table>
+        <div class="intro-caption">Σχ. 2.8. Πολλαπλασιασμός αλά ρωσικά</div>
+
+        <button class="intro-btn" onclick="closeIntro()">Κατάλαβα! Πάμε στην εφαρμογή</button>
+    </div>
+</div>
+
+<div class="toolbar blurred" id="mainHeader">
+    
+    <div style="font-weight: 800; font-size: 1.2rem; color: var(--primary); display: flex; align-items: center;">
+        🇷🇺 Πολλαπλασιασμός αλά Ρωσικά
+    </div>
+
+    <div class="toolbar-spacer"></div>
+
+    <button id="btnReset" class="tool-btn" onclick="initApp()"><span class="tool-icon">🔄</span> Αρχή</button>
+    <button id="btnAuto" class="tool-btn blue-btn" onclick="toggleAutoPlay()"><span class="tool-icon" id="autoIcon">▶</span> <span id="autoText">Αυτόματη Εκτέλεση</span></button>
+    <button id="btnStep" class="tool-btn" onclick="nextStep()">Βήμα <span class="tool-icon">⏭</span></button>
+    
+    <div class="inputs-group">
+        <label>A:</label> <input type="number" id="inpA" value="45" min="1">
+        <label>B:</label> <input type="number" id="inpB" value="19" min="1">
+        <button class="tool-btn" style="padding: 4px 10px; font-size:0.85rem;" onclick="applyInputs()">OK</button>
+    </div>
+
+    <button id="btnToggleCode" class="tool-btn" onclick="toggleCode()"><span class="tool-icon">👁</span> Εμφάνιση Κώδικα</button>
+
+    <div class="speed-group">
+        <label>Ταχύτητα:</label>
+        <input type="range" id="speedSlider" class="speed-slider" min="1" max="5" value="3">
+    </div>
+
+    <button onclick="toggleTheme()" id="btnTheme" class="tool-btn" style="font-size: 1.2rem; padding: 4px 8px; border-color: transparent; margin-left: 5px;" title="Αλλαγή Θέματος">🌙</button>
+
+</div>
+
+<div class="main-container blurred" id="mainApp">
+    
+    <div class="col col-left" id="colLeft">
+        <div class="problem-info">
+            <h3>Ψευδογλώσσα</h3>
+            <p>Παρακολουθήστε τον κώδικα να εκτελείται παράλληλα με την οπτική αναπαράσταση. Ο αλγόριθμος υπολογίζει το γινόμενο 2 θετικών ακεραίων αριθμών.</p>
+        </div>
+
+        <div class="code-box" id="codeBox">
+            <div class="code-line" id="line1">Διάβασε α, β</div>
+            <div class="code-line" id="line2">s &lt;- 0</div>
+            <div class="code-line" id="line3">Όσο β > 0 επανάλαβε</div>
+            <div class="code-line" id="line4">&nbsp;&nbsp;Αν β MOD 2 = 1 τότε</div>
+            <div class="code-line" id="line5">&nbsp;&nbsp;&nbsp;&nbsp;s &lt;- s + α</div>
+            <div class="code-line" id="line6">&nbsp;&nbsp;Τέλος_αν</div>
+            <div class="code-line" id="line7">&nbsp;&nbsp;α &lt;- α * 2</div>
+            <div class="code-line" id="line8">&nbsp;&nbsp;β &lt;- β DIV 2</div>
+            <div class="code-line" id="line9">Τέλος_επανάληψης</div>
+            <div class="code-line" id="line10">Γράψε s</div>
+        </div>
+    </div>
+
+    <div class="col col-mid">
+        <div class="stage-title">Μνήμη & Πράξεις (Ολίσθηση)</div>
+        
+        <div class="animation-area" id="animationArea">
+            <div class="number-display">
+                <div class="num-label label-a">Μεταβλητή Α (Αριστερή Ολίσθηση <<)</div>
+                <div class="decimal-value" id="decA">45</div>
+                <div class="binary-register" id="regA">
+                    </div>
+            </div>
+
+            <div class="number-display">
+                <div class="num-label label-b">Μεταβλητή Β (Δεξιά Ολίσθηση >>)</div>
+                <div class="decimal-value" id="decB">19</div>
+                <div class="binary-register" id="regB">
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col col-right">
+        <div class="s-box">
+            <div class="s-title">Τελικό Άθροισμα (s)</div>
+            <div class="s-value" id="sValue">0</div>
+        </div>
+
+        <div class="table-area">
+            <div class="table-title">Ιστορικό Τιμών (Πίνακας Ελέγχου)</div>
+            <table id="historyTable">
+                <thead><tr><th>Α</th><th>Β</th><th>Άθροισμα (s)</th></tr></thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="3" style="font-weight:normal; color:var(--text-light);">Πατήστε "Βήμα" για εκκίνηση.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- Close Intro Logic ---
+    function closeIntro() {
+        const overlay = document.getElementById('introOverlay');
+        overlay.style.opacity = '0';
+        document.getElementById('mainHeader').classList.remove('blurred');
+        document.getElementById('mainApp').classList.remove('blurred');
+        setTimeout(() => overlay.style.display = 'none', 500);
+    }
+
+    // --- Configuration & State ---
+    let a, b, s;
+    let initialA, initialB;
+    let stepIndex = -1; 
+    let isAutoPlaying = false;
+    let autoPlayTimer = null;
+    let registerBits = 16; 
+
+    // --- DOM Elements ---
+    const btnStep = document.getElementById('btnStep');
+    const btnAuto = document.getElementById('btnAuto');
+    const autoIcon = document.getElementById('autoIcon');
+    const autoText = document.getElementById('autoText');
+    const sValueSpan = document.getElementById('sValue');
+    const regA = document.getElementById('regA');
+    const regB = document.getElementById('regB');
+    const tableBody = document.getElementById('tableBody');
+
+    // --- Event Listeners ---
+    document.addEventListener("DOMContentLoaded", () => {
+        applyInputs(); 
+    });
+
+    // --- Theme Logic ---
+    function toggleTheme() {
+        document.body.classList.toggle('dark-mode');
+        document.getElementById('btnTheme').innerText = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+    }
+
+    // --- Helpers ---
+    function toggleCode() {
+        const colLeft = document.getElementById('colLeft');
+        colLeft.classList.toggle('hidden');
+    }
+
+    function hl(lineId) {
+        document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+        if(lineId) document.getElementById(lineId).classList.add('active');
+    }
+
+    function intToBinaryArray(n, size) {
+        let binString = n.toString(2).padStart(size, '0');
+        if (binString.length > size) binString = binString.slice(-size);
+        return binString.split('').map(Number);
+    }
+
+    function renderRegister(registerEl, n, bits, colorClass) {
+        registerEl.innerHTML = '';
+        const binArr = intToBinaryArray(n, bits);
+        
+        binArr.forEach((bit, index) => {
+            const powerIndex = bits - 1 - index; 
+            
+            const slot = document.createElement('div');
+            slot.className = 'bit-slot';
+            
+            const box = document.createElement('div');
+            box.className = `bit-box bit-${bit}`;
+            box.innerText = bit;
+            if (index === bits - 1) box.id = `${registerEl.id}-lsb`; 
+            
+            const idxLbl = document.createElement('div');
+            idxLbl.className = 'bit-index';
+            idxLbl.innerText = powerIndex; 
+
+            const powLbl = document.createElement('div');
+            powLbl.className = `bit-power ${colorClass}`;
+            if (bit === 1) {
+                powLbl.innerHTML = `2<sup>${powerIndex}</sup>`;
+            }
+            
+            slot.appendChild(box);
+            slot.appendChild(idxLbl);
+            slot.appendChild(powLbl);
+            
+            registerEl.appendChild(slot);
+        });
+    }
+
+    function updateDecimalDisplays() {
+        document.getElementById('decA').innerText = a;
+        document.getElementById('decB').innerText = b;
+    }
+
+    // --- CORE LOGIC ---
+    function applyInputs() {
+        let valA = parseInt(document.getElementById('inpA').value);
+        let valB = parseInt(document.getElementById('inpB').value);
+        if(isNaN(valA) || isNaN(valB) || valA < 1 || valB < 1) {
+            alert("Παρακαλώ δώστε θετικούς ακέραιους."); return;
+        }
+        initialA = valA;
+        initialB = valB;
+        initApp();
+    }
+
+    function initApp() {
+        stopAutoPlay();
+        a = initialA;
+        b = initialB;
+        s = 0;
+        stepIndex = 0;
+        
+        let maxExpected = a * (b + 1); 
+        registerBits = Math.max(12, maxExpected.toString(2).length + 2);
+
+        btnStep.disabled = false;
+        tableBody.innerHTML = '';
+        sValueSpan.innerText = '0';
+        
+        renderRegister(regA, a, registerBits, 'label-a');
+        renderRegister(regB, b, registerBits, 'label-b');
+        updateDecimalDisplays();
+        
+        hl('line1');
+        setTimeout(() => hl('line2'), 400);
+    }
+
+    function toggleAutoPlay() {
+        if (isAutoPlaying) {
+            stopAutoPlay();
+        } else {
+            startAutoPlay();
+        }
+    }
+
+    function startAutoPlay() {
+        if (stepIndex === 4) initApp(); 
+        isAutoPlaying = true;
+        btnAuto.classList.add('playing');
+        autoIcon.innerText = "⏸";
+        autoText.innerText = "Παύση";
+        btnStep.disabled = true;
+        executeNextStep();
+    }
+
+    function stopAutoPlay() {
+        isAutoPlaying = false;
+        clearTimeout(autoPlayTimer);
+        btnAuto.classList.remove('playing');
+        autoIcon.innerText = "▶";
+        autoText.innerText = "Αυτόματη Εκτέλεση";
+        if(stepIndex !== 4) btnStep.disabled = false;
+    }
+
+    function getSpeedDelay() {
+        const sliderVal = document.getElementById('speedSlider').value;
+        const delays = {1: 2500, 2: 1800, 3: 1200, 4: 800, 5: 400};
+        return delays[sliderVal] || 1200;
+    }
+
+    function nextStep() {
+        stopAutoPlay();
+        executeNextStep();
+    }
+
+    function executeNextStep() {
+        if (stepIndex === 4) return; 
+
+        let delayForNext = getSpeedDelay();
+
+        if (stepIndex === 0) {
+            hl('line3');
+            if (b > 0) {
+                stepIndex = 1;
+            } else {
+                stepIndex = 4; 
+            }
+        } 
+        else if (stepIndex === 1) {
+            hl('line4');
+            const lsb = b % 2;
+            const lsbBox = document.getElementById('regB-lsb');
+            if(lsbBox) lsbBox.classList.add('lsb-check');
+
+            let historyHtml = "";
+
+            if (lsb === 1) {
+                s += a;
+                historyHtml = `<tr class="keep active-row"><td>${a}</td><td>${b}</td><td>+${a} (Σύνολο: ${s})</td></tr>`;
+                
+                setTimeout(() => {
+                    hl('line5');
+                    sValueSpan.innerText = s;
+                    sValueSpan.classList.add('bump');
+                    setTimeout(() => sValueSpan.classList.remove('bump'), 300);
+                }, delayForNext / 2);
+
+            } else {
+                historyHtml = `<tr class="drop active-row"><td>${a}</td><td>${b}</td><td>Αγνοείται</td></tr>`;
+            }
+
+            Array.from(tableBody.querySelectorAll('tr')).forEach(tr => tr.classList.remove('active-row'));
+            tableBody.insertAdjacentHTML('beforeend', historyHtml);
+            tableBody.parentElement.parentElement.scrollTop = tableBody.parentElement.parentElement.scrollHeight;
+
+            stepIndex = 2;
+        } 
+        else if (stepIndex === 2) {
+            hl('line7');
+            const lsbBox = document.getElementById('regB-lsb');
+            if(lsbBox) lsbBox.classList.remove('lsb-check');
+
+            regA.classList.add('shift-left');
+            regB.classList.add('shift-right');
+
+            setTimeout(() => {
+                hl('line8');
+                a = a * 2; 
+                b = Math.floor(b / 2);
+                updateDecimalDisplays();
+            }, delayForNext / 2);
+
+            stepIndex = 3;
+        }
+        else if (stepIndex === 3) {
+            regA.classList.remove('shift-left');
+            regB.classList.remove('shift-right');
+
+            renderRegister(regA, a, registerBits, 'label-a');
+            renderRegister(regB, b, registerBits, 'label-b');
+
+            hl('line9');
+
+            if (b > 0) {
+                stepIndex = 0;
+            } else {
+                stepIndex = 4;
+            }
+        }
+        else if (stepIndex === 4) {
+            hl('line10');
+            btnStep.disabled = true;
+            stopAutoPlay();
+            return; 
+        }
+
+        if (isAutoPlaying && stepIndex !== 4) {
+            autoPlayTimer = setTimeout(executeNextStep, delayForNext);
+        }
+    }
+</script>
+</body>
+</html>
