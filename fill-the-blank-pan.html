@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💻 Διαδραστική Συμπλήρωση & Εκτέλεση Κώδικα</title>
+    <style>
+        /* --- CSS VARIABLES --- */
+        :root {
+            --primary: #38bdf8; --primary-hover: #0284c7;
+            --text-dark: #f8fafc; --text-light: #cbd5e1;
+            --bg-color: #0f172a; --panel-bg: #1e293b;
+            --border-color: #334155;
+            --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
+            --code-bg: #020617;
+        }
+
+        body.light-mode {
+            --primary: #2563eb; --primary-hover: #1d4ed8;
+            --text-dark: #1e293b; --text-light: #64748b;
+            --bg-color: #f1f5f9; --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --code-bg: #f8fafc;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg-color); color: var(--text-dark); height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s; }
+
+        /* --- TOOLBAR --- */
+        .toolbar { background-color: var(--panel-bg); border-bottom: 1px solid var(--border-color); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 100;}
+        .toolbar-title { font-weight: 900; font-size: 1.4rem; color: var(--primary); display: flex; align-items: center; gap: 10px;}
+        .controls-group { display: flex; align-items: center; gap: 10px;}
+        
+        .input-group { display: flex; align-items: center; gap: 5px; background: var(--bg-color); padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .input-group select { padding: 8px; border: none; font-weight: bold; background: transparent; color: var(--text-dark); outline: none; cursor: pointer; font-size: 1rem;}
+        .input-group select option { background-color: var(--panel-bg); color: var(--text-dark); }
+
+        .tool-btn { background-color: var(--panel-bg); color: var(--text-dark); border: 1px solid var(--border-color); padding: 8px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 0.95rem;}
+        .tool-btn:hover { background-color: var(--border-color); }
+        
+        .btn-theme { background-color: transparent; border: 1px solid var(--border-color); font-size: 1.2rem; padding: 6px 12px; border-radius: 6px; cursor: pointer; color: var(--text-dark);}
+
+        /* --- LAYOUT --- */
+        .main-container { display: flex; flex: 1; padding: 15px; gap: 15px; height: calc(100% - 65px); }
+        .col { background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.2); overflow: hidden; }
+        
+        /* LEFT COLUMN: Problem Statement */
+        .col-left { flex: 0 0 320px; padding: 20px; overflow-y: auto;}
+        .panel-title { font-size: 1.2rem; font-weight: 900; margin-bottom: 15px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; color: var(--primary); display: flex; align-items: center; gap: 8px;}
+        
+        .theory-box { background: rgba(56, 189, 248, 0.05); border-left: 4px solid var(--primary); padding: 15px; border-radius: 0 8px 8px 0; margin-bottom: 20px; font-size: 1rem; line-height: 1.6; }
+        .target-box { background: rgba(16, 185, 129, 0.1); border: 2px dashed var(--success); padding: 15px; border-radius: 8px; text-align: center; margin-top: auto;}
+        .target-title { font-weight: bold; color: var(--success); margin-bottom: 10px; text-transform: uppercase; font-size: 0.9rem; letter-spacing: 1px;}
+        .target-output { font-family: 'Consolas', monospace; font-size: 1rem; font-weight: bold; color: var(--text-dark); word-break: break-word;}
+
+        /* MID COLUMN: Interactive Code Editor */
+        .col-mid { flex: 1; padding: 20px; background: var(--code-bg); position: relative;}
+        .code-container { font-family: 'Consolas', 'Monaco', monospace; font-size: 1.2rem; color: var(--text-dark); display: flex; flex-direction: column; gap: 6px; }
+        
+        /* Στοίχιση σε κάθε γραμμή κώδικα */
+        .code-line { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; line-height: 1.5;}
+
+        .kw { color: #c678dd; font-weight: bold; } /* Keywords */
+        .var { color: #61afef; } 
+        body.light-mode .kw { color: #2563eb; }
+        body.light-mode .var { color: #0f172a; }
+
+        .code-input { background: var(--panel-bg); color: var(--primary); border: 2px solid var(--border-color); border-radius: 4px; padding: 2px 4px; font-family: inherit; font-size: 1.05rem; font-weight: bold; text-align: center; outline: none; transition: 0.2s; width: 45px; display: inline-block;}
+        .code-input:focus { border-color: var(--primary); box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
+        .code-input.correct { border-color: var(--success); background: rgba(16, 185, 129, 0.1); color: var(--success);}
+        .code-input.wrong { border-color: var(--danger); background: rgba(239, 68, 68, 0.1); color: var(--danger);}
+
+        .editor-actions { position: absolute; bottom: 20px; left: 20px; right: 20px; display: flex; gap: 15px; justify-content: center;}
+        .btn-run { background: linear-gradient(45deg, var(--primary), #8b5cf6); color: white; border: none; padding: 12px 25px; border-radius: 8px; font-weight: 900; font-size: 1.1rem; cursor: pointer; transition: 0.3s; box-shadow: 0 5px 15px rgba(56, 189, 248, 0.3); display: flex; align-items: center; gap: 8px;}
+        .btn-run:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(56, 189, 248, 0.5); }
+        .btn-run:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-sol { background: var(--panel-bg); color: var(--text-dark); border: 2px solid var(--border-color); padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s;}
+        .btn-sol:hover { border-color: var(--text-dark); }
+
+        /* Overlay Messages */
+        .overlay { position: absolute; top:0; left:0; right:0; bottom:0; background: rgba(15, 23, 42, 0.8); z-index: 10; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); border-radius: 12px;}
+        .msg-box { background: var(--panel-bg); padding: 30px 50px; border-radius: 15px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.5); animation: scaleUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); border: 3px solid transparent;}
+        .msg-box.success { border-color: var(--success); }
+        .msg-box.error { border-color: var(--danger); }
+        .msg-icon { font-size: 4rem; margin-bottom: 10px; }
+        .msg-title { font-size: 1.5rem; font-weight: 900; color: var(--text-dark); margin-bottom: 10px;}
+        .msg-desc { font-size: 1rem; color: var(--text-light); }
+        @keyframes scaleUp { 0% { transform: scale(0.5); opacity: 0;} 100% { transform: scale(1); opacity: 1;} }
+
+        /* RIGHT COLUMN: RAM & Console */
+        .col-right { flex: 0 0 280px; display: flex; flex-direction: column; gap: 15px; background: transparent; border: none; box-shadow: none;}
+        
+        .ram-panel { flex: 1; background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.2);}
+        .trace-table { width: 100%; border-collapse: collapse; text-align: left; font-family: monospace; font-size: 1rem; }
+        .trace-table th { background: rgba(56, 189, 248, 0.1); color: var(--primary); padding: 12px; border-bottom: 2px solid var(--border-color); }
+        .trace-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-color); }
+        .val-td { font-weight: bold; color: var(--success); text-align: right; font-size: 1.2rem;} 
+        .new-row { animation: highlightRow 0.5s; }
+        @keyframes highlightRow { 0% { background-color: rgba(16, 185, 129, 0.3); } 100% { background-color: transparent; } }
+
+        /* Terminal ALWAYS Black/Green */
+        .console-panel { flex: 0 0 250px; background: #000000 !important; color: #00ff00 !important; padding: 15px; border-radius: 12px; font-family: 'Consolas', 'Monaco', monospace; font-size: 1.1rem; border: 2px solid #333; overflow-y: auto; line-height: 1.6; box-shadow: inset 0 0 10px rgba(0,0,0,0.8);}
+        
+    </style>
+</head>
+<body class="light-mode">
+
+<div class="toolbar">
+    <div class="toolbar-title">💻 Εργαστήριο: Εκτέλεση Κώδικα Μαθητή</div>
+    <div class="controls-group">
+        <div class="input-group">
+            <select id="exSelect" onchange="loadExercise()">
+                <option value="ex1">Άσκηση 1 (Ημιτελής ΟΣΟ)</option>
+                <option value="ex2">Άσκηση 2 (Ημιτελής ΓΙΑ)</option>
+                <option value="ex3">Άσκηση 3 (Εμφωλευμένη ΓΙΑ)</option>
+                <option value="ex4">Άσκηση 4 (ΑΡΧΗ_ΕΠΑΝΑΛΗΨΗΣ)</option>
+            </select>
+        </div>
+        <button class="btn-theme" onclick="toggleTheme()" title="Εναλλαγή Θέματος">🌓</button>
+    </div>
+</div>
+
+<div class="main-container">
+    
+    <div class="col col-left">
+        <div class="panel-title">📋 Εκφώνηση</div>
+        <div class="theory-box" id="probDesc"></div>
+        
+        <div class="target-box" id="targetBox">
+            <div class="target-title">ΣΤΟΧΟΣ ΕΞΟΔΟΥ ΟΘΟΝΗΣ</div>
+            <div class="target-output" id="targetOutput"></div>
+        </div>
+    </div>
+
+    <div class="col col-mid">
+        <div class="code-container" id="codeEditor"></div>
+
+        <div class="editor-actions">
+            <button class="btn-run" id="btnRun" onclick="executeUserCode()">▶️ Δοκιμή Κώδικα</button>
+            <button class="btn-sol" onclick="showSolution()">👁️ Λύση</button>
+        </div>
+
+        <div class="overlay" id="resultOverlay" onclick="this.style.display='none'">
+            <div class="msg-box" id="msgBox">
+                <div class="msg-icon" id="msgIcon">✅</div>
+                <div class="msg-title" id="msgTitle">Σωστό!</div>
+                <div class="msg-desc" id="msgDesc">Η έξοδος της οθόνης ταιριάζει απόλυτα με τον στόχο!</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-right">
+        <div class="ram-panel">
+            <div class="panel-title" style="margin: 15px 15px 0 15px;">🧠 Μνήμη (RAM)</div>
+            <div style="flex:1; padding: 15px; overflow-y: auto;">
+                <table class="trace-table">
+                    <thead><tr><th>Μεταβλητή</th><th style="text-align: right;">Τιμή</th></tr></thead>
+                    <tbody id="ramBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="console-panel" id="consoleScreen">
+            <div style="color:#aaa; border-bottom:1px dashed #555; margin-bottom:5px;">-- Τερματικό Εξόδου --</div>
+            <div id="consoleText"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- DATABASE OF EXERCISES ---
+    const exercises = {
+        ex1: {
+            title: "Άσκηση 1 (Ημιτελής ΟΣΟ)",
+            desc: "Να συμπληρωθούν τα κενά, ώστε ο αλγόριθμος να εμφανίζει τις τιμές: <strong>4, 8, 16, 20, 28, 32, 40</strong>.<br><br><em>Υπόδειξη:</em> Παρατήρησε ότι λείπουν τα πολλαπλάσια του 12 (το 12, το 24 και το 36).",
+            target: [4, 8, 16, 20, 28, 32, 40],
+            variables: ['i'],
+            html: `
+<div class="code-line"><span class="var">i</span> <- <input type="text" class="code-input"></div>
+<div class="code-line"><span class="kw">Όσο</span> <span class="var">i</span> <= <input type="text" class="code-input"> <span class="kw">επανάλαβε</span></div>
+<div class="code-line" style="margin-left: 20px;"><span class="kw">Αν</span> <input type="text" class="code-input" style="width: 160px;"> <span class="kw">τότε</span></div>
+<div class="code-line" style="margin-left: 40px;"><span class="kw">Γράψε</span> <span class="var">i</span></div>
+<div class="code-line" style="margin-left: 20px;"><span class="kw">Τέλος_αν</span></div>
+<div class="code-line" style="margin-left: 20px;"><span class="var">i</span> <- <span class="var">i</span> + <input type="text" class="code-input"></div>
+<div class="code-line"><span class="kw">Τέλος_επανάληψης</span></div>`,
+            solution: ['4', '40', 'i MOD 12 <> 0', '4'],
+            evaluator: async (inputs) => {
+                let [start, end, cond, step] = inputs;
+                let i = parseInt(start);
+                let e = parseInt(end);
+                let s = parseInt(step);
+                if(isNaN(i) || isNaN(e) || isNaN(s)) throw "Συντακτικό Λάθος στις αριθμητικές τιμές.";
+                
+                let expr = sanitizeExpr(cond);
+                
+                let loops = 0;
+                while(i <= e) {
+                    if (loops++ > 100) throw "Ατέρμων Βρόχος (Άπειρες επαναλήψεις)!";
+                    updateRAM('i', i);
+                    await sleep(400); 
+                    
+                    let isTrue = false;
+                    try { 
+                        // Η μεταβλητή i είναι προσβάσιμη από την eval επειδή βρίσκεται στο ίδιο scope!
+                        isTrue = eval(expr); 
+                    } catch(err) { throw "Λάθος στη Λογική Συνθήκη."; }
+                    
+                    if (isTrue) printConsole(i);
+                    i += s;
+                }
+                updateRAM('i', i);
+            }
+        },
+        ex2: {
+            title: "Άσκηση 2 (Ημιτελής ΓΙΑ)",
+            desc: "Να συμπληρωθεί ο κώδικας, ώστε να εμφανίζονται διαδοχικά οι τιμές: <strong>2, 4, 8, 10, 14</strong>.<br><br><em>Υπόδειξη:</em> Μπορείς να ελέγξεις αν ο αριθμός είναι άρτιος και όχι πολλαπλάσιο του 3, Ή απλά να αποκλείσεις συγκεκριμένες τιμές (π.χ. i <> 6).",
+            target: [2, 4, 8, 10, 14],
+            variables: ['i'],
+            html: `
+<div class="code-line"><span class="kw">Για</span> <span class="var">i</span> <span class="kw">από</span> <input type="text" class="code-input"> <span class="kw">μέχρι</span> <input type="text" class="code-input"> <span class="kw">με_βήμα</span> <input type="text" class="code-input"></div>
+<div class="code-line" style="margin-left: 20px;"><span class="kw">Αν</span> <input type="text" class="code-input" style="width: 160px;"> <span class="kw">και</span> <input type="text" class="code-input" style="width: 160px;"> <span class="kw">τότε</span></div>
+<div class="code-line" style="margin-left: 40px;"><span class="kw">Εμφάνισε</span> <span class="var">i</span></div>
+<div class="code-line" style="margin-left: 20px;"><span class="kw">Τέλος_αν</span></div>
+<div class="code-line"><span class="kw">Τέλος_επανάληψης</span></div>`,
+            solution: ['2', '14', '2', 'i <> 6', 'i <> 12'],
+            evaluator: async (inputs) => {
+                let [from, to, step, cond1, cond2] = inputs;
+                let f = parseInt(from);
+                let t = parseInt(to);
+                let s = parseInt(step);
+                if(isNaN(f) || isNaN(t) || isNaN(s)) throw "Λάθος όρια στο ΓΙΑ.";
+                
+                let c1 = sanitizeExpr(cond1);
+                let c2 = sanitizeExpr(cond2);
+                let expr = `(${c1}) && (${c2})`;
+                
+                let loops = 0;
+                for(let i=f; i<=t; i+=s) {
+                    if (loops++ > 100) throw "Ατέρμων Βρόχος!";
+                    updateRAM('i', i);
+                    await sleep(400);
+                    
+                    let isTrue = false;
+                    try { isTrue = eval(expr); } catch(err) { throw "Λάθος στη Λογική Συνθήκη."; }
+                    
+                    if (isTrue) printConsole(i);
+                }
+            }
+        },
+        ex3: {
+            title: "Άσκηση 3 (Εμφωλευμένη ΓΙΑ)",
+            desc: "Να συμπληρωθούν τα κενά, ώστε να εμφανίζονται οι τιμές: <strong>1, 2, 3, 4, 5,  1, 2, 3, 4,  1, 2, 3</strong>.<br><br><em>Υπόδειξη:</em> Παρατήρησε ότι το όριο του εσωτερικού βρόχου μειώνεται σε κάθε εξωτερική επανάληψη (5, 4, 3).",
+            target: [1, 2, 3, 4, 5, 1, 2, 3, 4, 1, 2, 3],
+            variables: ['Χ', 'Ψ'],
+            html: `
+<div class="code-line"><span class="kw">ΓΙΑ</span> <span class="var">Χ</span> <span class="kw">ΑΠΟ</span> 5 <span class="kw">ΜΕΧΡΙ</span> <input type="text" class="code-input"> <span class="kw">ΜΕ_ΒΗΜΑ</span> <input type="text" class="code-input"></div>
+<div class="code-line" style="margin-left: 20px;"><span class="kw">ΓΙΑ</span> <input type="text" class="code-input"> <span class="kw">ΑΠΟ</span> <input type="text" class="code-input"> <span class="kw">ΜΕΧΡΙ</span> <input type="text" class="code-input"> <span class="kw">ΜΕ_ΒΗΜΑ</span> <input type="text" class="code-input"></div>
+<div class="code-line" style="margin-left: 40px;"><span class="kw">ΓΡΑΨΕ</span> <span class="var">Ψ</span></div>
+<div class="code-line" style="margin-left: 20px;"><span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span></div>
+<div class="code-line"><span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span></div>`,
+            solution: ['3', '-1', 'Ψ', '1', 'Χ', '1'],
+            evaluator: async (inputs) => {
+                let [xTo, xStep, varName, from, to, step] = inputs;
+                let xt = parseInt(xTo);
+                let xs = parseInt(xStep);
+                let f = parseInt(from);
+                let s = parseInt(step);
+                let v = sanitizeExpr(varName.trim());
+                let t_str = sanitizeExpr(to.trim());
+                
+                if(isNaN(xt) || isNaN(xs) || isNaN(f) || isNaN(s)) throw "Συντακτικό Λάθος στα όρια.";
+                if(v !== 'y') throw "Λάθος μεταβλητή (πρέπει να είναι Ψ).";
+                
+                let loops = 0;
+                for(let x=5; (xs>0 ? x<=xt : x>=xt); x+=xs) {
+                    updateRAM('Χ', x);
+                    
+                    let limit = (t_str === 'x') ? x : parseInt(t_str);
+                    if (isNaN(limit)) throw "Το ΜΕΧΡΙ της εσωτερικής ΓΙΑ είναι λάθος.";
+
+                    for(let y=f; (s>0 ? y<=limit : y>=limit); y+=s) {
+                        if (loops++ > 200) throw "Ατέρμων Βρόχος!";
+                        updateRAM('Ψ', y);
+                        await sleep(200);
+                        printConsole(y);
+                    }
+                }
+            }
+        },
+        ex4: {
+            title: "Άσκηση 4 (ΑΡΧΗ_ΕΠΑΝΑΛΗΨΗΣ)",
+            desc: "Υπολογίζει και εμφανίζει τα <strong>τετράγωνα των πολλαπλασίων του 5</strong> από το 0 μέχρι τον αριθμό Χ που διαβάστηκε.<br><br>Στην προσομοίωση, το σύστημα θα δώσει αυτόματα την τιμή <strong>Χ = 20</strong>.",
+            target: [0, 25, 100, 225, 400],
+            variables: ['Χ', 'i', 'Α'],
+            html: `
+<div class="code-line"><span class="kw">ΑΡΧΗ_ΕΠΑΝΑΛΗΨΗΣ</span></div>
+<div class="code-line" style="margin-left: 20px;"><span class="kw">ΓΡΑΨΕ</span> 'ΔΩΣΕ ΘΕΤΙΚΟ ΑΡΙΘΜΟ'</div>
+<div class="code-line" style="margin-left: 20px;"><span class="kw">ΔΙΑΒΑΣΕ</span> <input type="text" class="code-input"></div>
+<div class="code-line"><span class="kw">ΜΕΧΡΙΣ_ΟΤΟΥ</span> <span class="var">Χ</span> <input type="text" class="code-input" style="width: 100px;"></div>
+<div class="code-line"><span class="kw">ΓΙΑ</span> <span class="var">i</span> <span class="kw">ΑΠΟ</span> 0 <span class="kw">ΜΕΧΡΙ</span> <input type="text" class="code-input"> <span class="kw">ΜΕ_ΒΗΜΑ</span> <input type="text" class="code-input"></div>
+<div class="code-line" style="margin-left: 20px;"><span class="var">Α</span> <- <span class="var">i</span> ^ <input type="text" class="code-input"></div>
+<div class="code-line" style="margin-left: 20px;"><span class="kw">ΓΡΑΨΕ</span> <input type="text" class="code-input"></div>
+<div class="code-line"><span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span></div>`,
+            solution: ['Χ', '> 0', 'Χ', '5', '2', 'Α'],
+            evaluator: async (inputs) => {
+                let [varX, cond, max, step, exp, printVar] = inputs;
+                if(sanitizeExpr(varX) !== 'x') throw "Λάθος μεταβλητή στη ΔΙΑΒΑΣΕ.";
+                
+                let expr = sanitizeExpr(cond); 
+                let x = 20; 
+                
+                updateRAM('Χ', x);
+                sysPrint("ΔΩΣΕ ΘΕΤΙΚΟ ΑΡΙΘΜΟ"); // Δεν επηρεάζει την αξιολόγηση!
+                await sleep(500);
+
+                let isTrue = false;
+                try { isTrue = eval(`${x} ${expr}`); } catch(e) { throw "Λάθος στη συνθήκη ΜΕΧΡΙΣ_ΟΤΟΥ."; }
+                if(!isTrue) throw "Η συνθήκη του ΜΕΧΡΙΣ_ΟΤΟΥ δεν επιτρέπει τη συνέχεια!";
+
+                let m = (sanitizeExpr(max) === 'x') ? x : parseInt(max);
+                let s = parseInt(step);
+                let ex = parseInt(exp);
+                let p = sanitizeExpr(printVar);
+
+                if(isNaN(m) || isNaN(s) || isNaN(ex) || p !== 'a') throw "Συντακτικό Λάθος στον βρόχο.";
+
+                let loops = 0;
+                for(let i=0; i<=m; i+=s) {
+                    if (loops++ > 100) throw "Ατέρμων Βρόχος!";
+                    updateRAM('i', i);
+                    let a = Math.pow(i, ex);
+                    updateRAM('Α', a);
+                    await sleep(400);
+                    printConsole(a); // ΜΟΝΟ ΑΥΤΟ μετράει στην αξιολόγηση
+                }
+            }
+        }
+    };
+
+    // --- APP STATE ---
+    let currentExId = 'ex1';
+    let printedOutput = [];
+    let isExecuting = false;
+
+    // --- DOM ELEMENTS ---
+    const exSelect = document.getElementById('exSelect');
+    const probDesc = document.getElementById('probDesc');
+    const targetBox = document.getElementById('targetBox');
+    const targetOutput = document.getElementById('targetOutput');
+    const codeEditor = document.getElementById('codeEditor');
+    const ramBody = document.getElementById('ramBody');
+    const consoleText = document.getElementById('consoleText');
+    const btnRun = document.getElementById('btnRun');
+    const resultOverlay = document.getElementById('resultOverlay');
+    const msgBox = document.getElementById('msgBox');
+    const msgIcon = document.getElementById('msgIcon');
+    const msgTitle = document.getElementById('msgTitle');
+    const msgDesc = document.getElementById('msgDesc');
+
+    // --- CORE LOGIC ---
+    function toggleTheme() { document.body.classList.toggle('light-mode'); }
+
+    function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+    // Ο ΑΠΟΛΥΤΟΣ & ΑΣΦΑΛΗΣ ΜΕΤΑΦΡΑΣΤΗΣ (SANITIZER)
+    function sanitizeExpr(expr) {
+        let e = expr.toUpperCase();
+        
+        // Μαθηματικά / Λογικά
+        e = e.replace(/MOD/g, '%').replace(/DIV/g, '/');
+        e = e.replace(/ΚΑΙ/g, '&&').replace(/AND/g, '&&');
+        e = e.replace(/Ή/g, '||').replace(/OR/g, '||');
+        
+        // Ασφαλής αντικατάσταση Συμβόλων (για να μην χαλάει το !==)
+        e = e.replace(/<>/g, ' !== ');
+        e = e.replace(/<=/g, ' LEQ ');
+        e = e.replace(/>=/g, ' GEQ ');
+        e = e.replace(/!==/g, ' NEQ '); 
+        e = e.replace(/!=/g, ' NEQ '); 
+        
+        // Τώρα μπορούμε να αντικαταστήσουμε το απλό ίσον με ασφάλεια
+        e = e.replace(/=/g, ' === '); 
+        
+        // Επαναφορά των προστατευμένων συμβόλων
+        e = e.replace(/ LEQ /g, ' <= ');
+        e = e.replace(/ GEQ /g, ' >= ');
+        e = e.replace(/ NEQ /g, ' !== ');
+
+        // Μετατροπή Ελληνικών/Αγγλικών Μεταβλητών σε Αγγλικά Μικρά (για την eval)
+        e = e.replace(/Ι/g, 'i').replace(/I/g, 'i'); 
+        e = e.replace(/Χ/g, 'x').replace(/X/g, 'x');
+        e = e.replace(/Ψ/g, 'y').replace(/Y/g, 'y');
+        e = e.replace(/Α/g, 'a').replace(/A/g, 'a');
+        
+        return e;
+    }
+
+    function updateRAM(varName, value) {
+        let el = document.getElementById(`ram-${varName}`);
+        if(el) {
+            el.innerText = value;
+            el.parentElement.classList.remove('new-row');
+            void el.parentElement.offsetWidth; 
+            el.parentElement.classList.add('new-row');
+        }
+    }
+
+    // Τυπώνει πληροφορίες συστήματος (ΔΕΝ μετράει στην αξιολόγηση)
+    function sysPrint(val) {
+        consoleText.innerHTML += `> <span style="color:#aaa;">${val}</span><br>`;
+        document.getElementById('consoleScreen').scrollTop = document.getElementById('consoleScreen').scrollHeight;
+    }
+
+    // Τυπώνει νούμερα του αλγορίθμου (ΜΕΤΡΑΕΙ στην αξιολόγηση)
+    function printConsole(val) {
+        printedOutput.push(val);
+        consoleText.innerHTML += `> <span style="color:#00ff00;">${val}</span><br>`;
+        document.getElementById('consoleScreen').scrollTop = document.getElementById('consoleScreen').scrollHeight;
+    }
+
+    function loadExercise() {
+        currentExId = exSelect.value;
+        const ex = exercises[currentExId];
+
+        probDesc.innerHTML = `<strong>${ex.title}</strong><br><br>${ex.desc}`;
+        
+        // Hide target box for Ex4
+        if(currentExId === 'ex4') {
+            targetBox.style.display = 'none';
+        } else {
+            targetBox.style.display = 'block';
+            targetOutput.innerText = ex.target.join(', ');
+        }
+        
+        codeEditor.innerHTML = ex.html;
+
+        // Reset RAM
+        ramBody.innerHTML = '';
+        ex.variables.forEach(v => {
+            ramBody.innerHTML += `<tr><td>${v}</td><td class="val-td" id="ram-${v}">-</td></tr>`;
+        });
+
+        // Reset Console
+        consoleText.innerHTML = '';
+        printedOutput = [];
+        isExecuting = false;
+        btnRun.disabled = false;
+        
+        // Listeners for Inputs
+        document.querySelectorAll('.code-input').forEach(inp => {
+            inp.addEventListener('input', () => {
+                inp.classList.remove('correct', 'wrong');
+            });
+        });
+    }
+
+    function showSolution() {
+        const ex = exercises[currentExId];
+        const inputs = document.querySelectorAll('.code-input');
+        inputs.forEach((inp, idx) => {
+            inp.value = ex.solution[idx];
+            inp.classList.remove('wrong');
+            inp.classList.add('correct');
+        });
+    }
+
+    function showResult(isSuccess, msg) {
+        msgBox.className = `msg-box ${isSuccess ? 'success' : 'error'}`;
+        msgIcon.innerText = isSuccess ? '✅' : '❌';
+        msgTitle.innerText = isSuccess ? 'Άριστα!' : 'Πρόβλημα...';
+        msgTitle.style.color = isSuccess ? 'var(--success)' : 'var(--danger)';
+        msgDesc.innerText = msg;
+        resultOverlay.style.display = 'flex';
+    }
+
+    async function executeUserCode() {
+        if (isExecuting) return;
+        isExecuting = true;
+        btnRun.disabled = true;
+
+        const ex = exercises[currentExId];
+        const inputs = Array.from(document.querySelectorAll('.code-input')).map(inp => inp.value.trim());
+        
+        if (inputs.some(val => val === '')) {
+            showResult(false, "Πρέπει να συμπληρώσεις όλα τα κενά του κώδικα!");
+            isExecuting = false; btnRun.disabled = false; return;
+        }
+
+        ex.variables.forEach(v => updateRAM(v, '-'));
+        consoleText.innerHTML = '';
+        printedOutput = [];
+
+        try {
+            await ex.evaluator(inputs);
+            
+            let isMatch = JSON.stringify(printedOutput) === JSON.stringify(ex.target);
+            
+            if (isMatch) {
+                document.querySelectorAll('.code-input').forEach(inp => inp.classList.add('correct'));
+                showResult(true, "Η έξοδος της οθόνης ταιριάζει ΑΠΟΛΥΤΑ με τον στόχο! Ο κώδικάς σου είναι σωστός.");
+            } else {
+                document.querySelectorAll('.code-input').forEach(inp => inp.classList.add('wrong'));
+                showResult(false, `Η έξοδος που παρήγαγε ο κώδικάς σου [${printedOutput.join(', ')}] δεν ταιριάζει με τον στόχο [${ex.target.join(', ')}].`);
+            }
+
+        } catch (err) {
+            document.querySelectorAll('.code-input').forEach(inp => inp.classList.add('wrong'));
+            showResult(false, `Ο κώδικας 'έσκασε' κατά την εκτέλεση: ${err}`);
+        }
+
+        isExecuting = false;
+        btnRun.disabled = false;
+    }
+
+    // --- INIT ---
+    window.addEventListener('load', loadExercise);
+
+</script>
+</body>
+</html>
