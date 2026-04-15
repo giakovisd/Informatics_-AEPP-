@@ -56,6 +56,7 @@
             box-sizing: border-box;
             flex-shrink: 0;
             z-index: 100;
+            transition: filter 0.5s; /* Προσθήκη για το θόλωμα */
         }
 
         .header-title h1 { margin: 0; font-size: 1.1rem; }
@@ -88,6 +89,7 @@
             height: calc(100% - 70px);
             box-sizing: border-box;
             overflow: hidden; 
+            transition: filter 0.5s; /* Προσθήκη για το θόλωμα */
         }
 
         /* LEFT: Code Panel */
@@ -349,11 +351,57 @@
         .output-log { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 0.9rem; }
         .log-item { border-bottom: 1px solid #eee; padding: 3px 0; }
 
+        /* --- INTRO OVERLAY (MODAL) --- */
+        .blurred { filter: blur(5px); pointer-events: none; transition: filter 0.5s; }
+        
+        #introOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000; opacity: 1; transition: opacity 0.5s;
+        }
+        .intro-box {
+            background: var(--panel-bg); width: 680px; max-width: 95%;
+            border-radius: 12px; padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            text-align: center; border: 2px solid var(--col-grade);
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .intro-box h1 { color: var(--col-grade); margin-top: 0; margin-bottom: 15px; font-size: 1.6rem; }
+        .intro-box p { font-size: 1rem; line-height: 1.5; margin-bottom: 15px; text-align: justify; }
+
+        .intro-array { display: flex; justify-content: center; gap: 6px; margin: 20px 0 25px 0;}
+        .intro-cell { width: 50px; height: 50px; border: 2px solid var(--border-color); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; background: var(--bg-color); color: var(--text-color); box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
+        .intro-cell.max { background: var(--col-grade); color: white; border-color: #065f46; transform: scale(1.15); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); z-index: 5;}
+
+        .intro-btn { padding: 10px 20px; font-size: 1rem; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; background-color: var(--col-grade); color: white; margin-top: 10px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);}
+        .intro-btn:hover { filter: brightness(0.9); transform: translateY(-2px); }
+
     </style>
 </head>
 <body>
 
-<header>
+<div id="introOverlay">
+    <div class="intro-box">
+        <h1>🔍 Εύρεση μεγίστου-ελαχίστου</h1>
+        <p>Για τον εντοπισμό του μεγίστου-ελαχίστου στοιχείου ενός πίνακα με διαδοχική σάρωση, αρχικά θεωρούμε ως μέγιστο ή ελάχιστο το πρώτο στοιχείο και στη συνέχεια συγκρίνουμε ένα-ένα τα υπόλοιπα στοιχεία. Αν βρεθεί μεγαλύτερη-μικρότερη τιμή, ενημερώνεται η μεταβλητή max ή min.</p>
+        <p>Το μέγιστο-ελάχιστο μπορεί να είναι μοναδικό (1η καρτέλα), ή πολλαπλό (2η καρτέλα). Στην περίπτωση που πρέπει να ανιχνεύσουμε αν είναι μοναδικό ή όχι, υλοποιούμε την 3η καρτέλα, εμφανίζοντας κατάλληλη επικεφαλίδα.</p>
+
+        <div class="intro-array">
+            <div class="intro-cell max">12</div>
+            <div class="intro-cell">5</div>
+            <div class="intro-cell max">12</div>
+            <div class="intro-cell">9</div>
+            <div class="intro-cell">3</div>
+            <div class="intro-cell">8</div>
+            <div class="intro-cell max">12</div>
+        </div>
+
+        <button class="intro-btn" onclick="closeIntro()">Κατάλαβα! Πάμε στην εφαρμογή</button>
+    </div>
+</div>
+
+<header id="mainHeader" class="blurred">
     <div class="header-title">
         <h1 id="appTitle">Εύρεση Μέγιστου Βαθμού</h1>
     </div>
@@ -373,7 +421,7 @@
     </div>
 </header>
 
-<div class="main-container">
+<div class="main-container blurred" id="mainApp">
     
     <div class="col-code hidden">
         <div class="tabs">
@@ -410,6 +458,15 @@
 </div>
 
 <script>
+    // --- Close Intro Logic ---
+    function closeIntro() {
+        const overlay = document.getElementById('introOverlay');
+        overlay.style.opacity = '0';
+        document.getElementById('mainHeader').classList.remove('blurred');
+        document.getElementById('mainApp').classList.remove('blurred');
+        setTimeout(() => overlay.style.display = 'none', 500);
+    }
+
     // --- Data & State ---
     const SIZE = 12;
     const NAMES_POOL = [
