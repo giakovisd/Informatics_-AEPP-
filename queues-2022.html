@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ολίσθηση Ουράς (Πανελλαδικές 2022)</title>
+    <style>
+        :root {
+            --bg-color: #f1f5f9;
+            --panel-bg: #ffffff;
+            --text-color: #1e293b;
+            --border-color: #cbd5e1;
+            
+            --col-keyword: #2563eb; 
+            --col-var: #0f172a; 
+            --col-num: #d97706;  
+            --col-string: #16a34a;
+            
+            --highlight-line: #fef08a; 
+            --highlight-error: #fee2e2;
+            --text-error: #dc2626;
+            
+            --cell-active: #f97316;
+            --cell-filled: #dbeafe;
+            
+            --input-bg: #e2e8f0;
+            --input-border: #94a3b8;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-color: #f1f5f9;
+            --border-color: #334155;
+            --col-keyword: #60a5fa;
+            --col-var: #e2e8f0;
+            --col-num: #fbbf24;
+            --highlight-line: #422006;
+            --highlight-error: #450a0a;
+            --input-bg: #334155;
+            --input-border: #64748b;
+        }
+
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background: var(--bg-color); color: var(--text-color); overflow: hidden; font-size: 0.95rem; }
+
+        /* HEADER */
+        header {
+            height: 60px; background: var(--panel-bg); border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0;
+        }
+        h1 { font-size: 1.2rem; margin: 0; display:flex; align-items:center; gap:10px; }
+        
+        .controls { display: flex; gap: 8px; align-items: center; }
+        
+        button {
+            padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 4px;
+            cursor: pointer; font-weight: 600; font-size: 0.85rem;
+            background: var(--panel-bg); color: var(--text-color); display: flex; align-items: center; gap: 5px; white-space: nowrap;
+        }
+        button:hover { filter: brightness(0.95); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+        
+        .btn-run { background: #10b981; color: white; border-color: #059669; }
+        .btn-step { background: #3b82f6; color: white; border-color: #2563eb; }
+        .btn-auto { background: #8b5cf6; color: white; border-color: #7c3aed; }
+        .btn-reset { background: #ef4444; color: white; border-color: #dc2626; }
+        .btn-scenario { background: #f59e0b; color: white; border-color: #d97706; }
+
+        .speed-control { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin: 0 10px; background: var(--panel-bg); padding: 4px; border-radius: 6px; border: 1px solid var(--border-color); }
+        input[type=range] { width: 100px; cursor: pointer; }
+
+        /* MAIN LAYOUT */
+        .container { display: flex; flex: 1; overflow: hidden; }
+
+        /* LEFT */
+        .col-left {
+            width: 420px; padding: 20px; border-right: 1px solid var(--border-color); 
+            background: var(--panel-bg); overflow-y: auto; line-height: 1.5;
+        }
+
+        /* CENTER */
+        .col-center {
+            flex: 1; padding: 20px; background: var(--bg-color); overflow-y: auto; display: flex; justify-content: center;
+        }
+        .code-editor {
+            background: var(--panel-bg); padding: 25px; border-radius: 6px; border: 1px solid var(--border-color);
+            width: 100%; max-width: 800px; font-family: 'Consolas', monospace; font-size: 1.05rem; line-height: 1.6;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .line { 
+            padding: 2px 6px; border-radius: 2px; border-left: 4px solid transparent; 
+            display: flex; flex-wrap: wrap; align-items: center; 
+        }
+        .line.active { background-color: var(--highlight-line); border-left-color: #f59e0b; transition: background 0.1s; }
+        .line.error { background-color: var(--highlight-error); border-left-color: #dc2626; }
+        
+        .ln-num { width: 25px; color: var(--text-light); font-size: 0.85rem; user-select: none; }
+        .kw { color: var(--col-keyword); font-weight: bold; margin-right: 6px; }
+        .var { color: var(--col-var); margin-right: 2px; }
+        .num { color: var(--col-num); font-weight: bold; margin: 0 4px; }
+        .op { margin: 0 6px; color: var(--text-color); }
+        
+        .code-input {
+            border: 1px solid var(--input-border); background: var(--input-bg); border-radius: 3px; padding: 2px 5px;
+            font-family: inherit; font-weight: bold; width: 100px; text-align: center; color: inherit; font-size: 1rem;
+        }
+        .code-input:focus { outline: 2px solid var(--col-keyword); background: #fff; color: #000; }
+
+        /* RIGHT */
+        .col-right {
+            width: 460px; background: var(--panel-bg); border-left: 1px solid var(--border-color);
+            display: flex; flex-direction: column; padding: 15px;
+        }
+
+        .monitor {
+            background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 10px;
+        }
+        .var-row { flex: 1 1 40%; display: flex; justify-content: space-between; font-family: monospace; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding: 4px 0; }
+        .var-val { font-weight: bold; color: var(--col-keyword); }
+
+        /* Queue Visualization */
+        .queue-viz {
+            display: flex; gap: 4px; background: var(--bg-color); padding: 25px 10px 20px 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid var(--border-color);
+            flex-wrap: wrap; justify-content: center;
+        }
+        .q-slot-wrapper {
+            display: flex; flex-direction: column; align-items: center; position: relative;
+        }
+        .q-index { font-size: 0.8rem; color: var(--text-light); margin-bottom: 3px; font-weight: bold;}
+        .cell {
+            width: 32px; height: 32px; background: #fff; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-family: monospace; border-radius: 4px; color: #94a3b8; font-size: 1.1rem; border: 1px solid #cbd5e1;
+        }
+        .cell.active { border: 3px solid var(--cell-active); transform: scale(1.15); z-index: 10; color: #000; background: #fff; }
+        .cell.filled { color: #0f172a; background: var(--cell-filled); border-color: #93c5fd;}
+        
+        .ptr-label {
+            position: absolute; font-size: 0.75rem; font-weight: bold; background: var(--panel-bg); padding: 2px 4px; border-radius: 3px; border: 1px solid; z-index: 5;
+        }
+        .ptr-f { color: #10b981; border-color: #10b981; top: -25px; }
+        .ptr-r { color: #ef4444; border-color: #ef4444; bottom: -25px; }
+
+        .console {
+            flex: 1; background: #1e293b; color: #10b981; font-family: monospace; font-size: 0.85rem;
+            padding: 10px; border-radius: 6px; overflow-y: auto; white-space: pre-wrap; line-height:1.4;
+        }
+        .console.error { color: #f87171; font-weight: bold; }
+
+        /* Indentation */
+        .pad-1 { padding-left: 20px; } 
+        .pad-2 { padding-left: 40px; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>💻 Ολίσθηση Ουράς</h1>
+    <div class="controls">
+        <button class="btn-scenario" onclick="generateNewScenario()">🎲 Νέο Σενάριο</button>
+        <button class="btn-reset" onclick="resetToInitial()">🔄 Αρχή</button>
+        <button class="btn-run" id="btnRun" onclick="startExecution()" disabled>▶ Εκκίνηση</button>
+        <button class="btn-step" id="btnStep" onclick="step()" disabled>⤵ Βήμα</button>
+        <button class="btn-auto" id="btnAuto" onclick="toggleAuto()" disabled>Αυτόματη Εκτέλεση</button>
+        <div class="speed-control">
+            <span>🐢</span>
+            <input type="range" id="speedRange" min="50" max="1500" value="500" oninput="updateSpeed()">
+            <span>🐇</span>
+        </div>
+        <div style="width:1px; background:#ccc; margin:0 5px; height: 20px;"></div>
+        <button onclick="solve()">💡 Λύση</button>
+        <button onclick="document.body.classList.toggle('dark-mode')">🌙</button>
+    </div>
+</header>
+
+<div class="container">
+    
+    <div class="col-left">
+        <p><strong>Β1.</strong> Έστω ουρά 10 θέσεων η οποία υλοποιείται με μονοδιάστατο πίνακα Ο[10] και με τις μεταβλητές f και r για το εμπρός και το πίσω άκρο της ουράς, αντίστοιχα.</p>
+        <p style="text-align: justify;">Δίνεται στη συνέχεια αλγόριθμος ο οποίος αντιγράφει όλα τα στοιχεία της ουράς στην αρχή της, αναπροσαρμόζοντας κατάλληλα τους δείκτες f και r. Ο αλγόριθμος περιέχει 5 κενά.</p>
+        <p style="text-align: justify;">Για καθένα από τα κενά να γράψετε στο τετράδιό σας τον αριθμό του και δίπλα ό,τι πρέπει να συμπληρωθεί, ώστε ο αλγόριθμος να επιτελεί σωστά τη λειτουργία που περιγράφηκε.</p>
+        
+        <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-color);">
+        <p style="font-size: 0.9rem; color: var(--col-keyword);"><b>Οδηγία:</b> Συμπλήρωσε τα κενά (1) έως (5) στον Editor. Μόλις τα συμπληρώσεις όλα, πάτα <b>"Εκκίνηση"</b>. Στην προσομοίωσή μας, η ουρά <strong>αρχικοποιείται τυχαία</strong>. Μπορείς να παράγεις διαφορετικά παραδείγματα πατώντας 'Νέο Σενάριο'.</p>
+    </div>
+
+    <div class="col-center">
+        <div class="code-editor" id="editor">
+            <div class="line" id="L1"><span class="ln-num">1</span> <span class="kw">ΔΙΑΔΙΚΑΣΙΑ</span> <span class="var">ΟΛΙΣΘΗΣΗ</span> (<span class="var">O</span>, <span class="var">f</span>, <span class="var">r</span>)</div>
+            <div class="line" id="L2"><span class="ln-num">2</span> <span class="kw">ΜΕΤΑΒΛΗΤΕΣ</span></div>
+            <div class="line pad-1" id="L3"><span class="ln-num">3</span> <span class="kw">ΧΑΡΑΚΤΗΡΕΣ:</span> <span class="var">O</span>[<span class="num">10</span>]</div>
+            <div class="line pad-1" id="L4"><span class="ln-num">4</span> <span class="kw">ΑΚΕΡΑΙΕΣ:</span> <span class="var">f</span>, <span class="var">r</span>, <span class="var">i</span>, <span class="var">k</span></div>
+            <div class="line" id="L5"><span class="ln-num">5</span> <span class="kw">ΑΡΧΗ</span></div>
+            
+            <div class="line pad-1" id="L6"><span class="ln-num">6</span> <span class="var">k</span> <span class="op">←</span> <input id="in1" class="code-input" placeholder="(1)"></div>
+            <div class="line pad-1" id="L7"><span class="ln-num">7</span> <span class="kw">ΓΙΑ</span> <span class="var">i</span> <span class="kw">ΑΠΟ</span> <span class="var">f</span> <span class="kw">ΜΕΧΡΙ</span> <span class="var">r</span></div>
+            <div class="line pad-2" id="L8"><span class="ln-num">8</span> <span class="var">k</span> <span class="op">←</span> <input id="in2" class="code-input" placeholder="(2)"></div>
+            <div class="line pad-2" id="L9"><span class="ln-num">9</span> <span class="var">O</span>[ <input id="in3" class="code-input" placeholder="(3)" style="width:60px;"> ] <span class="op">←</span> <span class="var">O</span>[ <input id="in4" class="code-input" placeholder="(4)" style="width:60px;"> ]</div>
+            <div class="line pad-1" id="L10"><span class="ln-num">10</span> <span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span></div>
+            <div class="line pad-1" id="L11"><span class="ln-num">11</span> <span class="var">f</span> <span class="op">←</span> <span class="num">1</span></div>
+            <div class="line pad-1" id="L12"><span class="ln-num">12</span> <span class="var">r</span> <span class="op">←</span> <input id="in5" class="code-input" placeholder="(5)"></div>
+            
+            <div class="line" id="L13"><span class="ln-num">13</span> <span class="kw">ΤΕΛΟΣ_ΔΙΑΔΙΚΑΣΙΑΣ</span></div>
+        </div>
+    </div>
+
+    <div class="col-right">
+        <div style="font-weight:bold; margin-bottom:5px;">Τιμές Μεταβλητών</div>
+        <div class="monitor">
+            <div class="var-row"><span>f:</span> <span id="val-f" class="var-val">-</span></div>
+            <div class="var-row"><span>r:</span> <span id="val-r" class="var-val">-</span></div>
+            <div class="var-row"><span>i:</span> <span id="val-i" class="var-val">-</span></div>
+            <div class="var-row"><span>k:</span> <span id="val-k" class="var-val">-</span></div>
+        </div>
+
+        <div style="font-weight:bold; margin-bottom:5px;">Πίνακας Ο[10]</div>
+        <div class="queue-viz" id="vizGrid"></div>
+
+        <div class="console" id="console">Συμπληρώστε τα 5 κενά στον κώδικα...</div>
+    </div>
+</div>
+
+<script>
+    // --- Simulator State ---
+    let PC = 1; 
+    let VARS = { f: '-', r: '-', i: '-', k: '-' };
+    let O_ARR = Array(10).fill(null);
+    let TIMER = null;
+    let ERROR_FLAG = false;
+    let LOOP_STARTED = false;
+
+    // --- Scenario Generation State ---
+    let INITIAL_F, INITIAL_R, INITIAL_ARR;
+
+    function generateNewScenario() {
+        // Επιλογή 3 ή 4 στοιχείων στην ουρά
+        const numElements = Math.random() < 0.5 ? 3 : 4;
+        
+        // Το front (f) δεν πρέπει να είναι 1. Άρα ξεκινάει από το 2 τουλάχιστον.
+        // Πρέπει το rear (r) να μην ξεπερνά το 10. Άρα maxF = 10 - numElements + 1
+        const minF = 2;
+        const maxF = 10 - numElements + 1;
+        
+        INITIAL_F = Math.floor(Math.random() * (maxF - minF + 1)) + minF;
+        INITIAL_R = INITIAL_F + numElements - 1;
+        
+        // Αρχικοποίηση πίνακα
+        INITIAL_ARR = Array(10).fill(null);
+        for(let i = INITIAL_F - 1; i <= INITIAL_R - 1; i++) {
+            INITIAL_ARR[i] = Math.floor(Math.random() * 90) + 10; // Τυχαίοι 2-ψήφιοι
+        }
+        
+        resetToInitial();
+    }
+
+    // --- Validations ---
+    function checkInputsAreFilled() {
+        const ids = ['in1', 'in2', 'in3', 'in4', 'in5'];
+        for(let id of ids) {
+            if(!document.getElementById(id).value.trim()) return false;
+        }
+        return true;
+    }
+
+    function checkInputs() {
+        if(PC === 1) document.getElementById('btnRun').disabled = !checkInputsAreFilled();
+    }
+
+    document.querySelectorAll('.code-input').forEach(inp => {
+        inp.addEventListener('input', checkInputs);
+        inp.addEventListener('keyup', checkInputs);
+    });
+
+    // --- Evaluator ---
+    function safeEval(expr) {
+        let clean = expr.trim().toLowerCase();
+        
+        clean = clean.replace(/<-/g, '=').replace(/←/g, '=');
+        
+        // Exact word boundary replacements
+        clean = clean.replace(/\bf\b/g, VARS.f);
+        clean = clean.replace(/\br\b/g, VARS.r);
+        clean = clean.replace(/\bi\b/g, VARS.i);
+        clean = clean.replace(/\bk\b/g, VARS.k);
+
+        try {
+            // eslint-disable-next-line no-eval
+            let result = eval(clean);
+            if(isNaN(result)) throw new Error();
+            return result;
+        } catch (e) {
+            throw new Error(`Συντακτικό ή Λογικό λάθος στην έκφραση: "${expr}"`);
+        }
+    }
+
+    // --- Execution Logic ---
+    const INSTRUCTIONS = {
+        1: { next: 2, action: () => log("--- Έναρξη Διαδικασίας ΟΛΙΣΘΗΣΗ ---") },
+        2: { next: 3, action: () => {} },
+        3: { next: 4, action: () => {} },
+        4: { next: 5, action: () => {} },
+        5: { next: 6, action: () => {} },
+        
+        // L6: k <- (1)
+        6: { next: 7, action: () => {
+            let v = safeEval(document.getElementById('in1').value);
+            VARS.k = v;
+            log(`k ← ${v}`);
+        }},
+
+        // L7: ΓΙΑ i ΑΠΟ f ΜΕΧΡΙ r
+        7: { next: null, action: () => {
+            if(!LOOP_STARTED) {
+                VARS.i = VARS.f;
+                LOOP_STARTED = true;
+                log(`-- Έναρξη Επανάληψης (i=${VARS.i} έως ${VARS.r}) --`);
+            }
+            if(VARS.i <= VARS.r) return 8; // Enter loop
+            else {
+                LOOP_STARTED = false;
+                log(`-- Τέλος Επανάληψης (το i ξεπέρασε το r) --`);
+                return 11; // Exit loop
+            }
+        }},
+
+        // L8: k <- (2)
+        8: { next: 9, action: () => {
+            let v = safeEval(document.getElementById('in2').value);
+            VARS.k = v;
+            log(`k ← ${v}`);
+        }},
+
+        // L9: O[ (3) ] <- O[ (4) ]
+        9: { next: 10, action: () => {
+            let idx3 = safeEval(document.getElementById('in3').value);
+            let idx4 = safeEval(document.getElementById('in4').value);
+            
+            if(idx3 < 1 || idx3 > 10) throw new Error(`Δείκτης εκτός ορίων: O[${idx3}]`);
+            if(idx4 < 1 || idx4 > 10) throw new Error(`Δείκτης εκτός ορίων: O[${idx4}]`);
+            
+            let val = O_ARR[idx4 - 1];
+            O_ARR[idx3 - 1] = val;
+            updateCell(idx3, val);
+            log(`O[${idx3}] ← O[${idx4}] (δηλαδή ${val})`);
+        }},
+
+        // L10: ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ
+        10: { next: 7, action: () => {
+            VARS.i++;
+        }},
+
+        // L11: f <- 1
+        11: { next: 12, action: () => {
+            VARS.f = 1;
+            log(`f ← 1`);
+        }},
+
+        // L12: r <- (5)
+        12: { next: 13, action: () => {
+            let v = safeEval(document.getElementById('in5').value);
+            VARS.r = v;
+            log(`r ← ${v}`);
+        }},
+
+        // L13: ΤΕΛΟΣ
+        13: { next: 99, action: () => {
+            stopAuto();
+            log("--- Επιτυχής Ολοκλήρωση! ---");
+            log("\n💡 Παρατήρηση: Τα παλιά στοιχεία δεν διαγράφηκαν από τη μνήμη! Απλώς οι δείκτες f και r ορίζουν πλέον τη νέα «ενεργή» ουρά, αφήνοντας τα παλιά ως 'σκουπίδια'.", false);
+        }}
+    };
+
+    function startExecution() {
+        document.querySelectorAll('.code-input').forEach(i => i.disabled = true);
+        document.getElementById('btnRun').disabled = true;
+        document.getElementById('btnStep').disabled = false;
+        document.getElementById('btnAuto').disabled = false;
+
+        // Reset execution state back to the initially generated random scenario
+        PC = 1; 
+        VARS = { f: INITIAL_F, r: INITIAL_R, i: '-', k: '-' };
+        O_ARR = [...INITIAL_ARR]; 
+        LOOP_STARTED = false;
+        ERROR_FLAG = false;
+        
+        initGrid();
+        log("Προετοιμασία εκτέλεσης...");
+        updateUI();
+    }
+
+    function step() {
+        if(ERROR_FLAG || PC === 99) return;
+
+        document.querySelectorAll('.line').forEach(l => l.classList.remove('active', 'error'));
+
+        let instr = INSTRUCTIONS[PC];
+        let dom = document.getElementById('L' + PC);
+        
+        if(dom) {
+            dom.classList.add('active');
+            dom.scrollIntoView({behavior: "smooth", block: "center"});
+        }
+
+        try {
+            let jump = instr.action();
+            updateUI();
+            
+            if (jump !== undefined) PC = jump; 
+            else PC = instr.next;
+            
+        } catch (e) {
+            ERROR_FLAG = true;
+            stopAuto();
+            if(dom) dom.classList.add('error');
+            log(e.message, true); 
+        }
+    }
+
+    // --- UI Updates ---
+    function updateCell(idx, val) {
+        let el = document.getElementById(`qcell-${idx}`);
+        if(el) {
+            el.innerText = val !== null ? val : '';
+            if(val !== null) el.classList.add('filled');
+            el.classList.add('active');
+            setTimeout(() => el.classList.remove('active'), 500);
+        }
+    }
+
+    function updateUI() {
+        document.getElementById('val-f').innerText = VARS.f;
+        document.getElementById('val-r').innerText = VARS.r;
+        document.getElementById('val-i').innerText = VARS.i;
+        document.getElementById('val-k').innerText = VARS.k;
+
+        // Pointers in Grid
+        document.querySelectorAll('.ptr-label').forEach(e => e.remove());
+        
+        if(VARS.f > 0 && VARS.f <= 10) {
+            let fw = document.getElementById(`qw-${VARS.f}`);
+            if(fw) {
+                let lbl = document.createElement('div');
+                lbl.className = 'ptr-label ptr-f';
+                lbl.innerText = 'f';
+                fw.appendChild(lbl);
+            }
+        }
+        if(VARS.r > 0 && VARS.r <= 10) {
+            let rw = document.getElementById(`qw-${VARS.r}`);
+            if(rw) {
+                let lbl = document.createElement('div');
+                lbl.className = 'ptr-label ptr-r';
+                lbl.innerText = 'r';
+                rw.appendChild(lbl);
+            }
+        }
+    }
+
+    function log(m, isError = false) { 
+        let c = document.getElementById('console');
+        c.innerText = m + "\n" + c.innerText;
+        if(isError) c.classList.add('error'); else c.classList.remove('error');
+    }
+
+    function initGrid() {
+        const g = document.getElementById('vizGrid');
+        g.innerHTML = '';
+        for(let i=1; i<=10; i++) {
+            let wrap = document.createElement('div');
+            wrap.className = 'q-slot-wrapper';
+            wrap.id = `qw-${i}`;
+            
+            let idxLbl = document.createElement('div');
+            idxLbl.className = 'q-index';
+            idxLbl.innerText = i;
+            
+            let div = document.createElement('div');
+            div.className = 'cell';
+            div.id = `qcell-${i}`;
+            if(O_ARR[i-1] !== null) {
+                div.innerText = O_ARR[i-1];
+                div.classList.add('filled');
+            }
+            
+            wrap.appendChild(idxLbl);
+            wrap.appendChild(div);
+            g.appendChild(wrap);
+        }
+        updateUI();
+    }
+
+    // --- Controls ---
+    function toggleAuto() {
+        if (TIMER) stopAuto(); else startAuto();
+    }
+
+    function startAuto() {
+        document.getElementById('btnAuto').innerText = "Παύση";
+        updateSpeed();
+    }
+    
+    function stopAuto() {
+        if(TIMER) clearInterval(TIMER);
+        TIMER = null;
+        document.getElementById('btnAuto').innerText = "Αυτόματη Εκτέλεση";
+    }
+
+    function updateSpeed() {
+        if(document.getElementById('btnAuto').innerText === "Παύση") {
+            if(TIMER) clearInterval(TIMER);
+            let val = document.getElementById('speedRange').value;
+            let ms = 1550 - val;
+            TIMER = setInterval(step, ms);
+        }
+    }
+
+    function solve() {
+        document.getElementById('in1').value = "0";
+        document.getElementById('in2').value = "k + 1";
+        document.getElementById('in3').value = "k";
+        document.getElementById('in4').value = "i";
+        document.getElementById('in5').value = "k";
+        checkInputs();
+    }
+
+    function resetToInitial() {
+        stopAuto();
+        PC = 1; 
+        VARS = { f: INITIAL_F, r: INITIAL_R, i: '-', k: '-' }; 
+        O_ARR = [...INITIAL_ARR]; 
+        ERROR_FLAG = false; 
+        LOOP_STARTED = false;
+        
+        // Enable inputs but don't clear them (so student can fix typos)
+        document.querySelectorAll('.code-input').forEach(i => { i.disabled = false; });
+        document.querySelectorAll('.line').forEach(l => l.classList.remove('active', 'error'));
+        
+        document.getElementById('btnRun').disabled = !checkInputsAreFilled();
+        document.getElementById('btnStep').disabled = true;
+        document.getElementById('btnAuto').disabled = true;
+        
+        document.getElementById('console').innerText = "Συμπληρώστε τα 5 κενά στον κώδικα...";
+        document.getElementById('console').classList.remove('error');
+        
+        initGrid();
+    }
+
+    // --- Start App ---
+    generateNewScenario();
+
+</script>
+</body>
+</html>
