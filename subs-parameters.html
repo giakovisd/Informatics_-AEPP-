@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Η Ψευδαίσθηση της Εμβέλειας - Walking Values</title>
+    <style>
+        /* --- CSS VARIABLES (Day/Night) --- */
+        :root {
+            --primary: #3b82f6; --primary-hover: #2563eb;
+            --text-dark: #1e293b; --text-light: #64748b;
+            --bg-color: #f8fafc; --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
+            --main-room-bg: #e0f2fe; --sub-room-bg: #fef3c7;
+            --door-rgb: 71, 85, 105; /* Σκούρο μπλε/γκρι */
+            --leg-color: #1e293b;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a; --panel-bg: #1e293b;
+            --text-dark: #f8fafc; --text-light: #cbd5e1;
+            --border-color: #334155;
+            --main-room-bg: #0c4a6e; --sub-room-bg: #78350f;
+            --door-rgb: 148, 163, 184; /* Πιο ανοιχτό γκρι για night mode */
+            --leg-color: #0f172a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg-color); color: var(--text-dark); height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s; }
+
+        /* --- TOOLBAR --- */
+        .toolbar { background-color: var(--panel-bg); border-bottom: 1px solid var(--border-color); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 100; }
+        .toolbar-title { font-weight: 800; font-size: 1.3rem; color: var(--primary); text-align: left; display: flex; align-items: center; gap: 8px;}
+        .controls-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end;}
+        
+        .tool-btn { background-color: var(--panel-bg); color: var(--text-dark); border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; font-size: 0.9rem; white-space: nowrap;}
+        .tool-btn:hover:not(:disabled) { background-color: var(--border-color); }
+        .tool-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-run { background-color: var(--success); color: white; border-color: var(--success); }
+        .btn-run:hover:not(:disabled) { background-color: #059669; }
+        .btn-step { background-color: var(--primary); color: white; border-color: var(--primary); }
+        .btn-step:hover:not(:disabled) { background-color: var(--primary-hover); }
+
+        .input-group { display: flex; align-items: center; gap: 5px; background: var(--bg-color); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color); }
+        .input-group label { font-weight: bold; font-size: 0.9rem; }
+        .input-group input { width: 50px; padding: 4px; border: 1px solid var(--border-color); border-radius: 4px; text-align: center; font-weight: bold; background: var(--panel-bg); color: var(--text-dark);}
+        
+        .speed-slider-container { display: flex; align-items: center; gap: 6px; background: var(--bg-color); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-color); }
+        .speed-icon { font-size: 1rem; }
+        .rheostat { -webkit-appearance: none; width: 80px; height: 6px; border-radius: 3px; background: #cbd5e1; outline: none; cursor: pointer; }
+        .rheostat::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        .rheostat::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--primary); border: none; }
+
+        /* --- 3-COLUMN LAYOUT --- */
+        .main-container { display: flex; flex: 1; padding: 15px; gap: 15px; height: calc(100% - 60px); }
+        .col { background: var(--panel-bg); border-radius: 10px; border: 1px solid var(--border-color); display: flex; flex-direction: column; box-shadow: 0 4px 6px rgba(0,0,0,0.02); overflow: hidden; }
+        
+        /* Left: Theory */
+        .col-left { flex: 0 0 350px; padding: 20px; overflow-y: auto; }
+        .panel-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid var(--border-color); padding-bottom: 5px; color: var(--primary); }
+        
+        .theory-box, .analogy-box { padding: 15px; border-radius: 6px; margin-bottom: 15px; font-size: 0.9rem; line-height: 1.5; }
+        .theory-box { background: rgba(59, 130, 246, 0.1); border-left: 4px solid var(--primary); }
+        .analogy-box { background: rgba(245, 158, 11, 0.1); border-left: 4px solid var(--warning); }
+        
+        .method-selector { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+        .method-btn { padding: 10px; border: 2px solid var(--border-color); background: var(--bg-color); color: var(--text-dark); border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; text-align: left; font-size: 0.9rem;}
+        .method-btn.active { border-color: var(--primary); background: rgba(59, 130, 246, 0.1); color: var(--primary); }
+
+        .status-box { margin-top: auto; margin-bottom: 10px; padding: 15px; background: var(--bg-color); border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.9rem; color: var(--text-dark); text-align: left; min-height: 80px; line-height: 1.5;}
+        .status-box strong { display: block; margin-bottom: 6px; color: var(--primary); font-family: monospace; font-size: 1.1rem; }
+
+        /* Middle: Animation & Scopes */
+        .col-mid { flex: 1; position: relative; display: flex; flex-direction: column; background: var(--bg-color); padding: 15px; gap: 15px; }
+        
+        .anim-area { flex: 1; background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color); position: relative; display: flex; gap: 20px; align-items: stretch; justify-content: center; box-shadow: inset 0 2px 10px rgba(0,0,0,0.05); padding: 25px 20px;}
+        
+        /* THE ROOMS (SCOPES) */
+        .room { flex: 1; border: 3px solid var(--border-color); border-radius: 12px; position: relative; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 15px; transition: 0.5s; opacity: 1; padding: 25px 15px 15px 15px;}
+        .room-main { background: var(--main-room-bg); border-color: var(--primary); }
+        .room-sub { background: var(--sub-room-bg); border-color: var(--warning); opacity: 0.4; filter: grayscale(0.8); }
+        .room-sub.active { opacity: 1; filter: grayscale(0); box-shadow: 0 0 20px rgba(245, 158, 11, 0.3); }
+        
+        .room-title { position: absolute; top: -15px; left: 15px; background: var(--panel-bg); padding: 5px 15px; border-radius: 20px; font-weight: 900; border: 2px solid; color: var(--text-dark); box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 10;}
+        .room-main .room-title { border-color: var(--primary); }
+        .room-sub .room-title { border-color: var(--warning); }
+
+        /* EMBEDDED CODE AREA */
+        .code-embedded { flex: 1; background: #ffffff !important; color: #1e293b !important; padding: 10px; border-radius: 8px; font-family: 'Consolas', 'Monaco', monospace; font-size: 0.95rem; font-weight: bold; border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,0.05); overflow-y: auto; text-align: left; transition: opacity 0.3s; margin-bottom: 10px;}
+        .code-line { padding: 2px 6px; border-radius: 4px; transition: 0.2s; border-left: 4px solid transparent; margin-bottom: 1px;}
+        .code-line.active { background: #eff6ff !important; border-left-color: #3b82f6 !important; color: #2563eb !important; }
+        .code-decl { color: #8b5cf6; font-weight: normal; } 
+        .code-comment { color: #64748b; font-style: italic; font-size: 0.8rem; font-weight: normal;}
+
+        /* --- THE DOOR VARIABLES --- */
+        .var-container { display: flex; gap: 20px; justify-content: center; margin-top: auto; perspective: 600px;}
+        
+        .var-door { width: 75px; height: 95px; position: relative; transform-style: preserve-3d; }
+        .var-door-frame { width: 100%; height: 100%; background: #0f172a; border: 4px solid #475569; border-radius: 8px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 5px 10px rgba(0,0,0,0.8); position: absolute; top: 0; left: 0;}
+        
+        .var-val { color: #4ade80; font-family: monospace; font-size: 2rem; font-weight: bold; text-shadow: 0 0 8px rgba(74, 222, 128, 0.8); z-index: 1;}
+        .var-val.empty { opacity: 0; }
+        
+        /* ΗΜΙΔΙΑΦΑΝΗ ΠΟΡΤΑ */
+        .var-door-leaf { width: 100%; height: 100%; background: rgba(var(--door-rgb), 0.07); backdrop-filter: blur(2px); border-radius: 4px; border: 2px solid rgba(255,255,255,0.2); position: absolute; top: 0; left: 0; transform-origin: left; transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 5; box-shadow: 2px 0 5px rgba(0,0,0,0.3);}
+        .var-door-leaf::after { content: ''; position: absolute; right: 5px; top: 50%; transform: translateY(-50%); width: 6px; height: 20px; background: #cbd5e1; border-radius: 3px; box-shadow: 1px 1px 2px rgba(0,0,0,0.5);}
+        
+        .var-label { position: absolute; top: 5px; font-weight: 900; font-size: 1.3rem; color: white; text-shadow: 1px 1px 3px rgba(0,0,0,0.8);}
+        
+        /* Καταστάσεις Πόρτας */
+        .var-door.open .var-door-leaf { transform: rotateY(-105deg); box-shadow: none; }
+        
+        /* Knocking Animation */
+        @keyframes knock {
+            0%, 100% { transform: rotateY(0deg); }
+            20% { transform: rotateY(-12deg); }
+            40% { transform: rotateY(2deg); }
+            60% { transform: rotateY(-12deg); }
+            80% { transform: rotateY(2deg); }
+        }
+        .var-door.knocking .var-door-leaf { animation: knock 0.4s ease-in-out; }
+
+        .hallway { position: absolute; left: 50%; top: 20%; bottom: 20%; width: 0px; border-left: 2px dashed var(--border-color); z-index: 0; }
+
+        /* --- WALKING VALUES (ANIMATION & LEGS) --- */
+        .walking-token { position: absolute; width: 45px; height: 45px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-family: monospace; font-size: 1.5rem; z-index: 200; opacity: 0; pointer-events: none; box-shadow: 0 10px 15px rgba(0,0,0,0.4); border: 2px solid white; }
+        .walking-token.return { background: var(--success); }
+
+        /* Ποδαράκια */
+        .leg { position: absolute; bottom: -12px; width: 6px; height: 14px; background: var(--leg-color); border-radius: 3px; z-index: -1; }
+        .leg-left { left: 10px; }
+        .leg-right { right: 10px; }
+
+        /* Animation Περπατήματος */
+        @keyframes walkBop {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-15px) scale(1.05); }
+        }
+        @keyframes walkLegL {
+            0%, 100% { transform: translateY(0) rotate(-25deg); }
+            50% { transform: translateY(-8px) rotate(25deg); }
+        }
+        @keyframes walkLegR {
+            0%, 100% { transform: translateY(-8px) rotate(25deg); }
+            50% { transform: translateY(0) rotate(-25deg); }
+        }
+
+        .walking-token.is-walking { animation: walkBop 0.4s infinite linear; }
+        .walking-token.is-walking .leg-left { animation: walkLegL 0.4s infinite linear; }
+        .walking-token.is-walking .leg-right { animation: walkLegR 0.4s infinite linear; }
+
+        /* Right: RAM / Trace Table */
+        .col-right { flex: 0 0 360px; display: flex; flex-direction: column; }
+        
+        .trace-area { padding: 15px; border-bottom: 1px solid var(--border-color); flex: 1; display: flex; flex-direction: column; overflow: hidden;}
+        .trace-table-container { flex: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; margin-top: 10px; background: var(--panel-bg); }
+        
+        .trace-table { width: 100%; border-collapse: collapse; text-align: center; font-family: monospace; font-size: 1.1rem; }
+        .trace-table th { position: sticky; top: 0; background: #eff6ff; color: var(--primary); padding: 8px; border-bottom: 2px solid var(--border-color); z-index: 10; }
+        .trace-table td { padding: 8px; border-bottom: 1px solid var(--border-color); }
+        .trace-table tr:nth-child(even) td { background: var(--bg-color); }
+        
+        .new-row { animation: highlightRow 1s; }
+        @keyframes highlightRow {
+            0% { background-color: rgba(245, 158, 11, 0.3); }
+            100% { background-color: transparent; }
+        }
+
+        .console-area { flex: 0 0 150px; padding: 15px; display: flex; flex-direction: column; }
+        .console-screen { flex: 1; background: #ffffff !important; color: #1e293b !important; border-radius: 6px; padding: 10px; font-family: 'Consolas', 'Monaco', monospace; font-size: 1rem; overflow-y: auto; line-height: 1.5; border: 1px solid var(--border-color); box-shadow: inset 0 2px 5px rgba(0,0,0,0.05); }
+
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    <div class="toolbar-title">🚪 Πέρασμα Παραμέτρων</div>
+    <div class="controls-group">
+        <div class="input-group">
+            <label>X:</label><input type="number" id="inputX" value="10">
+            <label>Y:</label><input type="number" id="inputY" value="20">
+        </div>
+        <button class="tool-btn" id="btnReset" onclick="resetState()">🔄 Αρχή</button>
+        <button class="tool-btn btn-step" id="btnStep" onclick="step()">👣 Βήμα</button>
+        <button class="tool-btn btn-run" id="btnAuto" onclick="toggleAuto()">▶️ Αυτόματα</button>
+        
+        <div class="speed-slider-container">
+            <span class="speed-icon">🐢</span>
+            <input type="range" id="speedSlider" min="1" max="100" value="60" class="rheostat">
+            <span class="speed-icon">🚀</span>
+        </div>
+
+        <button class="tool-btn btn-theme" onclick="toggleTheme()">🌙</button>
+    </div>
+</div>
+
+<div class="main-container">
+    
+    <div class="col col-left">
+        <div class="panel-title">📚 Λειτουργίες & Σενάρια</div>
+        
+        <div class="method-selector">
+            <button class="method-btn active" id="btnMode1" onclick="changeMode(1)">1. Συνάρτηση</button>
+            <button class="method-btn" id="btnMode2" onclick="changeMode(2)">2. Διαδικασία (Επιστροφή Τιμών!)</button>
+        </div>
+
+        <div id="theory1">
+            <div class="analogy-box">
+                <strong>📄 Πέρασμα με Τιμή (Συνάρτηση):</strong><br>
+                Αντιγράφονται οι τιμές και περνούν στο υποπρόγραμμα!
+            </div>
+            <div class="theory-box">
+                Όταν οι τιμές αλλάζουν τοπικά (Α &lt;- Α + 5), η πόρτα <strong>δεν ανοίγει</strong>. Η αλλαγή γίνεται κεκλεισμένων των θυρών. Μόνο στο τέλος, το ΑΠΟΤΕΛΕΣΜΑ επιστρέφει πίσω!
+            </div>
+        </div>
+
+        <div id="theory2" style="display:none;">
+            <div class="analogy-box">
+                <strong>🔗 Πέρασμα στη Διαδικασία:</strong><br>
+                Μόλις τελειώσει η Διαδικασία, οι νέες τιμές των Α, Β <strong>επιστρέφουν πίσω</strong>, χτυπούν τις πόρτες Χ, Υ και <strong>ΑΝΤΙΚΑΘΙΣΤΟΥΝ</strong> τις αρχικές τιμές στα χρηματοκιβώτια!
+            </div>
+            <div class="theory-box">
+                Αυτός είναι ο τρόπος της ΓΛΩΣΣΑΣ να επιστρέφει πολλαπλά αποτελέσματα.
+            </div>
+        </div>
+
+        <div class="status-box" id="statusMsg">
+            <strong>Αρχικοποίηση</strong>
+            Έτοιμο. Πατήστε "Βήμα".
+        </div>
+    </div>
+
+    <div class="col col-mid">
+        <div class="anim-area" id="animArea">
+            
+            <div class="hallway"></div>
+            
+            <div class="walking-token" id="walkToken">
+                <span id="walkVal">10</span>
+                <div class="leg leg-left"></div>
+                <div class="leg leg-right"></div>
+            </div>
+
+            <div class="room room-main" id="roomMain">
+                <div class="room-title">Κύριο Πρόγραμμα</div>
+                
+                <div class="code-embedded" id="codeAreaM">
+                    <div id="codeGroupM1">
+                        <div class="code-line" id="lm1_1">ΠΡΟΓΡΑΜΜΑ Κύριο</div>
+                        <div class="code-line code-decl" id="lm1_2">ΜΕΤΑΒΛΗΤΕΣ</div>
+                        <div class="code-line code-decl" id="lm1_3">&nbsp;&nbsp;ΑΚΕΡΑΙΕΣ: Χ, Υ, ΑΠΟΤ</div>
+                        <div class="code-line" id="lm1_4">ΑΡΧΗ</div>
+                        <div class="code-line" id="lm1_5">&nbsp;&nbsp;Χ &lt;- <span id="valCodeM1X">10</span></div>
+                        <div class="code-line" id="lm1_6">&nbsp;&nbsp;Υ &lt;- <span id="valCodeM1Y">20</span></div>
+                        <div class="code-line" id="lm1_7">&nbsp;&nbsp;ΑΠΟΤ &lt;- Υπολ(Χ, Υ)</div>
+                        <div class="code-line" id="lm1_8">&nbsp;&nbsp;ΓΡΑΨΕ Χ, Υ</div>
+                        <div class="code-line" id="lm1_9">ΤΕΛΟΣ_ΠΡΟΓΡΑΜΜΑΤΟΣ</div>
+                    </div>
+                    <div id="codeGroupM2" style="display:none;">
+                        <div class="code-line" id="lm2_1">ΠΡΟΓΡΑΜΜΑ Κύριο</div>
+                        <div class="code-line code-decl" id="lm2_2">ΜΕΤΑΒΛΗΤΕΣ</div>
+                        <div class="code-line code-decl" id="lm2_3">&nbsp;&nbsp;ΑΚΕΡΑΙΕΣ: Χ, Υ</div>
+                        <div class="code-line" id="lm2_4">ΑΡΧΗ</div>
+                        <div class="code-line" id="lm2_5">&nbsp;&nbsp;Χ &lt;- <span id="valCodeM2X">10</span></div>
+                        <div class="code-line" id="lm2_6">&nbsp;&nbsp;Υ &lt;- <span id="valCodeM2Y">20</span></div>
+                        <div class="code-line" id="lm2_7">&nbsp;&nbsp;ΚΑΛΕΣΕ Αλλαγή(Χ, Υ)</div>
+                        <div class="code-line" id="lm2_8">&nbsp;&nbsp;ΓΡΑΨΕ Χ, Υ</div>
+                        <div class="code-line" id="lm2_9">ΤΕΛΟΣ_ΠΡΟΓΡΑΜΜΑΤΟΣ</div>
+                    </div>
+                </div>
+
+                <div class="var-container">
+                    <div class="var-door" id="doorX">
+                        <div class="var-door-frame"><div class="var-val empty" id="valX">-</div></div>
+                        <div class="var-door-leaf"><div class="var-label">Χ</div></div>
+                    </div>
+                    <div class="var-door" id="doorY">
+                        <div class="var-door-frame"><div class="var-val empty" id="valY">-</div></div>
+                        <div class="var-door-leaf"><div class="var-label">Υ</div></div>
+                    </div>
+                    <div class="var-door" id="doorApot">
+                        <div class="var-door-frame"><div class="var-val empty" id="valApot">-</div></div>
+                        <div class="var-door-leaf"><div class="var-label" style="font-size:1rem;">ΑΠΟΤ</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="room room-sub" id="roomSub">
+                <div class="room-title" id="roomTitleSub">Συνάρτηση Υπολ()</div>
+                
+                <div class="code-embedded" id="codeAreaS">
+                    <div id="codeGroupS1">
+                        <div class="code-line" id="ls1_1">ΣΥΝΑΡΤΗΣΗ Υπολ(Α, Β): ΑΚΕΡΑΙΑ</div>
+                        <div class="code-line code-decl" id="ls1_2">ΜΕΤΑΒΛΗΤΕΣ</div>
+                        <div class="code-line code-decl" id="ls1_3">&nbsp;&nbsp;ΑΚΕΡΑΙΕΣ: Α, Β</div>
+                        <div class="code-line" id="ls1_4">ΑΡΧΗ</div>
+                        <div class="code-line" id="ls1_5">&nbsp;&nbsp;Α &lt;- Α + 5</div>
+                        <div class="code-line" id="ls1_6">&nbsp;&nbsp;Β &lt;- Β + 10</div>
+                        <div class="code-line" id="ls1_7">&nbsp;&nbsp;Υπολ &lt;- Α + Β</div>
+                        <div class="code-line" id="ls1_8">ΤΕΛΟΣ_ΣΥΝΑΡΤΗΣΗΣ</div>
+                    </div>
+                    <div id="codeGroupS2" style="display:none;">
+                        <div class="code-line" id="ls2_1">ΔΙΑΔΙΚΑΣΙΑ Αλλαγή(Α, Β)</div>
+                        <div class="code-line code-decl" id="ls2_2">ΜΕΤΑΒΛΗΤΕΣ</div>
+                        <div class="code-line code-decl" id="ls2_3">&nbsp;&nbsp;ΑΚΕΡΑΙΕΣ: Α, Β</div>
+                        <div class="code-line" id="ls2_4">ΑΡΧΗ</div>
+                        <div class="code-line" id="ls2_5">&nbsp;&nbsp;Α &lt;- Α + 5</div>
+                        <div class="code-line" id="ls2_6">&nbsp;&nbsp;Β &lt;- Β + 10</div>
+                        <div class="code-line" id="ls2_7">ΤΕΛΟΣ_ΔΙΑΔΙΚΑΣΙΑΣ</div>
+                    </div>
+                </div>
+
+                <div class="var-container">
+                    <div class="var-door" id="doorA">
+                        <div class="var-door-frame"><div class="var-val empty" id="valA">-</div></div>
+                        <div class="var-door-leaf"><div class="var-label">Α</div></div>
+                    </div>
+                    <div class="var-door" id="doorB">
+                        <div class="var-door-frame"><div class="var-val empty" id="valB">-</div></div>
+                        <div class="var-door-leaf"><div class="var-label">Β</div></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="col col-right">
+        <div class="trace-area">
+            <div class="panel-title">📝 Πίνακας Τιμών (Μνήμη)</div>
+            <div class="trace-table-container">
+                <table class="trace-table" id="traceTable">
+                    <thead>
+                        <tr id="traceHeaders">
+                            <th>Χ</th><th>Υ</th><th id="thApot">ΑΠΟΤ</th><th>Α</th><th>Β</th>
+                        </tr>
+                    </thead>
+                    <tbody id="traceBody">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="console-area">
+            <div class="panel-title">🖥️ Οθόνη</div>
+            <div class="console-screen" id="consoleScreen">
+                > Έναρξη...<br>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- APP STATE ---
+    let currentMode = 1; 
+    let stepIndex = 0;
+    let isPlaying = false;
+    let autoInterval = null;
+    let isAnimating = false;
+
+    // Values
+    let M1 = 0, M2 = 0, APOT = null; 
+    let S1 = null, S2 = null; 
+
+    // --- DOM ELEMENTS ---
+    const codeAreaM = document.getElementById('codeAreaM');
+    const codeAreaS = document.getElementById('codeAreaS');
+    const cons = document.getElementById('consoleScreen');
+    const statusMsg = document.getElementById('statusMsg');
+    const btnStep = document.getElementById('btnStep');
+    const btnAuto = document.getElementById('btnAuto');
+    const speedSlider = document.getElementById('speedSlider');
+    const inpX = document.getElementById('inputX');
+    const inpY = document.getElementById('inputY');
+
+    const roomMain = document.getElementById('roomMain');
+    const roomSub = document.getElementById('roomSub');
+    
+    const doorX = document.getElementById('doorX'); const valX = document.getElementById('valX');
+    const doorY = document.getElementById('doorY'); const valY = document.getElementById('valY');
+    const doorApot = document.getElementById('doorApot'); const valApot = document.getElementById('valApot');
+    
+    const doorA = document.getElementById('doorA'); const valA = document.getElementById('valA');
+    const doorB = document.getElementById('doorB'); const valB = document.getElementById('valB');
+    
+    const walkToken = document.getElementById('walkToken');
+    const walkVal = document.getElementById('walkVal');
+    const traceBody = document.getElementById('traceBody');
+    const thApot = document.getElementById('thApot');
+
+    window.addEventListener('load', () => { 
+        inpX.addEventListener('change', resetState);
+        inpY.addEventListener('change', resetState);
+        changeMode(1); 
+    });
+
+    // --- HELPERS ---
+    function getDelay() {
+        let sliderVal = parseInt(speedSlider.value);
+        return 2000 - ((sliderVal - 1) * (1600 / 99)); 
+    }
+
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+
+    function logConsole(msg) {
+        cons.innerHTML += `> ${msg}<br>`;
+        cons.scrollTop = cons.scrollHeight;
+    }
+
+    function highlightLine(scopeType, mode, lineNum) {
+        document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+        if (!scopeType || !lineNum) return;
+        let prefix = (scopeType === 'main') ? `lm${mode}_` : `ls${mode}_`;
+        let el = document.getElementById(`${prefix}${lineNum}`);
+        if(el) {
+            el.classList.add('active');
+            let area = (scopeType === 'main') ? codeAreaM : codeAreaS;
+            area.scrollTop = el.offsetTop - area.offsetTop - 30;
+        }
+    }
+
+    function addTraceRow(x, y, ap, a, b) {
+        const tr = document.createElement('tr');
+        tr.className = 'new-row';
+        if (currentMode === 1) {
+            tr.innerHTML = `<td>${x !== null ? x : '-'}</td><td>${y !== null ? y : '-'}</td><td>${ap !== null ? ap : '-'}</td><td>${a !== null ? a : '-'}</td><td>${b !== null ? b : '-'}</td>`;
+        } else {
+            tr.innerHTML = `<td>${x !== null ? x : '-'}</td><td>${y !== null ? y : '-'}</td><td>${a !== null ? a : '-'}</td><td>${b !== null ? b : '-'}</td>`;
+        }
+        traceBody.appendChild(tr);
+        tr.scrollIntoView({behavior: "smooth", block: "end"});
+    }
+
+    // --- MODE SELECTION ---
+    function changeMode(m) {
+        currentMode = m;
+        stopAuto();
+        
+        document.getElementById(`btnMode1`).classList.toggle('active', m === 1);
+        document.getElementById(`btnMode2`).classList.toggle('active', m === 2);
+        
+        document.getElementById(`theory1`).style.display = m === 1 ? 'block' : 'none';
+        document.getElementById(`theory2`).style.display = m === 2 ? 'block' : 'none';
+        
+        document.getElementById(`codeGroupM1`).style.display = m === 1 ? 'block' : 'none';
+        document.getElementById(`codeGroupM2`).style.display = m === 2 ? 'block' : 'none';
+        document.getElementById(`codeGroupS1`).style.display = m === 1 ? 'block' : 'none';
+        document.getElementById(`codeGroupS2`).style.display = m === 2 ? 'block' : 'none';
+
+        document.getElementById('roomTitleSub').innerText = m === 1 ? 'Συνάρτηση Υπολ()' : 'Διαδικασία Αλλαγή()';
+        
+        doorApot.style.display = m === 1 ? 'block' : 'none';
+        thApot.style.display = m === 1 ? 'table-cell' : 'none';
+
+        resetState();
+    }
+
+    function resetState() {
+        stopAuto();
+        isAnimating = false;
+        stepIndex = 0;
+        
+        M1 = parseInt(inpX.value) || 0; M2 = parseInt(inpY.value) || 0;
+        APOT = null; S1 = null; S2 = null;
+
+        document.getElementById('valCodeM1X').innerText = M1; document.getElementById('valCodeM1Y').innerText = M2;
+        document.getElementById('valCodeM2X').innerText = M1; document.getElementById('valCodeM2Y').innerText = M2;
+
+        [doorX, doorY, doorApot, doorA, doorB].forEach(d => d.classList.remove('open', 'knocking'));
+        
+        valX.innerText = '-'; valX.classList.add('empty');
+valY.innerText = '-'; valY.classList.add('empty');
+        valApot.innerText = '-'; valApot.classList.add('empty');
+        valA.innerText = '-'; valA.classList.add('empty');
+        valB.innerText = '-'; valB.classList.add('empty');
+        
+        roomMain.style.opacity = '1'; roomMain.style.filter = 'none';
+        roomSub.classList.remove('active');
+        walkToken.style.opacity = '0'; walkToken.className = 'walking-token';
+
+        cons.innerHTML = '> Έτοιμο...<br>';
+        statusMsg.innerHTML = "<strong>Αρχικοποίηση</strong>Πατήστε 'Βήμα' για να ξεκινήσει η εκτέλεση.";
+        traceBody.innerHTML = '';
+        addTraceRow(M1, M2, APOT, S1, S2);
+        
+        highlightLine(null);
+        btnStep.disabled = false; btnAuto.disabled = false;
+    }
+
+    // --- ANIMATION CONTROLS ---
+    function openDoor(doorEl) {
+        return new Promise(r => {
+            doorEl.classList.add('open');
+            setTimeout(r, 400); 
+        });
+    }
+    
+    function closeDoor(doorEl) {
+        doorEl.classList.remove('open');
+    }
+
+    // Main Transfer Logic
+    async function transferValue(sourceDoor, targetDoor, value, isReturn) {
+        const speed = getDelay();
+        const animArea = document.getElementById('animArea');
+        const aRect = animArea.getBoundingClientRect();
+        
+        // 1. Open Source (if exists)
+        if (sourceDoor) await openDoor(sourceDoor);
+
+        // 2. Determine start and end points
+        let startX, startY;
+        if (sourceDoor) {
+            const sRect = sourceDoor.getBoundingClientRect();
+            startX = sRect.left - aRect.left + (sRect.width/2) - 22;
+            startY = sRect.top - aRect.top + (sRect.height/2) - 22;
+        } else {
+            // No source door (e.g. Function return computed value)
+            const rRect = document.getElementById('roomSub').getBoundingClientRect();
+            startX = rRect.left - aRect.left + (rRect.width/2) - 22;
+            startY = rRect.top - aRect.top + (rRect.height/2) - 22;
+        }
+
+        const eRect = targetDoor.getBoundingClientRect();
+        const endX = eRect.left - aRect.left + (eRect.width/2) - 22;
+        const endY = eRect.top - aRect.top + (eRect.height/2) - 22;
+
+        // 3. Setup token
+        walkVal.innerText = value;
+        walkToken.className = isReturn ? 'walking-token return' : 'walking-token';
+        walkToken.style.transition = 'none';
+        walkToken.style.left = startX + 'px';
+        walkToken.style.top = startY + 'px';
+        walkToken.style.opacity = '1';
+
+        void walkToken.offsetWidth; // reflow
+
+        // 4. Start Walk & Close Source Behind
+        walkToken.classList.add('is-walking');
+        walkToken.style.transition = `left ${speed}ms linear, top ${speed}ms linear`;
+        walkToken.style.left = endX + 'px';
+        walkToken.style.top = endY + 'px';
+        
+        if (sourceDoor) closeDoor(sourceDoor); // Don't await, let it close while token walks
+
+        await new Promise(r => setTimeout(r, speed));
+        walkToken.classList.remove('is-walking');
+
+        // 5. Knock-Knock
+        targetDoor.classList.add('knocking');
+        await new Promise(r => setTimeout(r, 400));
+        targetDoor.classList.remove('knocking');
+
+        // 6. Open Target
+        await openDoor(targetDoor);
+        walkToken.style.opacity = '0';
+        
+        // Caller handles updating the value inside and closing the door.
+    }
+
+    // --- INTERPRETER LOGIC ---
+    async function step() {
+        if (isAnimating) return; 
+        isAnimating = true;
+        btnStep.disabled = true;
+        let delay = getDelay();
+
+        stepIndex++;
+
+        switch(stepIndex) {
+           case 1:
+    highlightLine('main', currentMode, 5); highlightLine('main', currentMode, 6); 
+    statusMsg.innerHTML = "<strong>Αρχικές Τιμές</strong>Στις τοπικές μεταβλητές Χ και Υ εκχωρούνται οι τιμές.";
+    
+    // Εμφάνιση των τιμών στα "δωμάτια"
+    valX.innerText = M1; valX.classList.remove('empty');
+    valY.innerText = M2; valY.classList.remove('empty');
+    
+    // Ενημέρωση του Πίνακα Τιμών
+    addTraceRow(M1, M2, APOT, S1, S2);
+    break;
+                
+            case 2:
+                highlightLine('main', currentMode, 7); 
+                roomMain.style.opacity = '0.5'; roomMain.style.filter = 'grayscale(0.5)';
+                roomSub.classList.add('active'); 
+                
+                if (currentMode === 1) {
+                    statusMsg.innerHTML = "<strong>Κλήση: Αντιγραφή τιμών</strong>Η πόρτα Χ ανοίγει. Η τιμή αντιγράφεται!";
+                } else {
+                    statusMsg.innerHTML = "<strong>Κλήση: Πέρασμα παραμέτρων</strong>Οι τιμές αντιγράφονται στο υποπρόγραμμα.";
+                }
+
+                // X -> A
+                await transferValue(doorX, doorA, M1, false);
+                S1 = M1; valA.innerText = S1; valA.classList.remove('empty');
+                addTraceRow(M1, M2, APOT, S1, S2);
+                closeDoor(doorA); // close target
+                
+                // Y -> B
+                await transferValue(doorY, doorB, M2, false);
+                S2 = M2; valB.innerText = S2; valB.classList.remove('empty');
+                addTraceRow(M1, M2, APOT, S1, S2);
+                closeDoor(doorB);
+                break;
+
+            case 3:
+                highlightLine('sub', currentMode, 5); // A=A+5
+                statusMsg.innerHTML = "<strong>Αλλαγή Παραμέτρου Α</strong>Το υποπρόγραμμα αλλάζει το περιεχόμενο της Α. Η πόρτα ΔΕΝ ανοίγει, γίνεται κεκλεισμένων των θυρών!";
+                S1 = S1 + 5; valA.innerText = S1;
+                addTraceRow(M1, M2, APOT, S1, S2);
+                await new Promise(r => setTimeout(r, delay/2));
+                break;
+
+            case 4:
+                highlightLine('sub', currentMode, 6); // B=B+10
+                statusMsg.innerHTML = "<strong>Αλλαγή Παραμέτρου Β</strong>Ομοίως, η πόρτα Β δεν ανοίγει, αλλά βλέπουμε την τιμή να αλλάζει.";
+                S2 = S2 + 10; valB.innerText = S2;
+                addTraceRow(M1, M2, APOT, S1, S2);
+                await new Promise(r => setTimeout(r, delay/2));
+                break;
+
+            case 5:
+                let lastSubLine = currentMode === 1 ? 8 : 7;
+                highlightLine('sub', currentMode, lastSubLine); 
+                
+                if (currentMode === 1) {
+                    statusMsg.innerHTML = "<strong>Επιστροφή Αποτελέσματος (Συνάρτηση)</strong>Ο υπολογισμός (Α+Β) επιστρέφει πίσω και μπαίνει στην πόρτα <code>ΑΠΟΤ</code>. Τα Χ, Υ δεν έπαθαν τίποτα!";
+                    let res = S1 + S2;
+                    
+                    await transferValue(null, doorApot, res, true);
+                    roomMain.style.opacity = '1'; roomMain.style.filter = 'none'; 
+                    APOT = res; valApot.innerText = APOT; valApot.classList.remove('empty');
+                    addTraceRow(M1, M2, APOT, S1, S2);
+                    closeDoor(doorApot);
+
+                    roomSub.classList.remove('active');
+                    S1 = null; S2 = null; valA.innerText = '-'; valA.classList.add('empty'); valB.innerText = '-'; valB.classList.add('empty');
+                    addTraceRow(M1, M2, APOT, S1, S2); 
+                    highlightLine('main', currentMode, 7); 
+                } 
+                else {
+                    statusMsg.innerHTML = "<strong>ΕΠΙΣΤΡΟΦΗ ΤΙΜΩΝ (Διαδικασία)!</strong>Οι νέες τιμές των Α,Β 🔄 επιστρέφουν ΠΙΣΩ στο Κύριο πρόγραμμα και ΑΝΤΙΚΑΘΙΣΤΟΥΝ τα Χ,Υ!";
+                    roomMain.style.opacity = '1'; roomMain.style.filter = 'none'; 
+                    
+                    // Return A to X
+                    await transferValue(doorA, doorX, S1, true);
+                    M1 = S1; valX.innerText = M1; 
+                    addTraceRow(M1, M2, APOT, S1, S2);
+                    closeDoor(doorX);
+                    
+                    // Return B to Y
+                    await transferValue(doorB, doorY, S2, true);
+                    M2 = S2; valY.innerText = M2; 
+                    addTraceRow(M1, M2, APOT, S1, S2);
+                    closeDoor(doorY);
+
+                    roomSub.classList.remove('active');
+                    S1 = null; S2 = null; valA.innerText = '-'; valA.classList.add('empty'); valB.innerText = '-'; valB.classList.add('empty');
+                    addTraceRow(M1, M2, APOT, S1, S2);
+                    highlightLine('main', currentMode, 7); 
+                }
+                break;
+
+            case 6:
+                highlightLine('main', currentMode, 8); // Print
+                statusMsg.innerHTML = currentMode === 1 
+                    ? "<strong>Εκτύπωση (Συνάρτηση)</strong>Τυπώνουμε τα Χ, Υ. Παρέμειναν 10 και 20!" 
+                    : "<strong>Εκτύπωση (Διαδικασία)</strong>Τυπώνουμε τα Χ, Υ. Άλλαξαν οριστικά σε 15 και 30!";
+                logConsole(`Χ = ${M1}, Υ = ${M2}`);
+                // Briefly open X, Y to show printing
+                openDoor(doorX); openDoor(doorY);
+                setTimeout(() => { closeDoor(doorX); closeDoor(doorY); }, 1500);
+                break;
+
+            case 7:
+                highlightLine('main', currentMode, 9);
+                statusMsg.innerHTML = "<strong>🎉 Τέλος Προγράμματος</strong>Η εκτέλεση ολοκληρώθηκε επιτυχώς.";
+                btnStep.disabled = true;
+                stopAuto();
+                break;
+        }
+
+        if (stepIndex < 7 && !isAnimating) await new Promise(r => setTimeout(r, delay/3)); 
+        isAnimating = false;
+        
+        if (stepIndex < 7 && !isPlaying) btnStep.disabled = false;
+
+        if (isPlaying && stepIndex < 7) {
+            autoInterval = setTimeout(step, 50);
+        } else if (isPlaying && stepIndex >= 7) {
+            stopAuto();
+        }
+    }
+
+    // --- AUTO-PLAY CONTROLS ---
+    function toggleAuto() {
+        if (isPlaying) {
+            stopAuto();
+        } else {
+            if (stepIndex >= 7) resetState();
+            isPlaying = true;
+            btnAuto.innerHTML = "⏸️ Παύση";
+            btnAuto.style.backgroundColor = "var(--warning)";
+            btnAuto.style.borderColor = "var(--warning)";
+            step();
+        }
+    }
+
+    function stopAuto() {
+        isPlaying = false;
+        clearTimeout(autoInterval);
+        btnAuto.innerHTML = "▶️ Αυτόματα";
+        btnAuto.style.backgroundColor = "var(--success)";
+        btnAuto.style.borderColor = "var(--success)";
+        if(stepIndex < 7) btnStep.disabled = false;
+    }
+
+</script>
+</body>
+</html>
