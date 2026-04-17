@@ -254,9 +254,14 @@
     function openSettings() { document.getElementById('settingsModal').style.display = 'flex'; }
     function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
     function saveSettings() {
-        sysDefaults.budget = parseInt(document.getElementById('setBudget').value) || 2000;
-        sysDefaults.cost = parseInt(document.getElementById('setCost').value) || 40;
-        sysDefaults.step = parseInt(document.getElementById('setStep').value) || 3;
+        let valB = parseInt(document.getElementById('setBudget').value);
+        sysDefaults.budget = isNaN(valB) ? 2000 : valB;
+
+        let valC = parseInt(document.getElementById('setCost').value);
+        sysDefaults.cost = isNaN(valC) ? 40 : valC;
+
+        let valS = parseInt(document.getElementById('setStep').value);
+        sysDefaults.step = isNaN(valS) ? 3 : valS;
 
         document.getElementById('theoryBudget').innerText = sysDefaults.budget;
         document.getElementById('theoryCost').innerText = sysDefaults.cost;
