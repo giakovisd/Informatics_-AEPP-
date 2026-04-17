@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Η Σκακιέρα & Το Σιτάρι - Εκπαιδευτικό Εργαλείο</title>
+    <style>
+        :root {
+            --primary: #2563eb; --primary-hover: #1d4ed8;
+            --text-dark: #0f172a; --text-light: #64748b;
+            --bg-color: #f1f5f9; --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --success: #16a34a; --warning: #f59e0b; --danger: #ef4444;
+            --highlight: #fef08a; --code-bg: #f8fafc;
+            --screen-bg: #ffffff; --screen-text: #000000;
+            --board-light: #e2e8f0; --board-dark: #94a3b8;
+        }
+
+        body.dark-mode {
+            --bg-color: #020617; --panel-bg: #1e293b;
+            --text-dark: #f8fafc; --text-light: #94a3b8;
+            --border-color: #334155; --code-bg: #0f172a;
+            --screen-bg: #e2e8f0; --screen-text: #000000;
+            --board-light: #334155; --board-dark: #0f172a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background-color: var(--bg-color); color: var(--text-dark); 
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s;
+        }
+
+        /* --- TOOLBAR --- */
+        .toolbar { 
+            background: var(--panel-bg); border-bottom: 1px solid var(--border-color); 
+            padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 100;
+        }
+        .toolbar-title { font-weight: 800; font-size: 1.1rem; color: var(--primary); display: flex; align-items: center; gap: 8px;}
+        .controls-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;}
+
+        .tool-btn { 
+            padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);
+            background: var(--panel-bg); color: var(--text-dark); cursor: pointer; font-weight: bold;
+            display: flex; align-items: center; gap: 5px; font-size: 0.85rem; transition: 0.2s;
+        }
+        .tool-btn:hover:not(:disabled) { background: var(--border-color); }
+        .tool-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-solution { background: var(--success); color: white; border: none; }
+        .btn-solution:hover:not(:disabled) { background: #15803d; }
+        .btn-execute { background: var(--warning); color: black; border: none; }
+        .btn-execute:hover:not(:disabled) { background: #d97706; color: white;}
+        .btn-run { background: var(--primary); color: white; border: none; }
+        .btn-step { background: var(--primary); color: white; border: none; }
+
+        .speed-control { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; font-weight: bold; margin-right: 10px;}
+        .speed-control input { cursor: pointer; width: 60px;}
+
+        /* --- MAIN LAYOUT --- */
+        .main-container { display: flex; flex: 1; padding: 15px; gap: 15px; overflow: hidden; }
+        .col { 
+            background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color); 
+            display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        /* Left: Theory - Width updated to 370px */
+        .col-left { flex: 0 0 370px; padding: 20px; overflow-y: auto; line-height: 1.5;}
+        .theory-title { font-size: 1.05rem; font-weight: bold; margin-bottom: 12px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; }
+        .theory-text { font-size: 0.9rem; margin-bottom: 20px; text-align: justify; }
+        .instructions { background: rgba(245, 158, 11, 0.1); padding: 15px; border-left: 4px solid var(--warning); border-radius: 4px; font-size: 0.85rem;}
+
+        /* Mid: Code & Animation (Split in 2) */
+        .col-mid { flex: 1; display: flex; flex-direction: row; } 
+        
+        .code-area { 
+            flex: 0 0 45%; padding: 20px; background: var(--code-bg); 
+            border-right: 1px solid var(--border-color); 
+            font-family: 'Consolas', monospace; font-size: 0.85rem; line-height: 1.8;
+            display: flex; flex-direction: column; justify-content: center; overflow-y: auto;
+        }
+        .code-line { padding: 4px 8px; border-radius: 4px; transition: 0.2s; }
+        .code-line.active { background: var(--highlight); color: black; font-weight: bold; }
+        
+        .code-blank {
+            padding: 2px 5px; font-family: monospace; font-size: 0.85rem;
+            border: 2px dashed var(--primary); border-radius: 4px; text-align: center;
+            background: rgba(255, 255, 255, 0.9); color: #000; font-weight: bold; outline: none;
+        }
+        
+        .b-small { width: 50px; } 
+        .b-med { width: 120px; } 
+
+        .code-blank:focus { border-style: solid; background: #fff; box-shadow: 0 0 5px var(--primary); }
+        .code-blank.locked { border: 1px solid transparent; background: transparent; color: var(--primary); border-bottom: 2px solid var(--primary); border-radius: 0; text-align: left;}
+
+        /* Animation Area: Large Chessboard */
+        .anim-area { 
+            flex: 1; background: #e0f2fe; overflow: hidden; display: flex; flex-direction: column; padding: 15px; gap: 15px;
+        }
+        body.dark-mode .anim-area { background: #0c4a6e; }
+        
+        .board-stats {
+            background: #1e293b; color: #34d399; padding: 10px; border-radius: 6px;
+            display: flex; flex-direction: column; gap: 5px;
+            font-family: 'Consolas', monospace; font-size: 0.9rem; font-weight: bold;
+        }
+
+        .chessboard-wrapper {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+        }
+
+        .chessboard {
+            display: grid; grid-template-columns: repeat(8, 1fr);
+            width: 100%; max-width: 400px; aspect-ratio: 1 / 1;
+            border: 4px solid #1e293b; border-radius: 4px; overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .square {
+            display: flex; align-items: center; justify-content: center; transition: background-color 0.4s ease; position: relative;
+        }
+        .square.light { background-color: var(--board-light); }
+        .square.dark { background-color: var(--board-dark); }
+        
+        .square.active {
+            box-shadow: inset 0 0 0 3px #ffffff, 0 0 10px rgba(0,0,0,0.5); 
+            transform: scale(1.05); z-index: 10;
+        }
+        
+        /* Το κουτί εξήγησης χρωμάτων */
+        .magnitude-explainer {
+            background: #1e293b; color: white; padding: 12px; border-radius: 6px;
+            text-align: center; font-family: 'Consolas', monospace; font-size: 0.95rem; font-weight: bold;
+            border: 2px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        /* Right: RAM & Screen */
+        .col-right { flex: 0 0 320px; display: flex; flex-direction: column; }
+        
+        .ram-section { padding: 15px; flex: 1; border-bottom: 1px solid var(--border-color); overflow-y: auto; }
+        .ram-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: center; }
+        .ram-table th { background: var(--bg-color); padding: 8px 2px; border: 1px solid var(--border-color); position: sticky; top: 0; z-index: 10;}
+        .ram-table td { padding: 6px 2px; border: 1px solid var(--border-color); font-family: monospace; word-break: break-all;}
+        .ram-new-row { animation: flashRow 0.8s; }
+        @keyframes flashRow { 0% { background: var(--warning); } 100% { background: transparent; } }
+        
+        /* White Screen */
+        .screen-section { padding: 15px; height: 173px; display: flex; flex-direction: column; }
+        .screen-display { 
+            flex: 1; background: var(--screen-bg); color: var(--screen-text); border: 2px solid var(--border-color);
+            padding: 15px; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 0.9rem; overflow-y: auto; line-height: 1.4;
+        }
+
+        /* Bonus Animation Classes */
+        .line-swap-anim { animation: swapAnim 0.8s ease-in-out; background: rgba(139, 92, 246, 0.2); }
+        @keyframes swapAnim { 0% { opacity: 0; transform: scale(0.95); } 50% { opacity: 1; transform: scale(1.02); } 100% { transform: scale(1); } }
+
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    <div class="toolbar-title">♟️ Η Σκακιέρα & Το Σιτάρι</div>
+    <div class="controls-group">
+        <div class="speed-control" title="Ταχύτητα Εκτέλεσης">
+            🐢 <input type="range" id="speedSlider" min="100" max="1800" value="700" dir="rtl"> 🐇
+        </div>
+        <button class="tool-btn" onclick="toggleTheme()" title="Day/Night Mode">🌙</button>
+        <button class="tool-btn btn-solution" id="btnSolution" onclick="fillSolution()">💡 Λύση</button>
+        <button class="tool-btn btn-execute" id="btnExecute" onclick="prepareExecution()" disabled>🚀 Εκτέλεση</button>
+        <button class="tool-btn btn-step" id="btnStep" onclick="step()" style="display:none;">👣 Βήμα</button>
+        <button class="tool-btn btn-run" id="btnAuto" onclick="toggleAuto()" style="display:none;">▶️ Αυτόματα</button>
+        
+        <button class="tool-btn" id="btnBonus" onclick="startBonusChallenge()" style="display:none; background: #8b5cf6; color: white; border: none;">⭐ Bonus Πρόκληση</button>
+        
+        <button class="tool-btn" onclick="resetApp()">🔄 Αρχή</button>
+    </div>
+</div>
+
+<div class="main-container">
+    <div class="col col-left">
+        <div class="theory-title">Η Εκφώνηση</div>
+        <div class="theory-text" id="theoryText">
+            Ένας δημοφιλής μύθος αναφέρει ότι στην Ινδία κάποιος μεγάλος σοφός επινόησε ένα καινούργιο παιχνίδι, το σκάκι, όπου υπήρχαν πιόνια που κινούνταν σε μία πινακίδα εξήντα τεσσάρων (8x8) τετραγώνων (σκακιέρα). 
+            <br><br>
+            Ο ηγεμόνας της περιοχής ενθουσιάστηκε τόσο πολύ από το παιχνίδι που υποσχέθηκε στον σοφό άνθρωπο ότι θα του έδινε όποια ανταμοιβή επιθυμούσε. 
+            Εκείνος του απάντησε ότι δεν θέλει χρυσάφι, αλλά ζήτησε να του δώσουν έναν κόκκο σιταριού για το πρώτο τετράγωνο της σκακιέρας, δύο για το δεύτερο, τέσσερα για το τρίτο κ.ο.κ, διπλασιάζοντας τον αριθμό των κόκκων σιταριού κάθε φορά μέχρι το τελευταίο τετράγωνο. 
+            <br><br>
+            Ο ηγεμόνας θεώρησε πολύ μικρή την ανταμοιβή και του υποσχέθηκε αμέσως ότι θα ικανοποιούσε την επιθυμία του. Όταν κατάλαβε το λάθος του ήταν πλέον πολύ αργά…
+        </div>
+        <div class="instructions" id="instructionBox">
+            <strong>Οδηγίες:</strong><br>
+            Συμπλήρωσε τα κενά στον κώδικα (αγνοούνται τόνοι/κεφαλαία).<br><br>
+            Μόλις τελειώσεις, πάτα <strong>Εκτέλεση</strong>.
+        </div>
+    </div>
+
+    <div class="col col-mid">
+        <div class="code-area" id="codeAreaContainer">
+            <div class="code-line" style="color:var(--primary); font-weight:bold;">Αλγόριθμος σκακιέρα</div>
+            <div class="code-line" id="L1">σ &lt;- <input type="text" class="code-blank b-small" id="b1" oninput="checkBlanks()"></div>
+            <div class="code-line" id="L2">πλήθος &lt;- <input type="text" class="code-blank b-small" id="b2" oninput="checkBlanks()"></div>
+            <div class="code-line" id="L3">Για ι από <input type="text" class="code-blank b-small" id="b3" oninput="checkBlanks()"> μέχρι <input type="text" class="code-blank b-small" id="b4" oninput="checkBlanks()"></div>
+            <div class="code-line" id="L4">&nbsp;&nbsp;σ &lt;- σ + <input type="text" class="code-blank b-med" id="b5" oninput="checkBlanks()"></div>
+            <div class="code-line" id="L5">&nbsp;&nbsp;πλήθος &lt;- <input type="text" class="code-blank b-med" id="b6" oninput="checkBlanks()"> * <input type="text" class="code-blank b-small" id="b7" oninput="checkBlanks()"></div>
+            <div class="code-line" id="L6">Τέλος_επανάληψης</div>
+            <div class="code-line" id="L7">Εμφάνισε <input type="text" class="code-blank b-small" id="b8" oninput="checkBlanks()"></div>
+            <div class="code-line" style="color:var(--primary); font-weight:bold;">Τέλος σκακιέρα</div>
+        </div>
+
+        <div class="anim-area">
+            <div class="board-stats">
+                <span id="stat-i">Τετράγωνο: 0</span>
+                <span id="stat-grains">Κόκκοι: 0</span>
+                <span id="stat-sum">Σύνολο: 0</span>
+            </div>
+            
+            <div class="chessboard-wrapper">
+                <div class="chessboard" id="chessboard"></div>
+            </div>
+            
+            <div class="magnitude-explainer" id="mag-explainer">
+                Χρώμα Τάξης Μεγέθους: (Αναμονή...)
+            </div>
+        </div>
+    </div>
+
+    <div class="col col-right">
+        <div class="ram-section">
+            <div class="theory-title" style="border:none; margin-bottom:5px;">🧠 Μνήμη (RAM)</div>
+            <table class="ram-table">
+                <thead><tr><th>ι</th><th>Πλήθος</th><th>Σύνολο (σ)</th></tr></thead>
+                <tbody id="ramBody"></tbody>
+            </table>
+        </div>
+        <div class="screen-section">
+            <div class="theory-title" style="border:none; margin-bottom:5px;">🖥️ Οθόνη</div>
+            <div class="screen-display" id="screen"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let state = { sum: 0n, grains: 0n, i: 0, start: 0, end: 0, pc: 0, isPlaying: false, isFinished: false, timer: null, iters: 0 };
+    let userLogic = {};
+    let isBonusMode = false; // Flag για το Bonus
+
+    const originalTheoryText = `Ένας δημοφιλής μύθος αναφέρει ότι στην Ινδία κάποιος μεγάλος σοφός επινόησε ένα καινούργιο παιχνίδι, το σκάκι, όπου υπήρχαν πιόνια που κινούνταν σε μία πινακίδα εξήντα τεσσάρων (8x8) τετραγώνων (σκακιέρα). 
+            <br><br>
+            Ο ηγεμόνας της περιοχής ενθουσιάστηκε τόσο πολύ από το παιχνίδι που υποσχέθηκε στον σοφό άνθρωπο ότι θα του έδινε όποια ανταμοιβή επιθυμούσε. 
+            Εκείνος του απάντησε ότι δεν θέλει χρυσάφι, αλλά ζήτησε να του δώσουν έναν κόκκο σιταριού για το πρώτο τετράγωνο της σκακιέρας, δύο για το δεύτερο, τέσσερα για το τρίτο κ.ο.κ, διπλασιάζοντας τον αριθμό των κόκκων σιταριού κάθε φορά μέχρι το τελευταίο τετράγωνο. 
+            <br><br>
+            Ο ηγεμόνας θεώρησε πολύ μικρή την ανταμοιβή και του υποσχέθηκε αμέσως ότι θα ικανοποιούσε την επιθυμία του. Όταν κατάλαβε το λάθος του ήταν πλέον πολύ αργά…`;
+
+    const magnitudeNames = [
+        "", "Μονάδες", "Δεκάδες", "Εκατοντάδες", "Χιλιάδες", "Δεκάδες Χιλιάδων", "Εκατοντάδες Χιλιάδων", "Εκατομμύρια", 
+        "Δεκάδες Εκατομμυρίων", "Εκατοντάδες Εκατομμυρίων", "Δισεκατομμύρια", "Δεκάδες Δισεκατομμυρίων", 
+        "Εκατοντάδες Δισεκατομμυρίων", "Τρισεκατομμύρια", "Δεκάδες Τρισεκατομμυρίων", "Εκατοντάδες Τρισεκατομμυρίων", 
+        "Τετράκις Εκατομμύρια", "Δεκάδες Τετράκις Εκατ.", "Εκατοντάδες Τετράκις Εκατ.", "Πεντάκις Εκατομμύρια", "Δεκάδες Πεντάκις Εκατ."
+    ];
+
+    function initBoard() {
+        const board = document.getElementById('chessboard');
+        board.innerHTML = '';
+        for(let j = 1; j <= 64; j++) {
+            const sq = document.createElement('div');
+            let row = Math.floor((j - 1) / 8);
+            let col = (j - 1) % 8;
+            sq.className = 'square ' + ((row + col) % 2 === 0 ? 'light' : 'dark');
+            sq.id = 'sq-' + j;
+            board.appendChild(sq);
+        }
+    }
+    window.onload = initBoard;
+
+    function formatNum(num) {
+        if (num === undefined || num === null) return "0";
+        try { return num.toLocaleString('el-GR'); } 
+        catch (e) { return num.toString(); }
+    }
+
+    function checkBlanks() {
+        let allFilled = true;
+        for (let j = 1; j <= 8; j++) {
+            if (document.getElementById('b' + j).value.trim() === '') allFilled = false;
+        }
+        document.getElementById('btnExecute').disabled = !allFilled;
+    }
+
+    function fillSolution() {
+        if (isBonusMode) {
+            // Λύση για το Bonus Mode (Αλλαγμένες αρχικές τιμές)
+            const answers = ["1", "1", "2", "64", "πλήθος", "πλήθος", "2", "σ"];
+            for (let j = 1; j <= 8; j++) document.getElementById('b' + j).value = answers[j-1];
+        } else {
+            // Κανονική Λύση
+            const answers = ["0", "1", "1", "64", "πλήθος", "πλήθος", "2", "σ"];
+            for (let j = 1; j <= 8; j++) document.getElementById('b' + j).value = answers[j-1];
+        }
+        checkBlanks();
+    }
+
+    function normalizeStr(s) {
+        return s.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/_/g, "").replace(/\s+/g, "");
+    }
+
+    function evalExpr(expr) {
+        let s = normalizeStr(expr);
+        if(s.includes("πληθος")) s = s.replace(/πληθος/g, state.grains.toString() + "n");
+        if(s.includes("σ")) s = s.replace(/σ/g, state.sum.toString() + "n");
+        if(s.includes("ι")) s = s.replace(/ι/g, state.i.toString() + "n"); 
+        s = s.replace(/\b(\d+)\b/g, "$1n");
+        try { 
+            let res = eval(s); 
+            return (typeof res === "bigint") ? res : 0n;
+        } catch(e) { return 0n; }
+    }
+    
+    function evalSimpleNum(expr) {
+        let s = normalizeStr(expr);
+        try { 
+            let res = parseInt(s); 
+            return isNaN(res) ? 0 : res;
+        } catch(e) { return 0; }
+    }
+
+    function unlockInputs() {
+        for (let j = 1; j <= 8; j++) {
+            let el = document.getElementById('b' + j);
+            el.classList.remove('locked'); el.disabled = false;
+        }
+        document.getElementById('btnSolution').style.display = 'flex';
+        document.getElementById('btnExecute').style.display = 'flex';
+        document.getElementById('btnStep').style.display = 'none';
+        document.getElementById('btnAuto').style.display = 'none';
+        document.getElementById('btnExecute').disabled = false;
+        
+        document.getElementById('instructionBox').innerHTML = "<strong>Οδηγίες:</strong><br>Μπορείς να διορθώσεις τον κώδικά σου και να πατήσεις πάλι <strong>Εκτέλεση</strong>.";
+        document.getElementById('instructionBox').style.background = "rgba(245, 158, 11, 0.1)";
+        document.getElementById('instructionBox').style.borderColor = "var(--warning)";
+    }
+
+    // --- BONUS ΠΡΟΚΛΗΣΗ ΛΟΓΙΚΗ ---
+    function startBonusChallenge() {
+        isBonusMode = true;
+        
+        // Κρύβει το κουμπί του Bonus
+        document.getElementById('btnBonus').style.display = 'none';
+        
+        // Αλλαγή Σειράς DOM (Οπτική Αντιστροφή L4 και L5)
+        let l4 = document.getElementById('L4');
+        let l5 = document.getElementById('L5');
+        l4.parentNode.insertBefore(l5, l4); // Βάζει το L5 πάνω από το L4
+        
+        // Animation
+        l4.classList.add('line-swap-anim');
+        l5.classList.add('line-swap-anim');
+        setTimeout(() => { l4.classList.remove('line-swap-anim'); l5.classList.remove('line-swap-anim'); }, 800);
+
+        // Αλλαγή Εκφώνησης
+        document.getElementById('theoryText').innerHTML = `
+            <strong style="color: #8b5cf6; font-size: 1.1rem;">⭐ Bonus Πρόκληση Βιβλίου!</strong><br><br>
+            Παρατήρησε τον κώδικα δεξιά. Οι εντολές μέσα στην επανάληψη (ο πολλαπλασιασμός και η πρόσθεση) <strong>άλλαξαν σειρά</strong>!<br><br>
+            <em>Πώς πρέπει να αλλάξεις τις αρχικές τιμές (σ, πλήθος) και τα όρια της επανάληψης (ι από ... μέχρι ...), ώστε το πρόγραμμα να υπολογίσει πάλι το σωστό συνολικό αποτέλεσμα;</em>
+        `;
+        
+        // Καθαρισμός και ξεκλείδωμα για να δοκιμάσει ο μαθητής
+        for (let j = 1; j <= 8; j++) document.getElementById('b' + j).value = '';
+        resetAppLogicOnly();
+        unlockInputs();
+    }
+
+    function resetAppLogicOnly() {
+        stopAuto();
+        state = { sum: 0n, grains: 0n, i: 0, start: 0, end: 0, pc: 0, isPlaying: false, isFinished: false, timer: null, iters: 0 };
+        document.getElementById('ramBody').innerHTML = "";
+        document.getElementById('screen').innerHTML = ""; 
+        document.getElementById('mag-explainer').innerHTML = "Χρώμα Τάξης Μεγέθους: (Αναμονή...)";
+        document.getElementById('stat-i').innerText = "Τετράγωνο: 0";
+        document.getElementById('stat-grains').innerText = "Κόκκοι: 0";
+        document.getElementById('stat-sum').innerText = "Σύνολο: 0";
+        initBoard(); highlightLine(0);
+    }
+
+    function prepareExecution() {
+        for (let j = 1; j <= 8; j++) userLogic['p' + j] = document.getElementById('b' + j).value;
+
+        let screen = document.getElementById('screen');
+        let hasEmpty = false;
+        for (let j = 1; j <= 8; j++) {
+            if (userLogic['p' + j].trim() === '') hasEmpty = true;
+        }
+        
+        if (hasEmpty) {
+            screen.innerHTML = `<span style="color:var(--danger);"><strong>🚨 Συντακτικό Λάθος:</strong><br>Δεν μπορεί να γίνει εκτέλεση. Όλα τα πεδία πρέπει να είναι συμπληρωμένα!</span>`;
+            return; 
+        }
+
+        resetAppLogicOnly();
+
+        for (let j = 1; j <= 8; j++) {
+            let el = document.getElementById('b' + j);
+            el.classList.add('locked'); el.disabled = true;
+        }
+
+        document.getElementById('btnSolution').style.display = 'none';
+        document.getElementById('btnExecute').style.display = 'none';
+        document.getElementById('btnStep').style.display = 'flex';
+        document.getElementById('btnAuto').style.display = 'flex';
+        
+        document.getElementById('instructionBox').innerHTML = "<strong>Εκτέλεση σε εξέλιξη...</strong><br>Χρησιμοποίησε τα κουμπιά 'Βήμα' ή 'Αυτόματα'.";
+        document.getElementById('instructionBox').style.background = "rgba(16, 185, 129, 0.1)";
+        document.getElementById('instructionBox').style.borderColor = "var(--success)";
+        
+        state.pc = 1; state.isFinished = false; state.iters = 0; highlightLine(1);
+    }
+
+    function step() {
+        if (state.isFinished) return;
+
+        switch(state.pc) {
+            case 1: state.sum = evalExpr(userLogic.p1); state.pc = 2; highlightLine(2); break;
+            case 2: state.grains = evalExpr(userLogic.p2); state.pc = 3; highlightLine(3); break;
+            case 3: 
+                state.start = evalSimpleNum(userLogic.p3) || 1;
+                state.end = evalSimpleNum(userLogic.p4) || 64;
+                state.i = state.start;
+                state.pc = 4; highlightLine(3); 
+                break;
+            case 4: 
+                state.iters++;
+                if(state.iters > 150) {
+                    document.getElementById('screen').innerHTML += `<br><span style="color:var(--danger);"><strong>🚨 Λάθος Εκτέλεσης:</strong> Ατέρμων ή Τεράστιος Βρόχος! Η εκτέλεση διακόπηκε.</span>`;
+                    finishWithError(); return;
+                }
+                
+                if (state.i <= state.end) { 
+                    updateVisuals(state.i, state.grains, state.sum);
+                    // Αν είναι Bonus Mode, το L5 (multiplication) είναι πλέον οπτικά πρώτο, άρα πάμε στην state.pc = 50
+                    if (isBonusMode) { state.pc = 50; highlightLine(5); }
+                    else { state.pc = 5; highlightLine(4); }
+                } 
+                else { state.pc = 8; highlightLine(6); } 
+                break;
+                
+            // --- Κανονική Λειτουργία: Πρόσθεση πρώτα ---
+            case 5: 
+                state.sum += evalExpr(userLogic.p5); 
+                state.pc = 6; highlightLine(5); 
+                break;
+            case 6: 
+                let math1 = evalExpr(userLogic.p6);
+                let math2 = evalExpr(userLogic.p7);
+                state.grains = math1 * math2;
+                addRamRow(); 
+                state.pc = 7; highlightLine(6); 
+                break;
+            
+            // --- BONUS MODE Λειτουργία: Πολλαπλασιασμός ΠΡΩΤΑ ---
+            case 50: 
+                let m1 = evalExpr(userLogic.p6);
+                let m2 = evalExpr(userLogic.p7);
+                state.grains = m1 * m2;
+                state.pc = 60; highlightLine(4); // Μετά πάει στο L4 (που είναι οπτικά 2ο)
+                break;
+            case 60: 
+                state.sum += evalExpr(userLogic.p5);
+                addRamRow();
+                state.pc = 7; highlightLine(6);
+                break;
+            
+            case 7: 
+                state.i++; 
+                state.pc = 4; highlightLine(3); 
+                break;
+            case 8: 
+                if (normalizeStr(userLogic.p8).includes("σ")) {
+                    document.getElementById('screen').innerHTML += `<strong>> Τελικό Σύνολο Σιταριού:<br> ${formatNum(state.sum)} κόκκοι</strong>`;
+                }
+                finishSim();
+                break;
+        }
+    }
+
+    function finishWithError() {
+        state.isFinished = true; stopAuto(); highlightLine(0); unlockInputs();
+    }
+
+    function finishSim() {
+        state.isFinished = true; stopAuto(); highlightLine(7);
+
+        // Ο υπολογισμός του σωστού αποτελέσματος (πάντα είναι ο ίδιος)
+        let expS = 0n; let expG = 1n;
+        for(let j=1; j<=64; j++) { expS += expG; expG *= 2n; }
+
+        if(state.sum !== expS) {
+            document.getElementById('screen').innerHTML += `<br><br><span style="color:brown;"><strong>🤔 Λογικό Λάθος:</strong> Το τελικό ποσό δεν είναι το σωστό. Έλεγξε τα βήματα, τα όρια (ι) και τις αρχικές τιμές σου!</span>`;
+        } else {
+            let successHTML = `<br><br><span style="color:var(--success);"><strong>✅ Συγχαρητήρια!</strong> Υπολόγισες σωστά τους κόκκους!</span>`;
+            // Εμφάνιση του Bonus Button στη μπάρα εργαλείων, αν ΔΕΝ είμαστε ήδη στο Bonus Mode
+            if (!isBonusMode) {
+                document.getElementById('btnBonus').style.display = 'flex';
+            } else {
+                successHTML += `<br><br><span style="color: #8b5cf6;"><strong>Μπράβο! Έλυσες την πρόκληση!</strong></span>`;
+            }
+            document.getElementById('screen').innerHTML += successHTML;
+        }
+        
+        setTimeout(() => { highlightLine(0); unlockInputs(); }, 1500);
+    }
+
+    function getMagnitudeColor(digits) {
+        if (digits <= 0) return "";
+        let hue = Math.max(0, 60 - ((digits - 1) * 3.1));
+        let lightness = Math.max(20, 90 - ((digits - 1) * 3.6));
+        return `hsl(${hue}, 90%, ${lightness}%)`;
+    }
+
+    function updateVisuals(index, currentGrains, currentSum) {
+        document.querySelectorAll('.square').forEach(s => s.classList.remove('active'));
+        
+        let digits = currentGrains > 0n ? currentGrains.toString().length : 0;
+        let cellColor = getMagnitudeColor(digits);
+        
+        if(index >= 1 && index <= 64) {
+            let sq = document.getElementById('sq-' + index);
+            if(sq) {
+                sq.classList.add('active');
+                sq.classList.add('visited');
+                sq.style.backgroundColor = cellColor;
+            }
+        }
+        
+        let magName = digits > 0 && digits <= 20 ? magnitudeNames[digits] : "-";
+        
+        document.getElementById('mag-explainer').innerHTML = `
+            Χρώμα Τάξης Μεγέθους: <br>
+            <span style="color:${cellColor}; font-size:1.2rem; text-shadow: 1px 1px 2px #000, -1px -1px 0 #000; letter-spacing: 1px;">
+                ${magName}
+            </span> 
+            <span style="font-weight:normal;">(${digits} ψηφία)</span>
+        `;
+
+        document.getElementById('stat-i').innerText = `Τετράγωνο: ${index > 64 ? 64 : index}`;
+        document.getElementById('stat-grains').innerText = `Κόκκοι: ${formatNum(currentGrains)}`;
+        document.getElementById('stat-sum').innerText = `Σύνολο: ${formatNum(currentSum)}`;
+    }
+
+    function highlightLine(id) {
+        document.querySelectorAll('.code-line').forEach(l => l.classList.remove('active'));
+        if (id > 0) {
+            let line = document.getElementById('L' + id);
+            if(line) line.classList.add('active');
+        }
+    }
+
+    function addRamRow() {
+        const body = document.getElementById('ramBody');
+        const row = document.createElement('tr');
+        row.className = 'ram-new-row';
+        row.innerHTML = `<td>${state.i}</td><td>${formatNum(state.grains)}</td><td>${formatNum(state.sum)}</td>`;
+        body.appendChild(row);
+        body.parentElement.scrollTop = body.parentElement.scrollHeight;
+    }
+
+    function toggleAuto() {
+        if (state.isPlaying) { stopAuto(); } 
+        else {
+            state.isPlaying = true;
+            document.getElementById('btnAuto').innerText = "⏸️ Παύση";
+            document.getElementById('btnAuto').style.background = "var(--warning)";
+            document.getElementById('btnAuto').style.color = "black";
+            runAuto();
+        }
+    }
+    
+    function runAuto() {
+        if (!state.isPlaying || state.isFinished) return;
+        step();
+        let speed = parseInt(document.getElementById('speedSlider').value);
+        state.timer = setTimeout(runAuto, speed);
+    }
+
+    function stopAuto() {
+        state.isPlaying = false;
+        clearTimeout(state.timer);
+        document.getElementById('btnAuto').innerText = "▶️ Αυτόματα";
+        document.getElementById('btnAuto').style.background = "var(--primary)";
+        document.getElementById('btnAuto').style.color = "white";
+    }
+
+    function resetApp() {
+        stopAuto();
+        state = { sum: 0n, grains: 0n, i: 0, start: 0, end: 0, pc: 0, isPlaying: false, isFinished: false, timer: null, iters: 0 };
+        
+        // Κρύβει το κουμπί Bonus από τη μπάρα όταν κάνουμε Reset
+        document.getElementById('btnBonus').style.display = 'none';
+
+        // Επαναφορά Bonus Mode αν είναι ενεργό
+        if (isBonusMode) {
+            isBonusMode = false;
+            let l4 = document.getElementById('L4');
+            let l5 = document.getElementById('L5');
+            l5.parentNode.insertBefore(l4, l5); // Το L4 πάει πάλι πάνω από το L5
+            document.getElementById('theoryText').innerHTML = originalTheoryText;
+        }
+        
+        for (let j = 1; j <= 8; j++) {
+            let el = document.getElementById('b' + j);
+            el.value = ''; el.disabled = false; el.classList.remove('locked');
+        }
+
+        document.getElementById('btnSolution').style.display = 'flex';
+        document.getElementById('btnExecute').style.display = 'flex';
+        document.getElementById('btnExecute').disabled = true;
+        document.getElementById('btnStep').style.display = 'none';
+        document.getElementById('btnAuto').style.display = 'none';
+        
+        document.getElementById('btnStep').disabled = false;
+        document.getElementById('btnAuto').disabled = false;
+
+        document.getElementById('instructionBox').innerHTML = "<strong>Οδηγίες:</strong><br>Συμπλήρωσε τα κενά στον κώδικα (αγνοούνται τόνοι/κεφαλαία).<br><br>Μόλις τελειώσεις, πάτα <strong>Εκτέλεση</strong>.";
+        document.getElementById('instructionBox').style.background = "rgba(245, 158, 11, 0.1)";
+        document.getElementById('instructionBox').style.borderColor = "var(--warning)";
+
+        document.getElementById('ramBody').innerHTML = "";
+        document.getElementById('screen').innerHTML = ""; 
+        document.getElementById('mag-explainer').innerHTML = "Χρώμα Τάξης Μεγέθους: (Αναμονή...)";
+        
+        document.getElementById('stat-i').innerText = "Τετράγωνο: 0";
+        document.getElementById('stat-grains').innerText = "Κόκκοι: 0";
+        document.getElementById('stat-sum').innerText = "Σύνολο: 0";
+
+        initBoard(); highlightLine(0);
+    }
+
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+    checkBlanks();
+</script>
+
+</body>
+</html>
