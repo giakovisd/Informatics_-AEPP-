@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Η Γεώτρηση - Συμπλήρωση Κενών & Έλεγχος</title>
+    <style>
+        :root {
+            --primary: #2563eb; --primary-hover: #1d4ed8;
+            --text-dark: #0f172a; --text-light: #64748b;
+            --bg-color: #f1f5f9; --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --success: #16a34a; --warning: #f59e0b; --danger: #ef4444;
+            --highlight: #fef08a; --code-bg: #f8fafc;
+            --soil-1: #8b4513; --soil-2: #5d2e0a; --sky: #bae6fd;
+            --screen-bg: #ffffff; --screen-text: #000000;
+        }
+
+        body.dark-mode {
+            --bg-color: #020617; --panel-bg: #1e293b;
+            --text-dark: #f8fafc; --text-light: #94a3b8;
+            --border-color: #334155; --code-bg: #0f172a;
+            --sky: #082f49; --screen-bg: #e2e8f0; --screen-text: #000000;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background-color: var(--bg-color); color: var(--text-dark); 
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s;
+        }
+
+        /* --- TOOLBAR --- */
+        .toolbar { 
+            background: var(--panel-bg); border-bottom: 1px solid var(--border-color); 
+            padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 100;
+        }
+        .toolbar-title { font-weight: 800; font-size: 1.1rem; color: var(--primary); display: flex; align-items: center; gap: 8px;}
+        .controls-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;}
+
+        .tool-btn { 
+            padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);
+            background: var(--panel-bg); color: var(--text-dark); cursor: pointer; font-weight: bold;
+            display: flex; align-items: center; gap: 5px; font-size: 0.85rem; transition: 0.2s;
+        }
+        .tool-btn:hover:not(:disabled) { background: var(--border-color); }
+        .tool-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-solution { background: var(--success); color: white; border: none; }
+        .btn-solution:hover:not(:disabled) { background: #15803d; }
+        .btn-execute { background: var(--warning); color: black; border: none; }
+        .btn-execute:hover:not(:disabled) { background: #d97706; color: white;}
+        .btn-run { background: var(--primary); color: white; border: none; }
+        .btn-step { background: var(--primary); color: white; border: none; }
+
+        .speed-control { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; font-weight: bold; margin-right: 10px;}
+        .speed-control input { cursor: pointer; width: 60px;}
+
+        /* --- MODAL ΡΥΘΜΙΣΕΩΝ --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .modal-box {
+            background: var(--panel-bg); padding: 20px; border-radius: 10px; width: 300px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 15px;
+        }
+        .modal-box h3 { color: var(--primary); border-bottom: 2px solid var(--border-color); padding-bottom: 5px;}
+        .modal-field { display: flex; justify-content: space-between; align-items: center;}
+        .modal-field input { width: 70px; padding: 5px; border: 1px solid var(--border-color); border-radius: 4px; font-weight: bold; text-align: center;}
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;}
+
+        /* --- MAIN LAYOUT --- */
+        .main-container { display: flex; flex: 1; padding: 15px; gap: 15px; overflow: hidden; }
+        .col { 
+            background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color); 
+            display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        /* Left: Theory */
+        .col-left { flex: 0 0 280px; padding: 20px; overflow-y: auto; line-height: 1.5;}
+        .theory-title { font-size: 1.05rem; font-weight: bold; margin-bottom: 12px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; }
+        .theory-text { font-size: 0.9rem; margin-bottom: 20px; }
+        .instructions { background: rgba(245, 158, 11, 0.1); padding: 15px; border-left: 4px solid var(--warning); border-radius: 4px; font-size: 0.85rem;}
+
+        /* Mid: Code & Animation (Split in 2) */
+        .col-mid { flex: 1; display: flex; flex-direction: row; } 
+        
+        .code-area { 
+            flex: 1; padding: 20px; background: var(--code-bg); 
+            border-right: 1px solid var(--border-color); 
+            font-family: 'Consolas', monospace; font-size: 0.85rem; line-height: 1.8;
+            display: flex; flex-direction: column; justify-content: center; overflow-y: auto;
+        }
+        .code-line { padding: 4px 8px; border-radius: 4px; transition: 0.2s; }
+        .code-line.active { background: var(--highlight); color: black; font-weight: bold; }
+        
+        .code-blank {
+            padding: 2px 5px; font-family: monospace; font-size: 0.85rem;
+            border: 2px dashed var(--primary); border-radius: 4px; text-align: center;
+            background: rgba(255, 255, 255, 0.9); color: #000; font-weight: bold; outline: none;
+        }
+        
+        /* Νέα Μεγέθη Κενών βάσει των απαιτήσεων */
+        .code-blank.small-blank { width: 50px; } 
+        .code-blank.medium-blank { width: 140px; } 
+        .code-blank.large-blank { width: 230px; } 
+        
+        /* Τα νέα ειδικά μεγέθη: */
+        .code-blank.oso-blank { width: 255px; } /* +10% από το 230px */
+        .code-blank.money-calc-blank { width: 210px; } /* +48% από το 140px */
+
+        .code-blank:focus { border-style: solid; background: #fff; box-shadow: 0 0 5px var(--primary); }
+        .code-blank.locked { border: 1px solid transparent; background: transparent; color: var(--primary); border-bottom: 2px solid var(--primary); border-radius: 0; text-align: left;}
+
+        /* Animation Area */
+        .anim-area { flex: 1; position: relative; background: var(--sky); overflow: hidden; transition: background 0.3s;}
+        #drill-svg { width: 100%; height: 100%; display: block; }
+
+        /* Right: RAM & Screen */
+        .col-right { flex: 0 0 280px; display: flex; flex-direction: column; }
+        
+        .ram-section { padding: 15px; flex: 1; border-bottom: 1px solid var(--border-color); overflow-y: auto; }
+        .ram-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: center; }
+        .ram-table th { background: var(--bg-color); padding: 8px 2px; border: 1px solid var(--border-color); position: sticky; top: 0; z-index: 10;}
+        .ram-table td { padding: 6px 2px; border: 1px solid var(--border-color); font-family: monospace; }
+        .ram-new-row { animation: flashRow 0.8s; }
+        @keyframes flashRow { 0% { background: var(--warning); } 100% { background: transparent; } }
+        
+        /* White Screen - Αύξηση ύψους κατά 8% (Από 160px πήγε στα 173px) */
+        .screen-section { padding: 15px; height: 173px; display: flex; flex-direction: column; }
+        .screen-display { 
+            flex: 1; background: var(--screen-bg); color: var(--screen-text); border: 2px solid var(--border-color);
+            padding: 15px; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 0.95rem; overflow-y: auto;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    <div class="toolbar-title">⛏️ Η Γεώτρηση</div>
+    <div class="controls-group">
+        <button class="tool-btn" onclick="openSettings()" title="Αλλαγή Δεδομένων">⚙️ Ρυθμίσεις</button>
+        <div class="speed-control" title="Ταχύτητα Εκτέλεσης">
+            🐢 <input type="range" id="speedSlider" min="100" max="1500" value="400" dir="rtl"> 🐇
+        </div>
+        <button class="tool-btn" onclick="toggleTheme()" title="Day/Night Mode">🌙</button>
+        <button class="tool-btn btn-solution" id="btnSolution" onclick="fillSolution()">💡 Λύση</button>
+        <button class="tool-btn btn-execute" id="btnExecute" onclick="prepareExecution()" disabled>🚀 Εκτέλεση</button>
+        <button class="tool-btn btn-step" id="btnStep" onclick="step()" style="display:none;">👣 Βήμα</button>
+        <button class="tool-btn btn-run" id="btnAuto" onclick="toggleAuto()" style="display:none;">▶️ Αυτόματα</button>
+        <button class="tool-btn" onclick="resetApp()">🔄 Αρχή</button>
+    </div>
+</div>
+
+<div class="main-container">
+    <div class="col col-left">
+        <div class="theory-title">Η Εκφώνηση</div>
+        <div class="theory-text">
+            Ένας ιδιοκτήτης αγροκτήματος διαθέτει <strong id="theoryBudget">2000</strong><strong>€</strong> για να κάνει μια γεώτρηση. 
+            <br><br>
+            Το πρώτο μέτρο κοστίζει <strong id="theoryCost">40</strong><strong>€</strong> και κάθε επόμενο μέτρο αυξάνεται κατά <strong id="theoryStep">3</strong><strong>€</strong>.
+            <br><br>
+            Να αναπτύξετε αλγόριθμο ο οποίος να υπολογίζει και να εμφανίζει το <strong>μέγιστο βάθος</strong> (σε μέτρα) της γεώτρησης.
+        </div>
+        <div class="instructions" id="instructionBox">
+            <strong>Οδηγίες:</strong><br>
+            Συμπλήρωσε τα κενά στον κώδικα (Τα κενά αγνοούν τόνους ή κεφαλαία γράμματα).<br><br>
+            Μόλις τα συμπληρώσεις όλα, πάτα <strong>Εκτέλεση</strong>.
+        </div>
+    </div>
+
+    <div class="col col-mid">
+        <div class="code-area">
+            <div class="code-line" style="color:var(--primary); font-weight:bold;">Αλγόριθμος γεώτρηση</div>
+            <div class="code-line" id="L1">βάθος_γεώτρησης &lt;- <input type="text" class="code-blank small-blank" id="b1" oninput="checkBlanks()"></div>
+            <div class="code-line" id="L2">διαθέσιμα_χρήματα &lt;- <input type="text" class="code-blank small-blank" id="b2" oninput="checkBlanks()"></div>
+            <div class="code-line" id="L3">τιμή_μέτρου &lt;- <input type="text" class="code-blank small-blank" id="b3" oninput="checkBlanks()"></div>
+            <div class="code-line" id="L4">Όσο <input type="text" class="code-blank oso-blank" id="b4" oninput="checkBlanks()"> επανάλαβε</div>
+            <div class="code-line" id="L5">&nbsp;&nbsp;βάθος_γεώτρησης &lt;- <input type="text" class="code-blank" style="width: 190px;" id="b5" oninput="checkBlanks()"></div>
+            <div class="code-line" id="L6">&nbsp;&nbsp;διαθέσιμα_χρήματα &lt;- <input type="text" class="code-blank" style="width: 245px;" id="b6" oninput="checkBlanks()"></div>
+            <div class="code-line" id="L7">&nbsp;&nbsp;<input type="text" class="code-blank medium-blank" id="b7" oninput="checkBlanks()"> &lt;- <input type="text" class="code-blank medium-blank" id="b8" oninput="checkBlanks()"></div>
+            <div class="code-line" id="L8">Τέλος_επανάληψης</div>
+            <div class="code-line" id="L9"><input type="text" class="code-blank large-blank" id="b9" oninput="checkBlanks()"></div>
+            <div class="code-line" style="color:var(--primary); font-weight:bold;">Τέλος γεώτρηση</div>
+        </div>
+
+        <div class="anim-area" id="animArea">
+            <svg id="drill-svg" viewBox="0 0 800 600" preserveAspectRatio="xMidYMin slice">
+                <rect x="-200" y="100" width="1200" height="500" fill="var(--soil-1)" />
+                <rect x="-200" y="250" width="1200" height="350" fill="var(--soil-2)" opacity="0.6"/>
+                <rect x="-200" y="450" width="1200" height="150" fill="#2d1a0a" />
+                
+                <ellipse id="water-pool" cx="400" cy="100" rx="0" ry="0" fill="#0ea5e9" opacity="0.85" />
+                <rect id="water-pipe" x="397" y="100" width="6" height="0" fill="#0ea5e9" opacity="0.9" />
+                <ellipse id="water-fountain" cx="400" cy="100" rx="0" ry="0" fill="#0ea5e9" opacity="0.9" />
+
+                <line x1="400" y1="20" x2="370" y2="100" stroke="#334155" stroke-width="4" />
+                <line x1="400" y1="20" x2="430" y2="100" stroke="#334155" stroke-width="4" />
+                <line x1="370" y1="100" x2="430" y2="100" stroke="#334155" stroke-width="4" />
+                <rect x="380" y="90" width="40" height="10" fill="#1e293b" />
+                
+                <rect id="drill-pipe" x="397" y="50" width="6" height="50" fill="#94a3b8" />
+                <path id="drill-bit" d="M390 100 L410 100 L400 115 Z" fill="#cbd5e1" />
+                
+                <text id="drill-label" x="420" y="110" font-family="sans-serif" font-size="16" font-weight="bold" fill="#ffffff" filter="drop-shadow(1px 1px 2px rgba(0,0,0,0.8))">Βάθος: 0 μ.</text>
+            </svg>
+        </div>
+    </div>
+
+    <div class="col col-right">
+        <div class="ram-section">
+            <div class="theory-title" style="border:none; margin-bottom:5px;">🧠 Μνήμη (RAM)</div>
+            <table class="ram-table">
+                <thead><tr><th>Βάθος Γεώτρ.</th><th>Διαθέσιμα Χρ.</th><th>Τιμή Μέτρου</th></tr></thead>
+                <tbody id="ramBody"></tbody>
+            </table>
+        </div>
+        <div class="screen-section">
+            <div class="theory-title" style="border:none; margin-bottom:5px;">🖥️ Οθόνη</div>
+            <div class="screen-display" id="screen"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="settingsModal">
+    <div class="modal-box">
+        <h3>Ρυθμίσεις Προβλήματος</h3>
+        <div class="modal-field">
+            <label>Αρχικό Ποσό (€):</label>
+            <input type="number" id="setBudget" value="2000">
+        </div>
+        <div class="modal-field">
+            <label>Κόστος 1ου Μέτρου (€):</label>
+            <input type="number" id="setCost" value="40">
+        </div>
+        <div class="modal-field">
+            <label>Αύξηση ανά Μέτρο (€):</label>
+            <input type="number" id="setStep" value="3">
+        </div>
+        <div class="modal-actions">
+            <button class="tool-btn" onclick="closeSettings()">Ακύρωση</button>
+            <button class="tool-btn btn-solution" onclick="saveSettings()">Αποθήκευση</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let sysDefaults = { budget: 2000, cost: 40, step: 3 };
+    let state = { vathos: 0, money: 0, price: 0, pc: 0, isPlaying: false, isFinished: false, timer: null, currentY: 100, iters: 0 };
+    let userLogic = {};
+
+    function openSettings() { document.getElementById('settingsModal').style.display = 'flex'; }
+    function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
+    function saveSettings() {
+        sysDefaults.budget = parseInt(document.getElementById('setBudget').value) || 2000;
+        sysDefaults.cost = parseInt(document.getElementById('setCost').value) || 40;
+        sysDefaults.step = parseInt(document.getElementById('setStep').value) || 3;
+
+        document.getElementById('theoryBudget').innerText = sysDefaults.budget;
+        document.getElementById('theoryCost').innerText = sysDefaults.cost;
+        document.getElementById('theoryStep').innerText = sysDefaults.step;
+        
+        closeSettings(); resetApp(); 
+    }
+
+    function checkBlanks() {
+        let allFilled = true;
+        for (let i = 1; i <= 9; i++) {
+            if (document.getElementById('b' + i).value.trim() === '') allFilled = false;
+        }
+        document.getElementById('btnExecute').disabled = !allFilled;
+    }
+
+    function fillSolution() {
+        const answers = [
+            "0", 
+            sysDefaults.budget.toString(), 
+            sysDefaults.cost.toString(), 
+            "διαθέσιμα_χρήματα >= τιμή_μέτρου", 
+            "βάθος_γεώτρησης + 1", 
+            "διαθέσιμα_χρήματα - τιμή_μέτρου", 
+            "τιμή_μέτρου", 
+            `τιμή_μέτρου + ${sysDefaults.step}`, 
+            "Γράψε βάθος_γεώτρησης"
+        ];
+        for (let i = 1; i <= 9; i++) {
+            document.getElementById('b' + i).value = answers[i-1];
+        }
+        checkBlanks();
+    }
+
+    function normalizeStr(s) {
+        return s.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/_/g, "").replace(/\s+/g, "");
+    }
+
+    // Δυναμική αξιολόγηση των πράξεων που έγραψε ο μαθητής!
+    function evalExpr(expr) {
+        let s = normalizeStr(expr);
+        if(s.includes("διαθεσιμαχρηματα")) s = s.replace(/διαθεσιμαχρηματα/g, state.money);
+        if(s.includes("τιμημετρου")) s = s.replace(/τιμημετρου/g, state.price);
+        if(s.includes("βαθοςγεωτρησης")) s = s.replace(/βαθοςγεωτρησης/g, state.vathos);
+        try { 
+            let res = eval(s.replace(/>=/g, ">=").replace(/<=/g, "<=")); 
+            return (isNaN(res) && typeof res !== "boolean") ? 0 : res;
+        } catch(e) { return 0; }
+    }
+
+    // Ξεκλειδώνει τα πεδία για να κάνει διόρθωση χωρίς Reset
+    function unlockInputs() {
+        for (let i = 1; i <= 9; i++) {
+            let el = document.getElementById('b' + i);
+            el.classList.remove('locked'); el.disabled = false;
+        }
+        document.getElementById('btnSolution').style.display = 'flex';
+        document.getElementById('btnExecute').style.display = 'flex';
+        document.getElementById('btnStep').style.display = 'none';
+        document.getElementById('btnAuto').style.display = 'none';
+        document.getElementById('btnExecute').disabled = false;
+        
+        document.getElementById('instructionBox').innerHTML = "<strong>Οδηγίες:</strong><br>Μπορείς να διορθώσεις τον κώδικά σου και να πατήσεις πάλι <strong>Εκτέλεση</strong> χωρίς να χάσεις αυτά που έγραψες.";
+        document.getElementById('instructionBox').style.background = "rgba(245, 158, 11, 0.1)";
+        document.getElementById('instructionBox').style.borderColor = "var(--warning)";
+    }
+
+    function prepareExecution() {
+        // Διαβάζουμε τι έγραψε
+        for (let i = 1; i <= 9; i++) {
+            userLogic['p' + i] = document.getElementById('b' + i).value;
+        }
+
+        let screen = document.getElementById('screen');
+        
+        // --- 1. ΕΛΕΓΧΟΣ ΣΥΝΤΑΚΤΙΚΟΥ ---
+        // (Δεν επιτρέπει εκτέλεση αν υπάρχουν άδεια πεδία)
+        let hasEmpty = false;
+        for (let i = 1; i <= 9; i++) {
+            if (userLogic['p' + i].trim() === '') hasEmpty = true;
+        }
+        
+        if (hasEmpty) {
+            screen.innerHTML = `<span style="color:var(--danger);"><strong>🚨 Συντακτικό Λάθος:</strong><br>Δεν μπορεί να γίνει εκτέλεση. Όλα τα πεδία πρέπει να είναι συμπληρωμένα!</span>`;
+            return; 
+        }
+
+        // Καθαρίζουμε το RAM και την Οθόνη για τη ΝΕΑ εκτέλεση (Επιτρέπει επαναληπτικές δοκιμές)
+        document.getElementById('ramBody').innerHTML = "";
+        screen.innerHTML = ""; 
+        
+        // Καθαρίζουμε το νερό
+        const pool = document.getElementById('water-pool');
+        const waterPipe = document.getElementById('water-pipe');
+        const fountain = document.getElementById('water-fountain');
+        pool.style.transition = "none"; waterPipe.style.transition = "none"; fountain.style.transition = "none";
+        pool.setAttribute('rx', 0); pool.setAttribute('ry', 0);
+        waterPipe.setAttribute('height', 0);
+        fountain.setAttribute('rx', 0); fountain.setAttribute('ry', 0); fountain.setAttribute('cy', 100);
+        
+        // Φέρνουμε το τρυπάνι πάνω
+        updateDrill(0);
+
+        // Κλειδώνουμε το UI για όσο τρέχει
+        for (let i = 1; i <= 9; i++) {
+            let el = document.getElementById('b' + i);
+            el.classList.add('locked'); el.disabled = true;
+        }
+
+        document.getElementById('btnSolution').style.display = 'none';
+        document.getElementById('btnExecute').style.display = 'none';
+        document.getElementById('btnStep').style.display = 'flex';
+        document.getElementById('btnAuto').style.display = 'flex';
+        
+        document.getElementById('instructionBox').innerHTML = "<strong>Εκτέλεση σε εξέλιξη...</strong><br>Χρησιμοποίησε τα κουμπιά 'Βήμα' ή 'Αυτόματα' για να δεις τι συμβαίνει.";
+        document.getElementById('instructionBox').style.background = "rgba(16, 185, 129, 0.1)";
+        document.getElementById('instructionBox').style.borderColor = "var(--success)";
+        
+        state.pc = 1; state.isFinished = false; state.iters = 0; highlightLine(1);
+    }
+
+    function step() {
+        if (state.isFinished) return;
+
+        switch(state.pc) {
+            case 1: state.vathos = evalExpr(userLogic.p1) || 0; state.pc = 2; highlightLine(2); break;
+            case 2: state.money = evalExpr(userLogic.p2) || 0; state.pc = 3; highlightLine(3); break;
+            case 3: state.price = evalExpr(userLogic.p3) || 0; addRamRow(); state.pc = 4; highlightLine(4); updateDrill(state.vathos); break;
+            case 4: 
+                state.iters++;
+                // --- 2. ΛΑΘΟΣ ΚΑΤΑ ΤΗΝ ΕΚΤΕΛΕΣΗ (Runtime Error) ---
+                if(state.iters > 150) {
+                    document.getElementById('screen').innerHTML += `<br><span style="color:var(--danger);"><strong>🚨 Λάθος Εκτέλεσης:</strong> Ατέρμων Βρόχος! Το πρόγραμμα κόλλησε επειδή η συνθήκη δεν γίνεται ποτέ Ψευδής. Έλεγξε τη συνθήκη και την ενημέρωση μεταβλητών.</span>`;
+                    finishWithError();
+                    return;
+                }
+                
+                let condition = evalExpr(userLogic.p4);
+                if (condition) { state.pc = 5; highlightLine(5); } 
+                else { state.pc = 9; highlightLine(9); }
+                break;
+            case 5: state.vathos = evalExpr(userLogic.p5) || 0; updateDrill(state.vathos); state.pc = 6; highlightLine(6); break;
+            case 6: state.money = evalExpr(userLogic.p6) || 0; state.pc = 7; highlightLine(7); break;
+            case 7: 
+                let varName = normalizeStr(userLogic.p7);
+                let valResult = evalExpr(userLogic.p8) || 0;
+                if(varName === "τιμημετρου") state.price = valResult;
+                else if(varName === "βαθοςγεωτρησης") state.vathos = valResult;
+                else if(varName === "διαθεσιμαχρηματα") state.money = valResult;
+                addRamRow(); state.pc = 8; highlightLine(8); break;
+            case 8: state.pc = 4; highlightLine(4); break;
+            case 9: 
+                if (normalizeStr(userLogic.p9).includes("βαθοςγεωτρησης")) {
+                    document.getElementById('screen').innerHTML += `<strong>> Μέγιστο βάθος: ${state.vathos} μ.</strong>`;
+                }
+                finishSim();
+                break;
+        }
+    }
+
+    function finishWithError() {
+        state.isFinished = true;
+        stopAuto();
+        highlightLine(0);
+        unlockInputs(); // Ξεκλειδώνει για να διορθώσει ο μαθητής
+    }
+
+    function finishSim() {
+        state.isFinished = true;
+        stopAuto();
+        highlightLine(0);
+
+        // Υπολογισμός του ΠΡΑΓΜΑΤΙΚΑ ΣΩΣΤΟΥ βάθους (Για σύγκριση)
+        let expD = 0; let m = sysDefaults.budget; let p = sysDefaults.cost;
+        while(m >= p) { m -= p; p += sysDefaults.step; expD++; }
+
+        // --- 3. ΛΟΓΙΚΟ ΛΑΘΟΣ (Logic Error) ---
+        if(state.vathos !== expD) {
+            document.getElementById('screen').innerHTML += `<br><br><span style="color:brown;"><strong>🤔 Λογικό Λάθος:</strong> Η λογική εκτελέστηκε, αλλά το αποτέλεσμα δεν είναι το αναμενόμενο. Έλεγξε τις αρχικές σου τιμές και τις πράξεις μέσα στην επανάληψη.</span>`;
+        } else {
+            // ΟΛΑ ΣΩΣΤΑ - ANIMATION ΝΕΡΟΥ
+            const pool = document.getElementById('water-pool');
+            const waterPipe = document.getElementById('water-pipe');
+            const fountain = document.getElementById('water-fountain');
+            
+            pool.style.transition = "all 1s ease";
+            pool.setAttribute('rx', 40); pool.setAttribute('ry', 15);
+
+            setTimeout(() => {
+                waterPipe.style.transition = "all 2s ease-in";
+                waterPipe.setAttribute('y', 90); 
+                waterPipe.setAttribute('height', state.currentY - 90); 
+
+                setTimeout(() => {
+                    fountain.style.transition = "all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+                    fountain.setAttribute('cy', 85); 
+                    fountain.setAttribute('rx', 35);
+                    fountain.setAttribute('ry', 20);
+                }, 2000); 
+            }, 1000);
+        }
+        
+        // Ξεκλειδώνει για να μπορεί να κάνει αλλαγές
+        unlockInputs();
+    }
+
+    function updateDrill(depth) {
+        const pipe = document.getElementById('drill-pipe');
+        const bit = document.getElementById('drill-bit');
+        const label = document.getElementById('drill-label');
+        const pool = document.getElementById('water-pool');
+        const waterPipe = document.getElementById('water-pipe');
+        
+        let visualDepth = Math.min(depth, 55); 
+        const addedHeight = visualDepth * 8; 
+        state.currentY = 100 + addedHeight; 
+        
+        pipe.style.transition = "all 0.4s ease";
+        bit.style.transition = "all 0.4s ease";
+        label.style.transition = "all 0.4s ease";
+
+        pipe.setAttribute('height', 50 + addedHeight);
+        bit.setAttribute('transform', `translate(0, ${addedHeight})`);
+        
+        label.setAttribute('y', 110 + addedHeight);
+        label.textContent = `Βάθος: ${depth} μ.`;
+
+        pool.setAttribute('cy', state.currentY + 5);
+        waterPipe.setAttribute('y', state.currentY);
+    }
+
+    function highlightLine(id) {
+        document.querySelectorAll('.code-line').forEach(l => l.classList.remove('active'));
+        if (id > 0) document.getElementById('L' + id).classList.add('active');
+    }
+
+    function addRamRow() {
+        const body = document.getElementById('ramBody');
+        const row = document.createElement('tr');
+        row.className = 'ram-new-row';
+        row.innerHTML = `<td>${state.vathos}</td><td>${state.money}</td><td>${state.price}</td>`;
+        body.appendChild(row);
+        body.parentElement.scrollTop = body.parentElement.scrollHeight;
+    }
+
+    function toggleAuto() {
+        if (state.isPlaying) { stopAuto(); } 
+        else {
+            state.isPlaying = true;
+            document.getElementById('btnAuto').innerText = "⏸️ Παύση";
+            document.getElementById('btnAuto').style.background = "var(--warning)";
+            document.getElementById('btnAuto').style.color = "black";
+            runAuto();
+        }
+    }
+    
+    function runAuto() {
+        if (!state.isPlaying || state.isFinished) return;
+        step();
+        let speed = parseInt(document.getElementById('speedSlider').value);
+        state.timer = setTimeout(runAuto, speed);
+    }
+
+    function stopAuto() {
+        state.isPlaying = false;
+        clearTimeout(state.timer);
+        document.getElementById('btnAuto').innerText = "▶️ Αυτόματα";
+        document.getElementById('btnAuto').style.background = "var(--primary)";
+        document.getElementById('btnAuto').style.color = "white";
+    }
+
+    function resetApp() {
+        stopAuto();
+        state = { vathos: 0, money: 0, price: 0, pc: 0, isPlaying: false, isFinished: false, timer: null, currentY: 100, iters: 0 };
+        
+        for (let i = 1; i <= 9; i++) {
+            let el = document.getElementById('b' + i);
+            el.value = ''; el.disabled = false; el.classList.remove('locked');
+        }
+
+        document.getElementById('btnSolution').style.display = 'flex';
+        document.getElementById('btnExecute').style.display = 'flex';
+        document.getElementById('btnExecute').disabled = true;
+        document.getElementById('btnStep').style.display = 'none';
+        document.getElementById('btnAuto').style.display = 'none';
+        
+        document.getElementById('btnStep').disabled = false;
+        document.getElementById('btnAuto').disabled = false;
+
+        document.getElementById('instructionBox').innerHTML = "<strong>Οδηγίες:</strong><br>Συμπλήρωσε τα κενά στον κώδικα (Τα κενά αγνοούν τόνους ή κεφαλαία γράμματα).<br><br>Μόλις τα συμπληρώσεις όλα, πάτα <strong>Εκτέλεση</strong>.";
+        document.getElementById('instructionBox').style.background = "rgba(245, 158, 11, 0.1)";
+        document.getElementById('instructionBox').style.borderColor = "var(--warning)";
+
+        document.getElementById('ramBody').innerHTML = "";
+        document.getElementById('screen').innerHTML = ""; 
+        
+        const pool = document.getElementById('water-pool');
+        const waterPipe = document.getElementById('water-pipe');
+        const fountain = document.getElementById('water-fountain');
+        
+        pool.style.transition = "none"; waterPipe.style.transition = "none"; fountain.style.transition = "none";
+        pool.setAttribute('rx', 0); pool.setAttribute('ry', 0);
+        waterPipe.setAttribute('height', 0);
+        fountain.setAttribute('rx', 0); fountain.setAttribute('ry', 0); fountain.setAttribute('cy', 100);
+
+        updateDrill(0); highlightLine(0);
+    }
+
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+    checkBlanks();
+</script>
+
+</body>
+</html>
