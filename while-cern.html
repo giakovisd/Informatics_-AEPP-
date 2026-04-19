@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Δομή Επανάληψης ΟΣΟ - Πείραμα CERN</title>
+    <style>
+        :root {
+            --primary: #2563eb; --primary-hover: #1d4ed8;
+            --text-dark: #0f172a; --text-light: #64748b;
+            --bg-color: #f1f5f9; --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --success: #16a34a; --warning: #f59e0b; --danger: #ef4444;
+            --highlight: #fef08a; --fc-active: #fde047; --code-bg: #f8fafc;
+        }
+
+        body.dark-mode {
+            --bg-color: #020617; --panel-bg: #1e293b;
+            --text-dark: #f8fafc; --text-light: #94a3b8;
+            --border-color: #334155; --code-bg: #0f172a;
+            --screen-bg: #e2e8f0; --screen-text: #000000;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background-color: var(--bg-color); color: var(--text-dark); 
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s;
+        }
+
+        /* --- TOOLBAR --- */
+        .toolbar { 
+            background: var(--panel-bg); border-bottom: 1px solid var(--border-color); 
+            padding: 8px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100;
+            flex: 0 0 auto;
+        }
+        .toolbar-title { font-weight: 800; font-size: 1.1rem; color: var(--primary); display: flex; align-items: center; gap: 8px;}
+        .controls-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;}
+
+        .tool-btn { 
+            padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color);
+            background: var(--panel-bg); color: var(--text-dark); cursor: pointer; font-weight: bold;
+            display: flex; align-items: center; gap: 5px; font-size: 0.85rem; transition: 0.2s;
+        }
+        .tool-btn:hover:not(:disabled) { background: var(--border-color); }
+        .tool-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-execute { background: var(--warning); color: black; border: none; }
+        .btn-step { background: var(--primary); color: white; border: none; }
+        .btn-auto { background: var(--primary); color: white; border: none; }
+
+        .speed-control { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; font-weight: bold; margin-right: 10px;}
+        .speed-control input { cursor: pointer; width: 60px;}
+
+        /* --- MAIN LAYOUT --- */
+        .main-container { display: flex; flex: 1; padding: 10px; gap: 10px; overflow: hidden; min-height: 0;}
+        .col { 
+            background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color); 
+            display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        /* LEFT COLUMN */
+        .col-left { flex: 0 0 280px; padding: 15px; overflow-y: auto; line-height: 1.4;}
+        .theory-title { font-size: 1rem; font-weight: bold; margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; }
+        .theory-text { font-size: 0.85rem; margin-bottom: 15px; text-align: justify; }
+
+        /* --- CERN COLLIDER ANIMATION --- */
+        .cern-widget { margin-top: 15px; padding: 15px 0; display: flex; flex-direction: column; align-items: center; background: var(--code-bg); border-radius: 12px; border: 1px solid var(--border-color);}
+        .cern-title { font-size: 0.75rem; font-weight: bold; color: var(--text-light); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;}
+        .collider-ring {
+            width: 120px; height: 120px; border-radius: 50%; border: 4px dashed #3b82f6; position: relative;
+            animation: spinRing 10s linear infinite; box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+        }
+        @keyframes spinRing { 100% { transform: rotate(360deg); } }
+        
+        .particle { position: absolute; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; top: 5px; left: 55px; box-shadow: 0 0 10px #ef4444; }
+        .particle.p2 { top: 97px; background: #eab308; box-shadow: 0 0 10px #eab308; }
+        
+        .flash-overlay {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 0; height: 0; background: white; border-radius: 50%; opacity: 0;
+            box-shadow: 0 0 40px 20px rgba(255,255,255,0.8); pointer-events: none;
+        }
+        @keyframes collisionFlash { 0% { width: 0; height: 0; opacity: 1; } 50% { width: 80px; height: 80px; opacity: 1; box-shadow: 0 0 60px 30px rgba(255,255,255,1); } 100% { width: 150px; height: 150px; opacity: 0; } }
+        .flash-active { animation: collisionFlash 0.5s ease-out forwards; }
+
+
+        /* MIDDLE COLUMN (Code/Console + Flowchart) */
+        .col-mid { flex: 1; display: flex; flex-direction: row; gap: 10px; background: transparent; border: none; box-shadow: none; min-width: 0; } 
+        
+        /* 10% smaller code area -> flex basis reduced to 310px */
+        .mid-left { flex: 0 0 310px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+        .mid-right { flex: 1; display: flex; flex-direction: column; }
+
+        /* CODE AREA */
+        .code-area { 
+            flex: 1; padding: 15px; background: var(--code-bg); border: 1px solid var(--border-color); border-radius: 12px;
+            font-family: 'Consolas', monospace; font-size: 0.85rem; line-height: 1.7; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-height: 0;
+        }
+        .code-line { padding: 2px 6px; border-radius: 4px; transition: 0.2s; white-space: nowrap;}
+        .code-line.active { background: var(--highlight); color: black; font-weight: bold; box-shadow: inset 4px 0 0 var(--warning); }
+        .keyword { color: var(--primary); font-weight: bold; }
+        .string { color: #16a34a; }
+        .number { color: #ea580c; }
+
+        /* CONSOLE AREA */
+        .console-area {
+            flex: 0 0 160px; background: #ffffff; color: #000000; border: 2px solid var(--border-color); border-radius: 12px;
+            padding: 12px; font-family: 'Consolas', monospace; font-size: 0.85rem; overflow-y: auto; line-height: 1.4; box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+        }
+        body.dark-mode .console-area { background: #f8fafc; color: #0f172a; border-color: #475569; }
+
+        .console-input-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+        .console-input-row input { 
+            background: #ffffff; border: 2px solid #94a3b8; color: #000; 
+            padding: 4px 8px; border-radius: 4px; outline: none; width: 80px; font-family: inherit; font-weight: bold;
+        }
+        .waiting-input input { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2); }
+
+        /* FLOWCHART AREA */
+        .fc-area { 
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; 
+            padding: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: relative; min-height: 0;
+        }
+
+        /* Scaled down to 0.85 to ensure no scrollbars! */
+        .fc-container { position: relative; min-width: 500px; min-height: 540px; margin: 0 auto; transform: scale(0.85); transform-origin: top center;}
+
+        /* Flowchart Nodes Base */
+        .fc-node { 
+            position: absolute; display: flex; justify-content: center; align-items: center; text-align: center;
+            font-weight: bold; font-size: 0.75rem; z-index: 2; color: var(--text-dark); transition: 0.3s ease;
+        }
+
+        /* Standard border nodes */
+        .fc-oval, .fc-rect, .fc-diamond {
+            border: 2px solid var(--primary); background: var(--panel-bg); box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .fc-oval.active, .fc-rect.active, .fc-diamond.active { 
+            background: var(--fc-active); color: black; border-color: #ca8a04; box-shadow: 0 0 12px rgba(250, 204, 21, 0.8); 
+        }
+
+        .fc-oval { border-radius: 20px; }
+        .fc-rect { border-radius: 4px; }
+        
+        .fc-diamond { transform: rotate(45deg); }
+        .fc-diamond-text { transform: rotate(-45deg); font-size: 0.7rem; color: inherit; width: 85px;}
+
+        /* PARALLELOGRAM FIX: No italics, no skewed text. Just the background is skewed. */
+        .fc-io { border: none; background: transparent; box-shadow: none; z-index: 2;}
+        .fc-io::before {
+            content: ''; position: absolute; inset: 0; background: var(--panel-bg); border: 2px solid var(--primary);
+            transform: skew(-15deg); z-index: -1; transition: 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-radius: 2px;
+        }
+        .fc-io.active::before { background: var(--fc-active); border-color: #ca8a04; box-shadow: 0 0 12px rgba(250, 204, 21, 0.8); }
+        .fc-io > span { display: block; z-index: 1; position: relative;}
+
+        /* Lines and Arrows */
+        .fc-line { position: absolute; background: var(--primary); z-index: 1; transition: 0.3s; }
+        .fc-arrow-down { position: absolute; border-width: 6px 5px 0; border-style: solid; border-color: var(--primary) transparent transparent transparent; z-index: 1; transition: 0.3s; }
+        .fc-arrow-right { position: absolute; border-width: 5px 0 5px 6px; border-style: solid; border-color: transparent transparent transparent var(--primary); z-index: 1; transition: 0.3s; }
+        .fc-arrow-left { position: absolute; border-width: 5px 6px 5px 0; border-style: solid; border-color: transparent var(--primary) transparent transparent; z-index: 1; transition: 0.3s; }
+        
+        .fc-label { position: absolute; font-size: 0.65rem; font-weight: bold; }
+        .fc-label.no { color: var(--danger); }
+        .fc-label.yes { color: var(--success); }
+
+        /* Path Highlighting Effect (Kept underneath nodes) */
+        .fc-line.active-path { background: #ca8a04; box-shadow: 0 0 6px #fde047; }
+        .fc-arrow-down.active-path { border-top-color: #ca8a04; filter: drop-shadow(0 0 3px #fde047); }
+        .fc-arrow-right.active-path { border-left-color: #ca8a04; filter: drop-shadow(0 0 3px #fde047); }
+        .fc-arrow-left.active-path { border-right-color: #ca8a04; filter: drop-shadow(0 0 3px #fde047); }
+
+
+        /* RIGHT COLUMN (TRACE TABLE) */
+        /* Reduced width to 340px because we removed pl<>0 */
+        .col-right { flex: 0 0 340px; display: flex; flex-direction: column; min-width: 0;}
+        .ram-section { 
+            padding: 0; flex: 1; overflow-y: auto; min-height: 0; background: var(--panel-bg); 
+            border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: relative;
+        }
+        
+        .ram-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: center; }
+        .ram-table thead { position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
+        .ram-table th { background: var(--bg-color); padding: 8px 4px; border: 1px solid var(--border-color); color: var(--primary); text-transform: uppercase; font-size: 0.75rem;}
+        .ram-table td { padding: 6px 4px; border: 1px solid var(--border-color); font-family: monospace; font-weight: bold;}
+        
+        .ram-table tbody tr { transition: background-color 0.3s; }
+        .ram-table tbody tr.active-row { background-color: #fef9c3; } 
+        body.dark-mode .ram-table tbody tr.active-row { background-color: #422006; }
+
+        .val-true { color: var(--success); }
+        .val-false { color: var(--danger); }
+
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    <div class="toolbar-title">⚛️ Εντολή 'Όσο' - Πίνακας Τιμών</div>
+    <div class="controls-group">
+        <div class="speed-control">
+            🐢 <input type="range" id="speedSlider" min="200" max="1500" value="800" dir="rtl"> 🐇
+        </div>
+        <button class="tool-btn" onclick="toggleTheme()">🌙</button>
+        <button class="tool-btn btn-execute" id="btnExecute" onclick="prepareExecution()">🚀 Εκτέλεση</button>
+        <button class="tool-btn btn-step" id="btnStep" onclick="manualStep()" style="display:none;">👣 Βήμα</button>
+        <button class="tool-btn btn-auto" id="btnAuto" onclick="toggleAuto()" style="display:none;">▶️ Αυτόματα</button>
+        <button class="tool-btn" onclick="resetApp()">🔄 Αρχή</button>
+    </div>
+</div>
+
+<div class="main-container">
+    
+    <div class="col col-left">
+        <div class="theory-title">Η Εντολή Όσο</div>
+        <div class="theory-text">
+            Η εντολή <strong>Όσο</strong> επαναλαμβάνει μια σειρά εντολών εφόσον μια συνθήκη είναι Αληθής. Όταν γίνει Ψευδής, ο βρόχος τερματίζεται.
+            <br><br>
+            <strong>Εφαρμογή:</strong><br>
+            Να γραφεί αλγόριθμος που δέχεται τιμές από ένα πείραμα στο CERN και υπολογίζει τον <strong>μέσο όρο</strong>.
+            Το πείραμα σταματά όταν δοθεί η <strong>τιμή μηδέν (0)</strong>. Στο τέλος εμφανίζεται ο μέσος όρος.
+            Αν η πρώτη τιμή είναι 0, εμφανίζει μήνυμα αποτυχίας.
+        </div>
+        
+        <div class="cern-widget">
+            <div class="cern-title">LHC Collision Monitor</div>
+            <div class="collider-ring">
+                <div class="particle p1"></div>
+                <div class="particle p2"></div>
+                <div class="flash-overlay" id="cernFlash"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-mid">
+        <div class="mid-left">
+            <div class="code-area">
+                <div class="code-line"><span class="keyword">Αλγόριθμος</span> CERN</div>
+                <div class="code-line" id="L1">&nbsp;&nbsp;άθροισμα &lt;- <span class="number">0</span></div>
+                <div class="code-line" id="L2">&nbsp;&nbsp;πλήθος &lt;- <span class="number">0</span></div>
+                <div class="code-line" id="L3">&nbsp;&nbsp;<span class="keyword">Διάβασε</span> τιμή</div>
+                <div class="code-line" id="L4">&nbsp;&nbsp;<span class="keyword">Όσο</span> τιμή &lt;&gt; <span class="number">0</span> <span class="keyword">επανάλαβε</span></div>
+                <div class="code-line" id="L5">&nbsp;&nbsp;&nbsp;&nbsp;άθροισμα &lt;- άθροισμα + τιμή</div>
+                <div class="code-line" id="L6">&nbsp;&nbsp;&nbsp;&nbsp;πλήθος &lt;- πλήθος + <span class="number">1</span></div>
+                <div class="code-line" id="L7">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Διάβασε</span> τιμή</div>
+                <div class="code-line" id="L8">&nbsp;&nbsp;<span class="keyword">Τέλος_επανάληψης</span></div>
+                <div class="code-line" id="L9">&nbsp;&nbsp;<span class="keyword">Αν</span> πλήθος &lt;&gt; <span class="number">0</span> <span class="keyword">τότε</span></div>
+                <div class="code-line" id="L10">&nbsp;&nbsp;&nbsp;&nbsp;μο &lt;- άθροισμα / πλήθος</div>
+                <div class="code-line" id="L11">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Εμφάνισε</span> μο</div>
+                <div class="code-line" id="L12">&nbsp;&nbsp;<span class="keyword">Αλλιώς</span></div>
+                <div class="code-line" id="L13">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Εμφάνισε</span> <span class="string">"Απέτυχε"</span></div>
+                <div class="code-line" id="L14">&nbsp;&nbsp;<span class="keyword">Τέλος_αν</span></div>
+                <div class="code-line"><span class="keyword">Τέλος</span> CERN</div>
+            </div>
+
+            <div class="console-area" id="screen">
+                <div id="consoleOutput">Περιμένοντας εκτέλεση...<br></div>
+                <div class="console-input-row" id="inputContainer" style="display:none;">
+                    <span style="color:var(--primary); font-weight:bold;">Τιμή:</span>
+                    <input type="number" id="termInput" onkeydown="if(event.key==='Enter') submitInput()">
+                    <button class="tool-btn" style="background:var(--primary); color:white; padding: 4px 10px;" onclick="submitInput()">Enter</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="mid-right fc-area">
+            <div class="fc-container">
+                
+                <div class="fc-line" style="top: 40px; left: 199px; width: 2px; height: 20px;"></div>
+                <div class="fc-arrow-down" style="top: 55px; left: 195px;"></div>
+                
+                <div class="fc-line" style="top: 100px; left: 199px; width: 2px; height: 20px;"></div>
+                <div class="fc-arrow-down" style="top: 115px; left: 195px;"></div>
+
+                <div class="fc-line" style="top: 155px; left: 199px; width: 2px; height: 25px;"></div>
+                <div class="fc-label yes" style="top: 205px; left: 250px;">ΝΑΙ</div>
+                <div class="fc-line" id="l-loop-true" style="top: 219px; left: 240px; width: 60px; height: 2px;"></div>
+                <div class="fc-arrow-right" id="a-loop-true" style="top: 215px; left: 295px;"></div>
+
+                <div class="fc-label no" style="top: 275px; left: 205px;">ΟΧΙ</div>
+                <div class="fc-line" id="l-loop-false" style="top: 260px; left: 199px; width: 2px; height: 60px;"></div>
+                <div class="fc-arrow-down" id="a-loop-false" style="top: 315px; left: 195px;"></div>
+
+                <div class="fc-line" id="l-body-down" style="top: 245px; left: 389px; width: 2px; height: 20px;"></div>
+                <div class="fc-arrow-down" id="a-body-down" style="top: 260px; left: 385px;"></div>
+
+                <div class="fc-line" id="l-ret1" style="top: 281px; left: 455px; width: 35px; height: 2px;"></div>
+                <div class="fc-line" id="l-ret2" style="top: 160px; left: 488px; width: 2px; height: 123px;"></div>
+                <div class="fc-line" id="l-ret3" style="top: 160px; left: 200px; width: 290px; height: 2px;"></div>
+                <div class="fc-line" id="l-ret4" style="top: 160px; left: 199px; width: 2px; height: 15px;"></div>
+                <div class="fc-arrow-down" id="a-ret" style="top: 175px; left: 195px;"></div>
+
+
+                <div class="fc-label yes" style="top: 345px; left: 250px;">ΝΑΙ</div>
+                <div class="fc-line" id="l-if-true" style="top: 359px; left: 240px; width: 55px; height: 2px;"></div>
+                <div class="fc-arrow-right" id="a-if-true" style="top: 355px; left: 290px;"></div>
+
+                <div class="fc-label no" style="top: 345px; left: 120px;">ΟΧΙ</div>
+                <div class="fc-line" id="l-if-false1" style="top: 359px; left: 80px; width: 80px; height: 2px;"></div>
+                <div class="fc-line" id="l-if-false2" style="top: 359px; left: 79px; width: 2px; height: 35px;"></div>
+                <div class="fc-arrow-down" id="a-if-false" style="top: 389px; left: 75px;"></div>
+
+                <div class="fc-line" id="l-if-proc-down" style="top: 380px; left: 374px; width: 2px; height: 25px;"></div>
+                <div class="fc-arrow-down" id="a-if-proc-down" style="top: 400px; left: 370px;"></div>
+
+                <div class="fc-line" id="l-merge-left" style="top: 440px; left: 79px; width: 2px; height: 25px;"></div>
+                <div class="fc-line" id="l-merge-right" style="top: 440px; left: 374px; width: 2px; height: 25px;"></div>
+                
+                <div class="fc-line" id="l-merge-horiz" style="top: 465px; left: 80px; width: 296px; height: 2px;"></div>
+                
+                <div class="fc-line" id="l-end-down" style="top: 465px; left: 199px; width: 2px; height: 20px;"></div>
+                <div class="fc-arrow-down" id="a-end" style="top: 480px; left: 195px;"></div>
+
+
+                <div class="fc-node fc-oval" id="fc-start" style="top: 10px; left: 160px; width: 80px; height: 30px;">Αρχή</div>
+                
+                <div class="fc-node fc-rect" id="fc-init" style="top: 60px; left: 120px; width: 160px; height: 40px;">
+                    <span>άθροισμα &lt;- 0<br>πλήθος &lt;- 0</span>
+                </div>
+                
+                <div class="fc-node fc-io" id="fc-read1" style="top: 120px; left: 130px; width: 140px; height: 35px;"><span>Διάβασε τιμή</span></div>
+                
+                <div class="fc-node fc-diamond" id="fc-loop-cond" style="top: 180px; left: 160px; width: 80px; height: 80px;">
+                    <span class="fc-diamond-text" style="width:100px;">τιμή &lt;&gt; 0</span>
+                </div>
+                
+                <div class="fc-node fc-rect" id="fc-loop-proc" style="top: 195px; left: 300px; width: 180px; height: 50px;">
+                    <span>άθροισμα &lt;- άθροισμα + τιμή<br>πλήθος &lt;- πλήθος + 1</span>
+                </div>
+                
+                <div class="fc-node fc-io" id="fc-read2" style="top: 265px; left: 315px; width: 140px; height: 35px;"><span>Διάβασε τιμή</span></div>
+                
+                <div class="fc-node fc-diamond" id="fc-if-cond" style="top: 320px; left: 160px; width: 80px; height: 80px;">
+                    <span class="fc-diamond-text" style="width:100px;">πλήθος &lt;&gt; 0</span>
+                </div>
+
+                <div class="fc-node fc-rect" id="fc-if-proc" style="top: 340px; left: 295px; width: 160px; height: 40px;">
+                    <span>μο &lt;- άθροισμα/πλήθος</span>
+                </div>
+                
+                <div class="fc-node fc-io" id="fc-if-out" style="top: 405px; left: 305px; width: 140px; height: 35px;"><span>Εμφάνισε μο</span></div>
+
+                <div class="fc-node fc-io" id="fc-if-false" style="top: 395px; left: 10px; width: 140px; height: 45px; font-size: 0.65rem;"><span>Εμφάνισε<br>"Το πείραμα απέτυχε"</span></div>
+                
+                <div class="fc-node fc-oval" id="fc-end" style="top: 485px; left: 160px; width: 80px; height: 30px;">Τέλος</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col col-right">
+        <div class="theory-title" style="padding: 15px 15px 0 15px; margin: 0; border: none;">🧠 Πίνακας Τιμών</div>
+        <div class="ram-section">
+            <table class="ram-table">
+                <thead>
+                    <tr>
+                        <th title="τιμή">τιμή</th>
+                        <th title="άθροισμα">άθροισμα</th>
+                        <th title="πλήθος">πλήθος</th>
+                        <th title="Συνθήκη: τιμή <> 0">τιμή&lt;&gt;0</th>
+                        <th title="Μέσος Όρος">μο</th>
+                    </tr>
+                </thead>
+                <tbody id="traceBody">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let state = { val: null, sum: 0, count: 0, mo: null, pc: 0, isPlaying: false, isFinished: false, waitingInput: false, timer: null };
+    
+    // Trace Table Variables
+    let traceRows = [];
+    let currentRowIndex = -1;
+
+    // --- AUDIO SYSTEM (Web Audio API) ---
+    let audioCtx = null;
+
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    function playSound(type) {
+        initAudio();
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        let now = audioCtx.currentTime;
+        
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        if (type === 'beep') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, now);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            osc.start(now); osc.stop(now + 0.1);
+        } else if (type === 'success') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.linearRampToValueAtTime(800, now + 0.2);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.4);
+            osc.start(now); osc.stop(now + 0.4);
+        } else if (type === 'error') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(200, now);
+            osc.frequency.linearRampToValueAtTime(150, now + 0.3);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.3);
+            osc.start(now); osc.stop(now + 0.3);
+        }
+    }
+
+    // --- CERN VISUAL ---
+    function triggerFlash() {
+        let flash = document.getElementById('cernFlash');
+        flash.classList.remove('flash-active');
+        void flash.offsetWidth; 
+        flash.classList.add('flash-active');
+    }
+
+    // --- TRACE TABLE LOGIC ---
+    function addTraceRow() {
+        let tBody = document.getElementById('traceBody');
+        
+        if(currentRowIndex >= 0) {
+            let oldRow = document.getElementById('tr-' + currentRowIndex);
+            if(oldRow) oldRow.classList.remove('active-row');
+        }
+
+        currentRowIndex++;
+        
+        traceRows.push({
+            val: state.val !== null ? state.val : '-',
+            sum: state.sum !== null ? state.sum : '-',
+            count: state.count !== null ? state.count : '-',
+            cond1: '-',
+            mo: state.mo !== null ? state.mo.toFixed(2) : '-'
+        });
+
+        let tr = document.createElement('tr');
+        tr.id = 'tr-' + currentRowIndex;
+        tr.className = 'active-row';
+        
+        // Removed cond2 from the HTML structure
+        tr.innerHTML = `
+            <td id="tc-val-${currentRowIndex}">${traceRows[currentRowIndex].val}</td>
+            <td id="tc-sum-${currentRowIndex}">${traceRows[currentRowIndex].sum}</td>
+            <td id="tc-count-${currentRowIndex}">${traceRows[currentRowIndex].count}</td>
+            <td id="tc-cond1-${currentRowIndex}">-</td>
+            <td id="tc-mo-${currentRowIndex}">-</td>
+        `;
+        
+        tBody.appendChild(tr);
+        tBody.parentElement.parentElement.scrollTop = tBody.parentElement.parentElement.scrollHeight;
+    }
+
+    function updateTraceCell(col, value, cssClass='') {
+        if(currentRowIndex < 0) return;
+        let cell = document.getElementById(`tc-${col}-${currentRowIndex}`);
+        if(cell) {
+            cell.innerText = value;
+            if(cssClass) cell.className = cssClass;
+        }
+    }
+
+    // --- EXECUTION ENGINE ---
+    function prepareExecution() {
+        if(state.pc > 0 && !state.isFinished) return; 
+        initAudio();
+        
+        document.getElementById('btnExecute').style.display='none';
+        document.getElementById('btnAuto').style.display='flex';
+        document.getElementById('btnStep').style.display='flex';
+        
+        document.getElementById('consoleOutput').innerHTML = "";
+        document.getElementById('inputContainer').style.display = 'none';
+        document.getElementById('traceBody').innerHTML = "";
+        
+        document.querySelectorAll('.active-path').forEach(el => el.classList.remove('active-path'));
+        
+        state = { val: null, sum: null, count: null, mo: null, pc: 1, isPlaying: true, isFinished: false, waitingInput: false, timer: null };
+        traceRows = [];
+        currentRowIndex = -1;
+        
+        document.getElementById('btnAuto').innerText = "⏸️ Παύση";
+        document.getElementById('btnAuto').style.background = "var(--warning)";
+        document.getElementById('btnAuto').style.color = "black";
+        
+        runLoop();
+    }
+
+    function toggleAuto() {
+        if (state.isPlaying) { 
+            state.isPlaying = false; clearTimeout(state.timer);
+            document.getElementById('btnAuto').innerText = "▶️ Συνέχεια";
+            document.getElementById('btnAuto').style.background = "var(--primary)";
+            document.getElementById('btnAuto').style.color = "white";
+        } else {
+            state.isPlaying = true;
+            document.getElementById('btnAuto').innerText = "⏸️ Παύση";
+            document.getElementById('btnAuto').style.background = "var(--warning)";
+            document.getElementById('btnAuto').style.color = "black";
+            if (state.pc === 0) prepareExecution(); else runLoop();
+        }
+    }
+
+    function manualStep() {
+        if (state.pc === 0 || state.isFinished) {
+            document.getElementById('btnExecute').style.display='none';
+            document.getElementById('btnAuto').style.display='flex';
+            document.getElementById('consoleOutput').innerHTML = "";
+            document.getElementById('traceBody').innerHTML = "";
+            document.querySelectorAll('.active-path').forEach(el => el.classList.remove('active-path'));
+            
+            state = { val: null, sum: null, count: null, mo: null, pc: 1, isPlaying: false, isFinished: false, waitingInput: false, timer: null };
+            traceRows = []; currentRowIndex = -1;
+            
+            document.getElementById('btnAuto').innerText = "▶️ Συνέχεια";
+            document.getElementById('btnAuto').style.background = "var(--primary)";
+            document.getElementById('btnAuto').style.color = "white";
+            stepAlgo();
+            return;
+        }
+        
+        if (state.waitingInput) return;
+        if (state.isPlaying) toggleAuto(); 
+        stepAlgo();
+    }
+
+    function runLoop() {
+        if (!state.isPlaying || state.isFinished || state.waitingInput) return;
+        stepAlgo();
+        if(!state.isFinished && state.isPlaying && !state.waitingInput) {
+            state.timer = setTimeout(runLoop, parseInt(document.getElementById('speedSlider').value));
+        }
+    }
+
+    function highlightUI(codeLine, fcNodeId) {
+        document.querySelectorAll('.code-line').forEach(l => l.classList.remove('active'));
+        if(codeLine) {
+            let el = document.getElementById(codeLine);
+            if(el) el.classList.add('active');
+        }
+
+        document.querySelectorAll('.fc-node').forEach(n => n.classList.remove('active'));
+        if(fcNodeId) {
+            let n = document.getElementById(fcNodeId);
+            if(n) n.classList.add('active');
+        }
+    }
+
+    function clearPaths() { document.querySelectorAll('.active-path').forEach(el => el.classList.remove('active-path')); }
+    function addPath(id) { let el = document.getElementById(id); if(el) el.classList.add('active-path'); }
+
+    function printConsole(txt) {
+        let cText = document.getElementById('consoleOutput');
+        cText.innerHTML += `${txt}<br>`;
+        let scr = document.getElementById('screen');
+        scr.scrollTop = scr.scrollHeight;
+    }
+
+    function requestInput() {
+        printConsole("<strong>> Εισάγετε τιμή (TeV):</strong>");
+        document.getElementById('inputContainer').style.display = 'flex';
+        document.getElementById('inputContainer').classList.add('waiting-input');
+        document.getElementById('termInput').focus();
+        state.waitingInput = true;
+    }
+
+    function submitInput() {
+        let v = document.getElementById('termInput').value;
+        if(v === '') return;
+        state.val = parseFloat(v);
+        
+        document.getElementById('inputContainer').style.display = 'none';
+        document.getElementById('inputContainer').classList.remove('waiting-input');
+        document.getElementById('termInput').value = '';
+        
+        playSound('beep');
+        if(state.val !== 0) triggerFlash(); 
+        
+        printConsole(`Ελήφθη: <span style="color:var(--primary); font-weight:bold;">${state.val}</span>`);
+        
+        updateTraceCell('val', state.val);
+        
+        state.waitingInput = false;
+        
+        if(state.pc === 3) state.pc = 4; 
+        else if(state.pc === 7) state.pc = 8; 
+        
+        if(state.isPlaying) runLoop(); else stepAlgo();
+    }
+
+    // --- ALGORITHM STATE MACHINE ---
+    function stepAlgo() {
+        switch(state.pc) {
+            case 1: 
+                highlightUI(null, 'fc-start');
+                clearPaths();
+                state.pc = 2; 
+                break;
+            case 2: 
+                highlightUI('L1', 'fc-init'); 
+                document.getElementById('L2').classList.add('active');
+                state.sum = 0; state.count = 0;
+                
+                addTraceRow(); 
+                
+                state.pc = 3;
+                break;
+            case 3: 
+                highlightUI('L3', 'fc-read1');
+                requestInput();
+                break;
+            case 4: 
+                highlightUI('L4', 'fc-loop-cond');
+                clearPaths();
+                
+                let cond1 = (state.val !== 0);
+                updateTraceCell('cond1', cond1 ? 'Αληθής' : 'Ψευδής', cond1 ? 'val-true' : 'val-false');
+                
+                if(cond1) {
+                    addPath('l-loop-true'); addPath('a-loop-true');
+                    state.pc = 5;
+                } else {
+                    addPath('l-loop-false'); addPath('a-loop-false');
+                    state.pc = 9;
+                }
+                break;
+            case 5: 
+                highlightUI('L5', 'fc-loop-proc');
+                document.getElementById('L6').classList.add('active');
+                
+                state.sum += state.val;
+                state.count += 1;
+                
+                updateTraceCell('sum', state.sum);
+                updateTraceCell('count', state.count);
+                
+                state.pc = 6; 
+                break;
+            case 6: 
+                highlightUI(null, null); 
+                addPath('l-body-down'); addPath('a-body-down');
+                state.pc = 7;
+                break;
+            case 7:
+                highlightUI('L7', 'fc-read2');
+                
+                addTraceRow();
+                
+                requestInput();
+                break;
+            case 8:
+                highlightUI('L8', null);
+                addPath('l-ret1'); addPath('l-ret2'); addPath('l-ret3'); addPath('l-ret4'); addPath('a-ret');
+                state.pc = 4; 
+                break;
+            case 9:
+                highlightUI('L9', 'fc-if-cond');
+                clearPaths();
+                
+                let cond2 = (state.count !== 0);
+                // Αφαιρέθηκε η ενημέρωση του πλ<>0 στον πίνακα
+                
+                if(cond2) {
+                    addPath('l-if-true'); addPath('a-if-true');
+                    state.pc = 10;
+                } else {
+                    addPath('l-if-false1'); addPath('l-if-false2'); addPath('a-if-false');
+                    state.pc = 12;
+                }
+                break;
+            case 10:
+                highlightUI('L10', 'fc-if-proc');
+                state.mo = state.sum / state.count;
+                updateTraceCell('mo', state.mo.toFixed(2));
+                state.pc = 11;
+                break;
+            case 11:
+                highlightUI('L11', 'fc-if-out');
+                addPath('l-if-proc-down'); addPath('a-if-proc-down');
+                
+                playSound('success');
+                printConsole(`<strong>Αποτέλεσμα: Ο Μέσος Όρος είναι <span style="color:var(--success);">${state.mo.toFixed(2)}</span></strong>`);
+                
+                addPath('l-merge-right'); addPath('l-merge-horiz'); addPath('l-end-down'); addPath('a-end');
+                state.pc = 13;
+                break;
+            case 12:
+                highlightUI('L13', 'fc-if-false');
+                playSound('error');
+                printConsole(`<strong><span style="color:var(--danger);">Το πείραμα δεν ξεκίνησε ή απέτυχε</span></strong>`);
+                
+                addPath('l-merge-left'); addPath('l-merge-horiz'); addPath('l-end-down'); addPath('a-end');
+                state.pc = 13;
+                break;
+            case 13:
+                highlightUI(null, 'fc-end');
+                
+                let lastRow = document.getElementById('tr-' + currentRowIndex);
+                if(lastRow) lastRow.classList.remove('active-row');
+                
+                finishSim();
+                break;
+        }
+    }
+
+    function finishSim() {
+        state.isFinished = true; state.isPlaying = false;
+        document.getElementById('btnAuto').style.display='none';
+        document.getElementById('btnStep').style.display='none';
+        printConsole("<br><strong>✅ Τέλος Προγράμματος.</strong>");
+        document.getElementById('btnExecute').style.display='flex';
+    }
+
+    function resetApp() {
+        state.isPlaying = false; clearTimeout(state.timer);
+        
+        document.getElementById('consoleOutput').innerHTML = "Περιμένοντας εκτέλεση...<br>";
+        document.getElementById('inputContainer').style.display = 'none';
+        document.getElementById('inputContainer').classList.remove('waiting-input');
+        document.getElementById('termInput').value = '';
+        document.getElementById('traceBody').innerHTML = '';
+        
+        clearPaths();
+        
+        document.getElementById('btnExecute').style.display='flex';
+        document.getElementById('btnAuto').style.display='none';
+        document.getElementById('btnStep').style.display='none';
+        
+        state = { val: null, sum: null, count: null, mo: null, pc: 0, isPlaying: false, isFinished: false, waitingInput: false, timer: null };
+        traceRows = []; currentRowIndex = -1;
+        
+        highlightUI(null, null);
+    }
+
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+</script>
+
+</body>
+</html>

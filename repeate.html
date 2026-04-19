@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Δομή Μέχρις_Ότου - Καταμέτρηση Ατόμων</title>
+    <style>
+        :root {
+            --primary: #2563eb; --primary-hover: #1d4ed8;
+            --text-dark: #0f172a; --text-light: #64748b;
+            --bg-color: #f1f5f9; --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --success: #16a34a; --warning: #f59e0b; --danger: #ef4444;
+            --highlight: #fef08a; --fc-active: #fde047; --code-bg: #f8fafc;
+        }
+
+        body.dark-mode {
+            --bg-color: #020617; --panel-bg: #1e293b;
+            --text-dark: #f8fafc; --text-light: #94a3b8;
+            --border-color: #334155; --code-bg: #0f172a;
+            --screen-bg: #e2e8f0; --screen-text: #000000;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background-color: var(--bg-color); color: var(--text-dark); 
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s;
+        }
+
+        /* --- TOOLBAR --- */
+        .toolbar { 
+            background: var(--panel-bg); border-bottom: 1px solid var(--border-color); 
+            padding: 8px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100;
+            flex: 0 0 auto;
+        }
+        .toolbar-title { font-weight: 800; font-size: 1.1rem; color: var(--primary); display: flex; align-items: center; gap: 8px;}
+        .controls-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;}
+
+        .tool-btn { 
+            padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color);
+            background: var(--panel-bg); color: var(--text-dark); cursor: pointer; font-weight: bold;
+            display: flex; align-items: center; gap: 5px; font-size: 0.85rem; transition: 0.2s;
+        }
+        .tool-btn:hover:not(:disabled) { background: var(--border-color); }
+        .tool-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-execute { background: var(--warning); color: black; border: none; }
+        .btn-step { background: var(--primary); color: white; border: none; }
+        .btn-auto { background: var(--primary); color: white; border: none; }
+
+        .speed-control { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; font-weight: bold; margin-right: 10px;}
+        .speed-control input { cursor: pointer; width: 60px;}
+
+        /* --- MAIN LAYOUT --- */
+        .main-container { display: flex; flex: 1; padding: 10px; gap: 10px; overflow: hidden; min-height: 0;}
+        .col { 
+            background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color); 
+            display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        /* LEFT COLUMN */
+        .col-left { flex: 0 0 280px; padding: 15px; overflow-y: auto; line-height: 1.4;}
+        .theory-title { font-size: 1rem; font-weight: bold; margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; }
+        .theory-text { font-size: 0.85rem; margin-bottom: 15px; text-align: justify; }
+
+        /* HEIGHT MEASURE VISUALIZER */
+        .visual-widget { margin-top: 15px; padding: 15px 10px; display: flex; flex-direction: column; align-items: center; background: var(--code-bg); border-radius: 12px; border: 1px solid var(--border-color); flex: 1;}
+        .vw-title { font-size: 0.75rem; font-weight: bold; color: var(--text-light); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;}
+        
+        .ruler-container {
+            display: flex; align-items: flex-end; justify-content: center; gap: 15px; 
+            width: 100%; height: 180px; border-bottom: 4px solid var(--border-color); position: relative;
+        }
+        .ruler-axis { position: absolute; left: 0; bottom: 0; height: 100%; border-left: 2px solid var(--text-light); width: 10px; display: flex; flex-direction: column; justify-content: space-between; }
+        .ruler-tick { width: 6px; height: 1px; background: var(--text-light); position: relative;}
+        .ruler-tick::after { content: attr(data-val); position: absolute; left: 10px; top: -6px; font-size: 0.55rem; color: var(--text-light); font-weight: bold;}
+        
+        .person-bar {
+            width: 25px; background: linear-gradient(to top, var(--primary), #60a5fa); border-radius: 4px 4px 0 0;
+            display: flex; align-items: flex-start; justify-content: center; position: relative;
+            animation: growUp 0.4s ease-out forwards; box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+        }
+        .person-bar::before {
+            content: ''; position: absolute; top: -12px; width: 14px; height: 14px; background: #fbbf24; border-radius: 50%;
+        }
+        .person-val { position: absolute; bottom: 5px; font-size: 0.6rem; font-weight: bold; color: white; writing-mode: vertical-rl;}
+        @keyframes growUp { from { height: 0; } }
+
+        /* MIDDLE COLUMN (Code/Console + Flowchart) */
+        .col-mid { flex: 1; display: flex; flex-direction: row; gap: 10px; background: transparent; border: none; box-shadow: none; min-width: 0; } 
+        .mid-left { flex: 0 0 350px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+        .mid-right { flex: 1; display: flex; flex-direction: column; }
+
+        /* CODE AREA */
+        .code-area { 
+            flex: 1; padding: 15px; background: var(--code-bg); border: 1px solid var(--border-color); border-radius: 12px;
+            font-family: 'Consolas', monospace; font-size: 0.85rem; line-height: 1.9; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-height: 0;
+        }
+        .code-line { padding: 2px 6px; border-radius: 4px; transition: 0.2s; white-space: nowrap;}
+        .code-line.active { background: var(--highlight); color: black; font-weight: bold; box-shadow: inset 4px 0 0 var(--warning); }
+        .keyword { color: var(--primary); font-weight: bold; }
+        .string { color: #16a34a; }
+        .number { color: #ea580c; }
+
+        /* CONSOLE AREA */
+        .console-area {
+            flex: 0 0 160px; background: #ffffff; color: #000000; border: 2px solid var(--border-color); border-radius: 12px;
+            padding: 12px; font-family: 'Consolas', monospace; font-size: 0.85rem; overflow-y: auto; line-height: 1.4; box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+        }
+        body.dark-mode .console-area { background: #f8fafc; color: #0f172a; border-color: #475569; }
+
+        .console-input-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+        .console-input-row input { 
+            background: #ffffff; border: 2px solid #94a3b8; color: #000; 
+            padding: 4px 8px; border-radius: 4px; outline: none; width: 100px; font-family: inherit; font-weight: bold;
+        }
+        .waiting-input input { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2); }
+        #inputLabel { color: var(--primary); font-weight: bold; }
+
+        /* FLOWCHART AREA */
+        .fc-area { 
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; 
+            padding: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: relative; min-height: 0;
+        }
+
+        .fc-container { position: relative; min-width: 400px; min-height: 560px; margin: 0 auto; transform: scale(0.9); transform-origin: top center;}
+
+        /* Flowchart Nodes Base */
+        .fc-node { 
+            position: absolute; display: flex; justify-content: center; align-items: center; text-align: center;
+            font-weight: bold; font-size: 0.75rem; z-index: 2; color: var(--text-dark); transition: 0.3s ease;
+        }
+
+        .fc-oval, .fc-rect, .fc-diamond {
+            border: 2px solid var(--primary); background: var(--panel-bg); box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .fc-oval.active, .fc-rect.active, .fc-diamond.active { background: var(--fc-active); color: black; border-color: #ca8a04; box-shadow: 0 0 12px rgba(250, 204, 21, 0.8); }
+        .fc-oval { border-radius: 20px; }
+        .fc-rect { border-radius: 4px; }
+        
+        .fc-diamond { transform: rotate(45deg); }
+        .fc-diamond-text { transform: rotate(-45deg); font-size: 0.7rem; color: inherit; width: 85px;}
+
+        /* PARALLELOGRAM FIX */
+        .fc-io { border: none; background: transparent; box-shadow: none; z-index: 2;}
+        .fc-io::before {
+            content: ''; position: absolute; inset: 0; background: var(--panel-bg); border: 2px solid var(--primary);
+            transform: skew(-15deg); z-index: -1; transition: 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-radius: 2px;
+        }
+        .fc-io.active::before { background: var(--fc-active); border-color: #ca8a04; box-shadow: 0 0 12px rgba(250, 204, 21, 0.8); }
+        .fc-io > span { display: block; z-index: 1; position: relative;}
+
+        /* Lines and Arrows */
+        .fc-line { position: absolute; background: var(--primary); z-index: 1; transition: 0.3s; }
+        .fc-arrow-down { position: absolute; border-width: 6px 5px 0; border-style: solid; border-color: var(--primary) transparent transparent transparent; z-index: 1; transition: 0.3s; }
+        .fc-arrow-right { position: absolute; border-width: 5px 0 5px 6px; border-style: solid; border-color: transparent transparent transparent var(--primary); z-index: 1; transition: 0.3s; }
+        .fc-arrow-up { position: absolute; border-width: 0 5px 6px 5px; border-style: solid; border-color: transparent transparent var(--primary) transparent; z-index: 1; transition: 0.3s; }
+        .fc-arrow-left { position: absolute; border-width: 5px 6px 5px 0; border-style: solid; border-color: transparent var(--primary) transparent transparent; z-index: 1; transition: 0.3s; }
+        
+        .fc-label { position: absolute; font-size: 0.65rem; font-weight: bold; }
+        .fc-label.no { color: var(--danger); }
+        .fc-label.yes { color: var(--success); }
+
+        .fc-line.active-path { background: #ca8a04; box-shadow: 0 0 6px #fde047; }
+        .fc-arrow-down.active-path { border-top-color: #ca8a04; filter: drop-shadow(0 0 3px #fde047); }
+        .fc-arrow-right.active-path { border-left-color: #ca8a04; filter: drop-shadow(0 0 3px #fde047); }
+        .fc-arrow-left.active-path { border-right-color: #ca8a04; filter: drop-shadow(0 0 3px #fde047); }
+        .fc-arrow-up.active-path { border-bottom-color: #ca8a04; filter: drop-shadow(0 0 3px #fde047); }
+
+        /* RIGHT COLUMN (TRACE TABLE) */
+        .col-right { flex: 0 0 340px; display: flex; flex-direction: column; min-width: 0;}
+        .ram-section { 
+            padding: 0; flex: 1; overflow-y: auto; min-height: 0; background: var(--panel-bg); 
+            border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: relative;
+        }
+        
+        .ram-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: center; }
+        .ram-table thead { position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
+        .ram-table th { background: var(--bg-color); padding: 8px 4px; border: 1px solid var(--border-color); color: var(--primary); text-transform: uppercase; font-size: 0.75rem;}
+        .ram-table td { padding: 6px 4px; border: 1px solid var(--border-color); font-family: monospace; font-weight: bold;}
+        
+        .ram-table tbody tr { transition: background-color 0.3s; }
+        .ram-table tbody tr.active-row { background-color: #fef9c3; } 
+        body.dark-mode .ram-table tbody tr.active-row { background-color: #422006; }
+
+        .val-true { color: var(--success); }
+        .val-false { color: var(--danger); }
+
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    <div class="toolbar-title">🔄 Εντολή 'Μέχρις_ότου'</div>
+    <div class="controls-group">
+        <div class="speed-control">
+            🐢 <input type="range" id="speedSlider" min="200" max="1500" value="800" dir="rtl"> 🐇
+        </div>
+        <button class="tool-btn" onclick="toggleTheme()">🌙</button>
+        <button class="tool-btn btn-execute" id="btnExecute" onclick="prepareExecution()">🚀 Εκτέλεση</button>
+        <button class="tool-btn btn-step" id="btnStep" onclick="manualStep()" style="display:none;">👣 Βήμα</button>
+        <button class="tool-btn btn-auto" id="btnAuto" onclick="toggleAuto()" style="display:none;">▶️ Αυτόματα</button>
+        <button class="tool-btn" onclick="resetApp()">🔄 Αρχή</button>
+    </div>
+</div>
+
+<div class="main-container">
+    
+    <div class="col col-left">
+        <div class="theory-title">Η Εντολή Μέχρις_ότου</div>
+        <div class="theory-text">
+            Η εντολή <strong>Αρχή_επανάληψης ... Μέχρις_ότου</strong> ελέγχει τη συνθήκη στο <strong>τέλος</strong> του βρόχου. 
+            <br>Αυτό σημαίνει ότι οι εντολές εκτελούνται <em>τουλάχιστον μία φορά</em>! Αν η συνθήκη γίνει <strong>Αληθής</strong>, ο βρόχος σταματάει.
+            <br><br>
+            <strong>Εφαρμογή:</strong><br>
+            Να γραφεί αλγόριθμος που θα διαβάζει επαναληπτικά ύψη ατόμων. Για τον τερματισμό της εισαγωγής δεδομένων ο αλγόριθμος εμφανίζει το μήνυμα "Υπάρχει επόμενο άτομο; (ΝΑΙ/ΟΧΙ)". 
+            <br>Αν εισαχθεί η τιμή 'ΟΧΙ', να τερματίζεται η εισαγωγή. Ο αλγόριθμος τότε εμφανίζει το πλήθος των ατόμων που πληκτρολογήθηκαν.
+        </div>
+        
+        <div class="visual-widget">
+            <div class="vw-title">Αναστημόμετρο</div>
+            <div class="ruler-container" id="rulerContainer">
+                <div class="ruler-axis">
+                    <div class="ruler-tick" data-val="2.0"></div>
+                    <div class="ruler-tick" data-val="1.5"></div>
+                    <div class="ruler-tick" data-val="1.0"></div>
+                    <div class="ruler-tick" data-val="0.5"></div>
+                    <div class="ruler-tick" data-val="0.0"></div>
+                </div>
+                </div>
+        </div>
+    </div>
+
+    <div class="col-mid">
+        <div class="mid-left">
+            <div class="code-area">
+                <div class="code-line"><span class="keyword">Αλγόριθμος</span> Καταμέτρηση_Ατόμων</div>
+                <div class="code-line" id="L1">&nbsp;&nbsp;πλήθος &lt;- <span class="number">0</span></div>
+                <div class="code-line" id="L2">&nbsp;&nbsp;<span class="keyword">Αρχή_επανάληψης</span></div>
+                <div class="code-line" id="L3">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Διάβασε</span> ύψος</div>
+                <div class="code-line" id="L4">&nbsp;&nbsp;&nbsp;&nbsp;πλήθος &lt;- πλήθος + <span class="number">1</span></div>
+                <div class="code-line" id="L5">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Εμφάνισε</span> <span class="string">"Υπάρχει επόμενο; (ΝΑΙ/ΟΧΙ)"</span></div>
+                <div class="code-line" id="L6">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Διάβασε</span> απάντηση</div>
+                <div class="code-line" id="L7">&nbsp;&nbsp;<span class="keyword">Μέχρις_ότου</span> απάντηση = <span class="string">'ΟΧΙ'</span></div>
+                <div class="code-line" id="L8">&nbsp;&nbsp;<span class="keyword">Εμφάνισε</span> πλήθος</div>
+                <div class="code-line"><span class="keyword">Τέλος</span> Καταμέτρηση_Ατόμων</div>
+            </div>
+
+            <div class="console-area" id="screen">
+                <div id="consoleOutput">Περιμένοντας εκτέλεση...<br></div>
+                <div class="console-input-row" id="inputContainer" style="display:none;">
+                    <span id="inputLabel">> Ύψος:</span>
+                    <input type="text" id="termInput" onkeydown="if(event.key==='Enter') submitInput()">
+                    <button class="tool-btn" style="background:var(--primary); color:white; padding: 4px 10px;" onclick="submitInput()">Enter</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="mid-right fc-area">
+            <div class="fc-container">
+                <div class="fc-line" style="top: 40px; left: 159px; width: 2px; height: 20px;"></div>
+                <div class="fc-arrow-down" style="top: 55px; left: 155px;"></div>
+                
+                <div class="fc-line" style="top: 100px; left: 159px; width: 2px; height: 30px;"></div>
+                <div class="fc-arrow-down" id="a-to-readH" style="top: 125px; left: 155px;"></div>
+
+                <div class="fc-line" style="top: 165px; left: 159px; width: 2px; height: 30px;"></div>
+                <div class="fc-arrow-down" style="top: 190px; left: 155px;"></div>
+
+                <div class="fc-line" style="top: 230px; left: 159px; width: 2px; height: 30px;"></div>
+                <div class="fc-arrow-down" style="top: 255px; left: 155px;"></div>
+
+                <div class="fc-line" style="top: 295px; left: 159px; width: 2px; height: 30px;"></div>
+                <div class="fc-arrow-down" style="top: 320px; left: 155px;"></div>
+
+                <div class="fc-line" style="top: 360px; left: 159px; width: 2px; height: 30px;"></div>
+                <div class="fc-arrow-down" style="top: 385px; left: 155px;"></div>
+
+                <div class="fc-label no" style="top: 415px; left: 245px;">Ψευδής</div>
+                <div class="fc-line" id="l-loop-false1" style="top: 429px; left: 200px; width: 130px; height: 2px;"></div>
+                <div class="fc-line" id="l-loop-false2" style="top: 115px; left: 328px; width: 2px; height: 316px;"></div>
+                <div class="fc-line" id="l-loop-false3" style="top: 115px; left: 160px; width: 170px; height: 2px;"></div>
+                <div class="fc-arrow-left" id="a-loop-false" style="top: 111px; left: 160px;"></div>
+
+                <div class="fc-label yes" style="top: 475px; left: 165px;">Αληθής</div>
+                <div class="fc-line" id="l-loop-true" style="top: 470px; left: 159px; width: 2px; height: 30px;"></div>
+                <div class="fc-arrow-down" id="a-loop-true" style="top: 495px; left: 155px;"></div>
+
+                <div class="fc-line" style="top: 535px; left: 159px; width: 2px; height: 30px;"></div>
+                <div class="fc-arrow-down" style="top: 560px; left: 155px;"></div>
+
+                <div class="fc-node fc-oval" id="fc-start" style="top: 10px; left: 120px; width: 80px; height: 30px;">Αρχή</div>
+                
+                <div class="fc-node fc-rect" id="fc-init" style="top: 60px; left: 100px; width: 120px; height: 40px;">
+                    <span>πλήθος &lt;- 0</span>
+                </div>
+                
+                <div class="fc-node fc-io" id="fc-read1" style="top: 130px; left: 100px; width: 120px; height: 35px;"><span>Διάβασε ύψος</span></div>
+                
+                <div class="fc-node fc-rect" id="fc-proc" style="top: 195px; left: 90px; width: 140px; height: 35px;">
+                    <span>πλήθος &lt;- πλήθος + 1</span>
+                </div>
+                
+                <div class="fc-node fc-io" id="fc-print-q" style="top: 260px; left: 80px; width: 160px; height: 35px;"><span>Εμφάνισε "Επόμενο;"</span></div>
+                
+                <div class="fc-node fc-io" id="fc-read2" style="top: 325px; left: 100px; width: 120px; height: 35px;"><span>Διάβασε απάντηση</span></div>
+                
+                <div class="fc-node fc-diamond" id="fc-cond" style="top: 390px; left: 120px; width: 80px; height: 80px;">
+                    <span class="fc-diamond-text" style="width:100px;">απάντηση<br>= 'ΟΧΙ'</span>
+                </div>
+                
+                <div class="fc-node fc-io" id="fc-print-c" style="top: 500px; left: 95px; width: 130px; height: 35px;"><span>Εμφάνισε πλήθος</span></div>
+                
+                <div class="fc-node fc-oval" id="fc-end" style="top: 565px; left: 120px; width: 80px; height: 30px;">Τέλος</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col col-right">
+        <div class="theory-title" style="padding: 15px 15px 0 15px; margin: 0; border: none;">🧠 Πίνακας Τιμών</div>
+        <div class="ram-section">
+            <table class="ram-table">
+                <thead>
+                    <tr>
+                        <th title="ύψος">ύψος</th>
+                        <th title="πλήθος">πλήθος</th>
+                        <th title="απάντηση">απάντηση</th>
+                        <th title="Συνθήκη: απάντηση = 'ΟΧΙ'">απ='ΟΧΙ'</th>
+                    </tr>
+                </thead>
+                <tbody id="traceBody">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let state = { height: null, count: 0, ans: '', pc: 0, isPlaying: false, isFinished: false, waitingInput: false, timer: null, inputMode: 'height' };
+    
+    let traceRows = [];
+    let currentRowIndex = -1;
+
+    // --- AUDIO SYSTEM ---
+    let audioCtx = null;
+    function initAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function playSound(type) {
+        initAudio();
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        let now = audioCtx.currentTime;
+        
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        if (type === 'beep') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, now);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            osc.start(now); osc.stop(now + 0.1);
+        } else if (type === 'success') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.linearRampToValueAtTime(800, now + 0.2);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.4);
+            osc.start(now); osc.stop(now + 0.4);
+        }
+    }
+
+    // --- VISUALIZER ---
+    function addPersonVisual(h) {
+        let ruler = document.getElementById('rulerContainer');
+        let maxH = 2.0;
+        let p = (h / maxH) * 100;
+        if(p > 100) p = 100; // Cap
+        
+        let bar = document.createElement('div');
+        bar.className = 'person-bar';
+        bar.style.height = `${p}%`;
+        bar.innerHTML = `<span class="person-val">${h}m</span>`;
+        ruler.appendChild(bar);
+    }
+
+    // --- TRACE TABLE LOGIC ---
+    function addTraceRow() {
+        let tBody = document.getElementById('traceBody');
+        
+        if(currentRowIndex >= 0) {
+            let oldRow = document.getElementById('tr-' + currentRowIndex);
+            if(oldRow) oldRow.classList.remove('active-row');
+        }
+
+        currentRowIndex++;
+        
+        traceRows.push({
+            height: state.height !== null ? state.height : '-',
+            count: state.count !== null ? state.count : '-',
+            ans: state.ans !== '' ? state.ans : '-',
+            cond: '-'
+        });
+
+        let tr = document.createElement('tr');
+        tr.id = 'tr-' + currentRowIndex;
+        tr.className = 'active-row';
+        
+        tr.innerHTML = `
+            <td id="tc-h-${currentRowIndex}">${traceRows[currentRowIndex].height}</td>
+            <td id="tc-c-${currentRowIndex}">${traceRows[currentRowIndex].count}</td>
+            <td id="tc-a-${currentRowIndex}">${traceRows[currentRowIndex].ans}</td>
+            <td id="tc-cond-${currentRowIndex}">-</td>
+        `;
+        
+        tBody.appendChild(tr);
+        tBody.parentElement.parentElement.scrollTop = tBody.parentElement.parentElement.scrollHeight;
+    }
+
+    function updateTraceCell(col, value, cssClass='') {
+        if(currentRowIndex < 0) return;
+        let cell = document.getElementById(`tc-${col}-${currentRowIndex}`);
+        if(cell) {
+            cell.innerText = value;
+            if(cssClass) cell.className = cssClass;
+        }
+    }
+
+    // --- EXECUTION ENGINE ---
+    function prepareExecution() {
+        if(state.pc > 0 && !state.isFinished) return; 
+        initAudio();
+        
+        document.getElementById('btnExecute').style.display='none';
+        document.getElementById('btnAuto').style.display='flex';
+        document.getElementById('btnStep').style.display='flex';
+        
+        document.getElementById('consoleOutput').innerHTML = "";
+        document.getElementById('inputContainer').style.display = 'none';
+        document.getElementById('traceBody').innerHTML = "";
+        
+        // Clear visualizer
+        let rContainer = document.getElementById('rulerContainer');
+        while (rContainer.children.length > 1) {
+            rContainer.removeChild(rContainer.lastChild);
+        }
+        
+        document.querySelectorAll('.active-path').forEach(el => el.classList.remove('active-path'));
+        
+        state = { height: null, count: 0, ans: '', pc: 1, isPlaying: true, isFinished: false, waitingInput: false, timer: null, inputMode: 'height' };
+        traceRows = []; currentRowIndex = -1;
+        
+        document.getElementById('btnAuto').innerText = "⏸️ Παύση";
+        document.getElementById('btnAuto').style.background = "var(--warning)";
+        document.getElementById('btnAuto').style.color = "black";
+        
+        runLoop();
+    }
+
+    function toggleAuto() {
+        if (state.isPlaying) { 
+            state.isPlaying = false; clearTimeout(state.timer);
+            document.getElementById('btnAuto').innerText = "▶️ Συνέχεια";
+            document.getElementById('btnAuto').style.background = "var(--primary)";
+            document.getElementById('btnAuto').style.color = "white";
+        } else {
+            state.isPlaying = true;
+            document.getElementById('btnAuto').innerText = "⏸️ Παύση";
+            document.getElementById('btnAuto').style.background = "var(--warning)";
+            document.getElementById('btnAuto').style.color = "black";
+            if (state.pc === 0) prepareExecution(); else runLoop();
+        }
+    }
+
+    function manualStep() {
+        if (state.pc === 0 || state.isFinished) {
+            document.getElementById('btnExecute').style.display='none';
+            document.getElementById('btnAuto').style.display='flex';
+            document.getElementById('consoleOutput').innerHTML = "";
+            document.getElementById('traceBody').innerHTML = "";
+            document.querySelectorAll('.active-path').forEach(el => el.classList.remove('active-path'));
+            
+            let rContainer = document.getElementById('rulerContainer');
+            while (rContainer.children.length > 1) rContainer.removeChild(rContainer.lastChild);
+            
+            state = { height: null, count: 0, ans: '', pc: 1, isPlaying: false, isFinished: false, waitingInput: false, timer: null, inputMode: 'height' };
+            traceRows = []; currentRowIndex = -1;
+            
+            document.getElementById('btnAuto').innerText = "▶️ Συνέχεια";
+            document.getElementById('btnAuto').style.background = "var(--primary)";
+            document.getElementById('btnAuto').style.color = "white";
+            stepAlgo();
+            return;
+        }
+        
+        if (state.waitingInput) return;
+        if (state.isPlaying) toggleAuto(); 
+        stepAlgo();
+    }
+
+    function runLoop() {
+        if (!state.isPlaying || state.isFinished || state.waitingInput) return;
+        stepAlgo();
+        if(!state.isFinished && state.isPlaying && !state.waitingInput) {
+            state.timer = setTimeout(runLoop, parseInt(document.getElementById('speedSlider').value));
+        }
+    }
+
+    function highlightUI(codeLine, fcNodeId) {
+        document.querySelectorAll('.code-line').forEach(l => l.classList.remove('active'));
+        if(codeLine) {
+            let el = document.getElementById(codeLine);
+            if(el) el.classList.add('active');
+        }
+
+        document.querySelectorAll('.fc-node').forEach(n => n.classList.remove('active'));
+        if(fcNodeId) {
+            let n = document.getElementById(fcNodeId);
+            if(n) n.classList.add('active');
+        }
+    }
+
+    function clearPaths() { document.querySelectorAll('.active-path').forEach(el => el.classList.remove('active-path')); }
+    function addPath(id) { let el = document.getElementById(id); if(el) el.classList.add('active-path'); }
+
+    function printConsole(txt) {
+        let cText = document.getElementById('consoleOutput');
+        cText.innerHTML += `${txt}<br>`;
+        let scr = document.getElementById('screen');
+        scr.scrollTop = scr.scrollHeight;
+    }
+
+    function requestInput(mode) {
+        state.inputMode = mode;
+        let label = document.getElementById('inputLabel');
+        let inp = document.getElementById('termInput');
+        
+        if(mode === 'height') {
+            label.innerText = "> Ύψος (μ):";
+            inp.type = "number"; inp.step = "0.01";
+        } else {
+            label.innerText = "> Απάντηση:";
+            inp.type = "text";
+        }
+        
+        document.getElementById('inputContainer').style.display = 'flex';
+        document.getElementById('inputContainer').classList.add('waiting-input');
+        inp.focus();
+        state.waitingInput = true;
+    }
+
+    function submitInput() {
+        let v = document.getElementById('termInput').value.trim().toUpperCase();
+        if(v === '') return;
+        
+        if(state.inputMode === 'height') {
+            state.height = parseFloat(v);
+            if(isNaN(state.height)) return;
+            printConsole(`Ελήφθη ύψος: <span style="color:var(--primary); font-weight:bold;">${state.height}m</span>`);
+            updateTraceCell('h', state.height);
+            addPersonVisual(state.height);
+            state.pc = 4; 
+        } else {
+            state.ans = v;
+            printConsole(`Ελήφθη απάντηση: <span style="color:var(--primary); font-weight:bold;">'${state.ans}'</span>`);
+            updateTraceCell('a', `'${state.ans}'`);
+            state.pc = 7; 
+        }
+        
+        document.getElementById('inputContainer').style.display = 'none';
+        document.getElementById('inputContainer').classList.remove('waiting-input');
+        document.getElementById('termInput').value = '';
+        playSound('beep');
+        
+        state.waitingInput = false;
+        
+        if(state.isPlaying) runLoop(); else stepAlgo();
+    }
+
+    // --- ALGORITHM STATE MACHINE ---
+    function stepAlgo() {
+        switch(state.pc) {
+            case 1: 
+                highlightUI(null, 'fc-start');
+                clearPaths();
+                state.pc = 2; 
+                break;
+            case 2: 
+                highlightUI('L1', 'fc-init'); 
+                state.count = 0;
+                state.pc = 3;
+                break;
+            case 3: 
+                highlightUI('L3', 'fc-read1'); // Διάβασε ύψος
+                document.getElementById('L2').classList.add('active'); // Highlight Αρχή_Επανάληψης too
+                addTraceRow(); // Κάθε νέα καταμέτρηση είναι νέα σειρά
+                requestInput('height');
+                // state.pc moves to 4 in submitInput
+                break;
+            case 4: 
+                highlightUI('L4', 'fc-proc');
+                state.count += 1;
+                updateTraceCell('c', state.count);
+                state.pc = 5;
+                break;
+            case 5: 
+                highlightUI('L5', 'fc-print-q');
+                printConsole(`<strong><span style="color:var(--text-light);">Υπάρχει επόμενο; (ΝΑΙ/ΟΧΙ)</span></strong>`);
+                state.pc = 6; 
+                break;
+            case 6: 
+                highlightUI('L6', 'fc-read2');
+                requestInput('ans');
+                // state.pc moves to 7 in submitInput
+                break;
+            case 7:
+                highlightUI('L7', 'fc-cond');
+                clearPaths();
+                
+                let isOxi = (state.ans === 'ΟΧΙ' || state.ans === 'OXI'); // handle Greek/Latin OXI
+                updateTraceCell('cond', isOxi ? 'Αληθής' : 'Ψευδής', isOxi ? 'val-true' : 'val-false');
+                
+                if(isOxi) {
+                    // True -> Exit Loop
+                    addPath('l-loop-true'); addPath('a-loop-true');
+                    state.pc = 8;
+                } else {
+                    // False -> Repeat
+                    addPath('l-loop-false1'); addPath('l-loop-false2'); addPath('l-loop-false3'); addPath('a-loop-false');
+                    state.pc = 3;
+                }
+                break;
+            case 8:
+                highlightUI('L8', 'fc-print-c');
+                playSound('success');
+                printConsole(`<strong>Αποτέλεσμα: Συνολικό Πλήθος = <span style="color:var(--success);">${state.count}</span></strong>`);
+                state.pc = 9;
+                break;
+            case 9:
+                highlightUI(null, 'fc-end');
+                let lastRow = document.getElementById('tr-' + currentRowIndex);
+                if(lastRow) lastRow.classList.remove('active-row');
+                finishSim();
+                break;
+        }
+    }
+
+    function finishSim() {
+        state.isFinished = true; state.isPlaying = false;
+        document.getElementById('btnAuto').style.display='none';
+        document.getElementById('btnStep').style.display='none';
+        printConsole("<br><strong>✅ Τέλος Προγράμματος.</strong>");
+        document.getElementById('btnExecute').style.display='flex';
+    }
+
+    function resetApp() {
+        state.isPlaying = false; clearTimeout(state.timer);
+        
+        document.getElementById('consoleOutput').innerHTML = "Περιμένοντας εκτέλεση...<br>";
+        document.getElementById('inputContainer').style.display = 'none';
+        document.getElementById('inputContainer').classList.remove('waiting-input');
+        document.getElementById('termInput').value = '';
+        document.getElementById('traceBody').innerHTML = '';
+        
+        let rContainer = document.getElementById('rulerContainer');
+        while (rContainer.children.length > 1) rContainer.removeChild(rContainer.lastChild);
+        
+        clearPaths();
+        
+        document.getElementById('btnExecute').style.display='flex';
+        document.getElementById('btnAuto').style.display='none';
+        document.getElementById('btnStep').style.display='none';
+        
+        state = { height: null, count: 0, ans: '', pc: 0, isPlaying: false, isFinished: false, waitingInput: false, timer: null, inputMode: 'height' };
+        traceRows = []; currentRowIndex = -1;
+        
+        highlightUI(null, null);
+    }
+
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+</script>
+
+</body>
+</html>
