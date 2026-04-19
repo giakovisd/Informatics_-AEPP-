@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Πολλαπλή Επιλογή - Έξυπνος Θερμοστάτης</title>
+    <style>
+        :root {
+            --primary: #2563eb; --primary-hover: #1d4ed8;
+            --text-dark: #0f172a; --text-light: #64748b;
+            --bg-color: #f1f5f9; --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --success: #16a34a; --warning: #f59e0b; --danger: #ef4444;
+            --highlight: #fef08a; --fc-active: #fde047; --code-bg: #f8fafc;
+            --screen-bg: #ffffff; --screen-text: #000000;
+            --heat: #ef4444; --cool: #3b82f6; --normal: #10b981;
+        }
+
+        body.dark-mode {
+            --bg-color: #020617; --panel-bg: #1e293b;
+            --text-dark: #f8fafc; --text-light: #94a3b8;
+            --border-color: #334155; --code-bg: #0f172a;
+            --screen-bg: #e2e8f0; --screen-text: #000000;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        /* FIT SCREEN TRICK */
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background-color: var(--bg-color); color: var(--text-dark); 
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s;
+        }
+
+        /* --- TOOLBAR --- */
+        .toolbar { 
+            background: var(--panel-bg); border-bottom: 1px solid var(--border-color); 
+            padding: 8px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100;
+            flex: 0 0 auto;
+        }
+        .toolbar-title { font-weight: 800; font-size: 1.1rem; color: var(--primary); display: flex; align-items: center; gap: 8px;}
+        .controls-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;}
+
+        .tool-btn { 
+            padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color);
+            background: var(--panel-bg); color: var(--text-dark); cursor: pointer; font-weight: bold;
+            display: flex; align-items: center; gap: 5px; font-size: 0.85rem; transition: 0.2s;
+        }
+        .tool-btn:hover:not(:disabled) { background: var(--border-color); }
+        .tool-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-execute { background: var(--warning); color: black; border: none; }
+        .btn-step { background: var(--primary); color: white; border: none; }
+        .btn-auto { background: var(--primary); color: white; border: none; }
+
+        .speed-control { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; font-weight: bold; margin-right: 10px;}
+        .speed-control input { cursor: pointer; width: 60px;}
+
+        /* --- MAIN LAYOUT --- */
+        .main-container { display: flex; flex: 1; padding: 10px; gap: 10px; overflow: hidden; min-height: 0;}
+        .col { 
+            background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color); 
+            display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        /* LEFT COLUMN */
+        .col-left { flex: 0 0 280px; padding: 15px; overflow-y: auto; line-height: 1.4;}
+        .theory-title { font-size: 1rem; font-weight: bold; margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; }
+        .theory-text { font-size: 0.85rem; margin-bottom: 15px; text-align: justify; }
+
+        /* MIDDLE COLUMN (Code + Flowchart) */
+        .col-mid { flex: 1; display: flex; flex-direction: row; gap: 10px; background: transparent; border: none; box-shadow: none; min-width: 0; } 
+        
+        .code-area { 
+            flex: 0 0 350px; padding: 15px; background: var(--code-bg); border: 1px solid var(--border-color); border-radius: 12px;
+            font-family: 'Consolas', monospace; font-size: 0.85rem; line-height: 1.8; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-height: 0;
+        }
+        .code-line { padding: 3px 6px; border-radius: 4px; transition: 0.2s; white-space: nowrap; margin-bottom: 2px;}
+        .code-line.active { background: var(--highlight); color: black; font-weight: bold; box-shadow: inset 4px 0 0 var(--warning); }
+        .keyword { color: var(--primary); font-weight: bold; }
+        .string { color: #16a34a; }
+        .number { color: #ea580c; }
+
+        /* FLOWCHART AREA */
+        .fc-area { 
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; 
+            padding: 10px; overflow-y: auto; overflow-x: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: relative; min-height: 0;
+        }
+
+        .fc-container {
+            position: relative; min-width: 420px; min-height: 540px; margin: 0 auto;
+        }
+
+        /* Flowchart Nodes */
+        .fc-node { 
+            position: absolute; display: flex; justify-content: center; align-items: center; text-align: center;
+            border: 2px solid var(--primary); background: var(--panel-bg); color: var(--text-dark);
+            font-weight: bold; font-size: 0.75rem; z-index: 2; transition: 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        /* ΑΦΑΙΡΕΘΗΚΕ ΤΟ SCALE ΓΙΑ ΝΑ ΜΗΝ ΧΑΛΑΕΙ ΤΗΝ ΕΥΘΥΓΡΑΜΜΙΣΗ ΜΕ ΤΙΣ ΓΡΑΜΜΕΣ! */
+        .fc-node.active { background: var(--fc-active); color: black; border-color: #ca8a04; box-shadow: 0 0 14px rgba(250, 204, 21, 0.8); }
+
+        .fc-oval { border-radius: 20px; }
+        .fc-io { transform: skew(-15deg); }
+        .fc-io > span { transform: skew(15deg); display: block; }
+        
+        .fc-diamond { transform: rotate(45deg); }
+        /* ΑΦΑΙΡΕΘΗΚΕ ΤΟ SCALE ΚΑΙ ΕΔΩ! */
+        .fc-diamond.active { border-color: #ca8a04; box-shadow: 0 0 14px rgba(250, 204, 21, 0.8); }
+        .fc-diamond-text { transform: rotate(-45deg); font-size: 0.7rem; color: inherit; width: 85px;}
+
+        /* Lines and Arrows */
+        .fc-line { position: absolute; background: var(--primary); z-index: 1; transition: 0.3s; }
+        .fc-arrow-down { position: absolute; border-width: 6px 5px 0; border-style: solid; border-color: var(--primary) transparent transparent transparent; z-index: 1; transition: 0.3s; }
+        .fc-arrow-right { position: absolute; border-width: 5px 0 5px 6px; border-style: solid; border-color: transparent transparent transparent var(--primary); z-index: 1; transition: 0.3s; }
+        
+        .fc-label { position: absolute; font-size: 0.7rem; font-weight: bold; }
+        .fc-label.no { color: var(--danger); }
+        .fc-label.yes { color: var(--success); }
+
+        /* Path Highlighting Effect - ΑΦΑΙΡΕΘΗΚΕ ΤΟ Z-INDEX ΓΙΑ ΝΑ ΜΕΝΟΥΝ ΚΑΤΩ ΑΠΟ ΤΑ ΣΧΗΜΑΤΑ */
+        .fc-line.active-path { background: #ca8a04; box-shadow: 0 0 6px #fde047; }
+        .fc-arrow-down.active-path { border-top-color: #ca8a04; filter: drop-shadow(0 0 3px #fde047); }
+        .fc-arrow-right.active-path { border-left-color: #ca8a04; filter: drop-shadow(0 0 3px #fde047); }
+
+        /* --- THERMOSTAT VISUAL --- */
+        .thermostat-container {
+            position: absolute; 
+            top: 430px; left: 310px; 
+            width: 120px; height: 120px;
+            background: #1e293b; border-radius: 50%; border: 6px solid #cbd5e1;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2), inset 0 0 20px rgba(0,0,0,0.8);
+            transition: all 0.5s ease; color: white; z-index: 10;
+        }
+        .thermostat-container::after {
+            content: ''; position: absolute; top: 5px; left: 15px; width: 40px; height: 15px;
+            background: rgba(255,255,255,0.1); border-radius: 10px; transform: rotate(-30deg);
+        }
+        .temp-display { font-size: 2.2rem; font-weight: bold; font-family: monospace; line-height: 1; margin-bottom: 5px; transition: 0.3s;}
+        .temp-icon { font-size: 1.5rem; transition: 0.3s; transform: scale(0.8); opacity: 0.5;}
+        
+        /* States */
+        .thermostat-container.heat { border-color: var(--heat); box-shadow: 0 0 30px rgba(239, 68, 68, 0.4), inset 0 0 20px rgba(0,0,0,0.8); }
+        .thermostat-container.heat .temp-display { color: #fca5a5; }
+        .thermostat-container.heat .temp-icon { opacity: 1; transform: scale(1.2); }
+        
+        .thermostat-container.cool { border-color: var(--cool); box-shadow: 0 0 30px rgba(59, 130, 246, 0.4), inset 0 0 20px rgba(0,0,0,0.8); }
+        .thermostat-container.cool .temp-display { color: #93c5fd; }
+        .thermostat-container.cool .temp-icon { opacity: 1; transform: scale(1.2); }
+        
+        .thermostat-container.normal { border-color: var(--normal); box-shadow: 0 0 30px rgba(16, 185, 129, 0.4), inset 0 0 20px rgba(0,0,0,0.8); }
+        .thermostat-container.normal .temp-display { color: #6ee7b7; }
+        .thermostat-container.normal .temp-icon { opacity: 1; transform: scale(1.2); }
+
+
+        /* RIGHT COLUMN */
+        .col-right { flex: 0 0 260px; display: flex; flex-direction: column; min-width: 0;}
+        .ram-section { padding: 12px; flex: 1; border-bottom: 1px solid var(--border-color); overflow-y: auto; min-height: 0;}
+        .ram-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: center; }
+        .ram-table th { background: var(--bg-color); padding: 6px 2px; border: 1px solid var(--border-color); position: sticky; top: 0; }
+        .ram-table td { padding: 6px 2px; border: 1px solid var(--border-color); font-family: monospace; font-weight: bold;}
+        
+        .screen-section { padding: 12px; height: 260px; display: flex; flex-direction: column; min-height: 0;}
+        .screen-display { 
+            flex: 1; background: var(--screen-bg); color: var(--screen-text); border: 2px solid var(--border-color);
+            padding: 10px; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 0.85rem; overflow-y: auto; line-height: 1.4;
+        }
+        
+        .console-input-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+        .console-input-row input { 
+            background: var(--code-bg); border: 1px solid var(--border-color); color: var(--text-dark); 
+            padding: 5px 8px; border-radius: 4px; outline: none; width: 70px; font-family: inherit; font-weight: bold;
+        }
+        
+        @keyframes pulseInput {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); border-color: var(--border-color); }
+            50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); border-color: #ef4444; }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); border-color: var(--border-color); }
+        }
+        .waiting-input input { animation: pulseInput 1.5s infinite; border-color: #ef4444 !important; }
+
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    <div class="toolbar-title">🌡️ Πολλαπλή Επιλογή</div>
+    <div class="controls-group">
+        <div class="speed-control">
+            🐢 <input type="range" id="speedSlider" min="200" max="1500" value="800" dir="rtl"> 🐇
+        </div>
+        <button class="tool-btn" onclick="toggleTheme()">🌙</button>
+        <button class="tool-btn btn-execute" id="btnExecute" onclick="prepareExecution()">🚀 Εκτέλεση</button>
+        <button class="tool-btn btn-step" id="btnStep" onclick="manualStep()" style="display:none;">👣 Βήμα</button>
+        <button class="tool-btn btn-auto" id="btnAuto" onclick="toggleAuto()" style="display:none;">▶️ Αυτόματα</button>
+        <button class="tool-btn" onclick="resetApp()">🔄 Αρχή</button>
+    </div>
+</div>
+
+<div class="main-container">
+    
+    <div class="col col-left">
+        <div class="theory-title">Η Πολλαπλή Επιλογή</div>
+        <div class="theory-text">
+            Όταν ένα πρόβλημα έχει <strong>περισσότερες από δύο περιπτώσεις</strong>, χρησιμοποιούμε την εντολή <code>Αν ... Αλλιώς_αν ... Αλλιώς</code>.
+            <br><br>
+            <strong>Το Σενάριο (Έξυπνος Θερμοστάτης):</strong><br>
+            Ένα σύστημα κλιματισμού διαβάζει τη θερμοκρασία του δωματίου:
+            <ul style="margin-left: 20px; margin-top: 5px;">
+                <li>Αν είναι <strong>κάτω από 18</strong>, ανάβει τη Θέρμανση 🔥.</li>
+                <li>Αν είναι <strong>πάνω από 25</strong>, ανάβει την Ψύξη ❄️.</li>
+                <li>Σε κάθε άλλη περίπτωση (18 έως 25), η θερμοκρασία είναι Κανονική 🌿.</li>
+            </ul>
+            <br>
+            <hr style="border:0; border-top: 1px solid var(--border-color); margin: 10px 0;">
+            <strong style="color:var(--primary)">Οδηγίες:</strong> Πάτα <strong>"Εκτέλεση"</strong>. Όταν ο κώδικας φτάσει στη `Διάβασε`, πληκτρολόγησε μια θερμοκρασία κάτω δεξιά. Παρατήρησε στο διάγραμμα ροής ποιο μονοπάτι ακολουθεί και πώς αντιδρά ο θερμοστάτης!
+        </div>
+    </div>
+
+    <div class="col-mid">
+        <div class="code-area">
+            <div class="code-line"><span class="keyword">Αλγόριθμος</span> Έλεγχος_Θερμοκρασίας</div>
+            <div class="code-line" id="L1"><span class="keyword">Διάβασε</span> θερμοκρασία</div>
+            <div class="code-line" id="L2"><span class="keyword">Αν</span> θερμοκρασία &lt; <span class="number">18</span> <span class="keyword">τότε</span></div>
+            <div class="code-line" id="L3">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Εμφάνισε</span> <span class="string">"Ενεργοποίηση Θέρμανσης"</span></div>
+            <div class="code-line" id="L4"><span class="keyword">Αλλιώς_αν</span> θερμοκρασία &gt; <span class="number">25</span> <span class="keyword">τότε</span></div>
+            <div class="code-line" id="L5">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Εμφάνισε</span> <span class="string">"Ενεργοποίηση Ψύξης"</span></div>
+            <div class="code-line" id="L6"><span class="keyword">Αλλιώς</span></div>
+            <div class="code-line" id="L7">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Εμφάνισε</span> <span class="string">"Θερμοκρασία Κανονική"</span></div>
+            <div class="code-line" id="L8"><span class="keyword">Τέλος_αν</span></div>
+            <div class="code-line"><span class="keyword">Τέλος</span> Έλεγχος_Θερμοκρασίας</div>
+        </div>
+
+        <div class="fc-area">
+            <div class="fc-container">
+                <div class="fc-line" style="top: 30px; left: 109px; width: 2px; height: 15px;"></div>
+                <div class="fc-arrow-down" style="top: 45px; left: 105px;"></div>
+                
+                <div class="fc-line" style="top: 85px; left: 109px; width: 2px; height: 30px;"></div>
+                <div class="fc-arrow-down" style="top: 115px; left: 105px;"></div>
+
+                <div class="fc-label yes" style="top: 135px; left: 160px;">ΝΑΙ</div>
+                <div class="fc-line" id="l-d1-true" style="top: 154px; left: 145px; width: 55px; height: 2px;"></div>
+                <div class="fc-arrow-right" id="a-d1-true" style="top: 150px; left: 200px;"></div>
+                
+                <div class="fc-label no" style="top: 195px; left: 115px;">ΟΧΙ</div>
+                <div class="fc-line" id="l-d1-false" style="top: 190px; left: 109px; width: 2px; height: 35px;"></div>
+                <div class="fc-arrow-down" id="a-d1-false" style="top: 225px; left: 105px;"></div>
+
+                <div class="fc-label yes" style="top: 245px; left: 160px;">ΝΑΙ</div>
+                <div class="fc-line" id="l-d2-true" style="top: 264px; left: 145px; width: 55px; height: 2px;"></div>
+                <div class="fc-arrow-right" id="a-d2-true" style="top: 260px; left: 200px;"></div>
+                
+                <div class="fc-label no" style="top: 305px; left: 115px;">ΟΧΙ</div>
+                <div class="fc-line" id="l-d2-false" style="top: 300px; left: 109px; width: 2px; height: 30px;"></div>
+                <div class="fc-arrow-down" id="a-d2-false" style="top: 330px; left: 105px;"></div>
+
+                <div class="fc-line" id="l-io1-right" style="top: 154px; left: 325px; width: 25px; height: 2px;"></div>
+                <div class="fc-line" id="l-io2-right" style="top: 264px; left: 325px; width: 25px; height: 2px;"></div>
+                
+                <div class="fc-line" id="l-right-bus-top" style="top: 154px; left: 349px; width: 2px; height: 110px;"></div>
+                <div class="fc-line" id="l-right-bus-bottom" style="top: 264px; left: 349px; width: 2px; height: 146px;"></div>
+
+                <div class="fc-line" id="l-io3-down" style="top: 375px; left: 109px; width: 2px; height: 35px;"></div>
+
+                <div class="fc-line" id="l-merge-horiz" style="top: 410px; left: 110px; width: 240px; height: 2px;"></div>
+                
+                <div class="fc-line" id="l-end-down" style="top: 410px; left: 109px; width: 2px; height: 15px;"></div>
+                <div class="fc-arrow-down" id="a-end" style="top: 425px; left: 105px;"></div>
+
+
+                <div class="fc-node fc-oval" id="fc-start" style="top: 5px; left: 70px; width: 80px; height: 25px;">Αρχή</div>
+                <div class="fc-node fc-io" id="fc-read" style="top: 50px; left: 55px; width: 110px; height: 35px;"><span>Διάβασε θερμ.</span></div>
+                
+                <div class="fc-node fc-diamond" id="fc-d1" style="top: 120px; left: 75px; width: 70px; height: 70px;">
+                    <span class="fc-diamond-text">θερμ. &lt; 18</span>
+                </div>
+                
+                <div class="fc-node fc-io" id="fc-io1" style="top: 135px; left: 205px; width: 120px; height: 40px;"><span>Εμφάνισε<br>"Θέρμανση"</span></div>
+                
+                <div class="fc-node fc-diamond" id="fc-d2" style="top: 230px; left: 75px; width: 70px; height: 70px;">
+                    <span class="fc-diamond-text">θερμ. &gt; 25</span>
+                </div>
+
+                <div class="fc-node fc-io" id="fc-io2" style="top: 245px; left: 205px; width: 120px; height: 40px;"><span>Εμφάνισε<br>"Ψύξη"</span></div>
+
+                <div class="fc-node fc-io" id="fc-io3" style="top: 335px; left: 55px; width: 110px; height: 40px;"><span>Εμφάνισε<br>"Κανονική"</span></div>
+                
+                <div class="fc-node fc-oval" id="fc-end" style="top: 430px; left: 70px; width: 80px; height: 25px;">Τέλος</div>
+
+                <div class="thermostat-container" id="thermostat">
+                    <div class="temp-display" id="tempValue">--°</div>
+                    <div class="temp-icon" id="tempIcon">⚪</div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="col col-right">
+        <div class="ram-section">
+            <div class="theory-title" style="border:none;">🧠 Μνήμη (RAM)</div>
+            <table class="ram-table">
+                <thead><tr><th>θερμοκρασία</th><th>T &lt; 18</th><th>T &gt; 25</th></tr></thead>
+                <tbody id="ramBody"></tbody>
+            </table>
+        </div>
+        <div class="screen-section">
+            <div class="theory-title" style="border:none;">🖥️ Οθόνη Κονσόλας</div>
+            <div class="screen-display" id="screen">
+                <div id="consoleOutput">Περιμένοντας εκτέλεση...<br></div>
+                <div class="console-input-row" id="inputContainer" style="display:none;">
+                    <span style="color:var(--danger); font-weight:bold;">></span>
+                    <input type="number" id="termInput" onkeydown="if(event.key==='Enter') submitInput()">
+                    <button class="tool-btn" style="background:var(--primary); color:white; padding: 4px 8px;" onclick="submitInput()">Enter</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let state = { val: null, pc: 0, isPlaying: false, isFinished: false, waitingInput: false, timer: null };
+
+    // --- AUDIO SYSTEM (Web Audio API) ---
+    let audioCtx = null;
+    let oscillator = null;
+
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    function playBeep() {
+        initAudio();
+        if(oscillator) return; 
+
+        oscillator = audioCtx.createOscillator();
+        let gainNode = audioCtx.createGain();
+        
+        oscillator.type = 'sine';
+        let now = audioCtx.currentTime;
+        oscillator.frequency.setValueAtTime(800, now);
+        oscillator.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+
+        gainNode.gain.setValueAtTime(0.1, now); 
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        oscillator.start(now);
+        oscillator.stop(now + 0.3); 
+        
+        oscillator.onended = () => { oscillator = null; };
+    }
+
+    // --- EXECUTION ENGINE ---
+    function prepareExecution() {
+        if(state.pc > 0 && !state.isFinished) return; 
+        initAudio(); // User interaction unlocks audio
+        
+        document.getElementById('btnExecute').style.display='none';
+        document.getElementById('btnAuto').style.display='flex';
+        document.getElementById('btnStep').style.display='flex';
+        
+        document.getElementById('consoleOutput').innerHTML = "";
+        document.getElementById('ramBody').innerHTML = "";
+        document.getElementById('inputContainer').style.display = 'none';
+        
+        // Reset Visuals
+        document.querySelectorAll('.active-path').forEach(el => el.classList.remove('active-path'));
+        document.getElementById('thermostat').className = "thermostat-container";
+        document.getElementById('tempValue').innerText = "--°";
+        document.getElementById('tempIcon').innerText = "⚪";
+        
+        state = { val: null, pc: 1, isPlaying: true, isFinished: false, waitingInput: false, timer: null };
+        
+        document.getElementById('btnAuto').innerText = "⏸️ Παύση";
+        document.getElementById('btnAuto').style.background = "var(--warning)";
+        document.getElementById('btnAuto').style.color = "black";
+        
+        runLoop();
+    }
+
+    function toggleAuto() {
+        if (state.isPlaying) { 
+            state.isPlaying = false; clearTimeout(state.timer);
+            document.getElementById('btnAuto').innerText = "▶️ Συνέχεια";
+            document.getElementById('btnAuto').style.background = "var(--primary)";
+            document.getElementById('btnAuto').style.color = "white";
+        } else {
+            state.isPlaying = true;
+            document.getElementById('btnAuto').innerText = "⏸️ Παύση";
+            document.getElementById('btnAuto').style.background = "var(--warning)";
+            document.getElementById('btnAuto').style.color = "black";
+            if (state.pc === 0) prepareExecution(); else runLoop();
+        }
+    }
+
+    function manualStep() {
+        if (state.pc === 0 || state.isFinished) {
+            document.getElementById('btnExecute').style.display='none';
+            document.getElementById('btnAuto').style.display='flex';
+            document.getElementById('consoleOutput').innerHTML = "";
+            document.getElementById('ramBody').innerHTML = "";
+            
+            document.getElementById('thermostat').className = "thermostat-container";
+            document.getElementById('tempValue').innerText = "--°";
+            document.getElementById('tempIcon').innerText = "⚪";
+            document.querySelectorAll('.active-path').forEach(el => el.classList.remove('active-path'));
+            
+            state = { val: null, pc: 1, isPlaying: false, isFinished: false, waitingInput: false, timer: null };
+            document.getElementById('btnAuto').innerText = "▶️ Συνέχεια";
+            document.getElementById('btnAuto').style.background = "var(--primary)";
+            document.getElementById('btnAuto').style.color = "white";
+            stepAlgo();
+            return;
+        }
+        
+        if (state.waitingInput) return;
+        if (state.isPlaying) toggleAuto(); 
+        stepAlgo();
+    }
+
+    function runLoop() {
+        if (!state.isPlaying || state.isFinished || state.waitingInput) return;
+        stepAlgo();
+        if(!state.isFinished && state.isPlaying && !state.waitingInput) {
+            state.timer = setTimeout(runLoop, parseInt(document.getElementById('speedSlider').value));
+        }
+    }
+
+    function highlightUI(codeLine, fcNodeId) {
+        document.querySelectorAll('.code-line').forEach(l => l.classList.remove('active'));
+        if(codeLine) {
+            let el = document.getElementById('L' + codeLine);
+            if(el) el.classList.add('active');
+        }
+
+        document.querySelectorAll('.fc-node').forEach(n => n.classList.remove('active'));
+        if(fcNodeId) {
+            let n = document.getElementById(fcNodeId);
+            if(n) n.classList.add('active');
+        }
+    }
+
+    function addPathSegment(id) {
+        let el = document.getElementById(id);
+        if(el) el.classList.add('active-path');
+    }
+
+    function printConsole(txt, color="inherit") {
+        let cText = document.getElementById('consoleOutput');
+        cText.innerHTML += `<span style="color:${color};">${txt}</span><br>`;
+        let scr = document.getElementById('screen');
+        scr.scrollTop = scr.scrollHeight;
+    }
+
+    function updateRamRow(val, c1, c2) {
+        const body = document.getElementById('ramBody');
+        body.innerHTML = `<tr><td>${val !== null ? val : '-'}</td><td>${c1}</td><td>${c2}</td></tr>`;
+    }
+
+    function submitInput() {
+        let v = document.getElementById('termInput').value;
+        if(v === '') return;
+        state.val = parseInt(v);
+        
+        document.getElementById('inputContainer').style.display = 'none';
+        document.getElementById('inputContainer').classList.remove('waiting-input');
+        document.getElementById('termInput').value = '';
+        
+        document.getElementById('tempValue').innerText = state.val + "°";
+        printConsole(`> Εισήχθη θερμοκρασία: <strong>${state.val}</strong>`, "var(--text-dark)");
+        
+        state.waitingInput = false;
+        state.pc = 3; 
+        
+        if(state.isPlaying) runLoop(); else stepAlgo();
+    }
+
+    // --- ALGORITHM STATE MACHINE ---
+    function stepAlgo() {
+        switch(state.pc) {
+            case 1: 
+                highlightUI(null, 'fc-start');
+                state.pc = 2; 
+                break;
+            case 2: 
+                highlightUI('1', 'fc-read');
+                updateRamRow("-", "-", "-");
+                printConsole("Εισάγετε θερμοκρασία:", "var(--danger)");
+                document.getElementById('inputContainer').style.display = 'flex';
+                document.getElementById('inputContainer').classList.add('waiting-input');
+                document.getElementById('termInput').focus();
+                state.waitingInput = true;
+                break;
+            case 3: 
+                highlightUI('2', 'fc-d1');
+                let c1 = (state.val < 18);
+                updateRamRow(state.val, c1 ? "Αληθής" : "Ψευδής", "-");
+                
+                if(c1) {
+                    addPathSegment('l-d1-true'); addPathSegment('a-d1-true');
+                    state.pc = 4;
+                } else {
+                    addPathSegment('l-d1-false'); addPathSegment('a-d1-false');
+                    state.pc = 5;
+                }
+                break;
+            case 4: 
+                highlightUI('3', 'fc-io1');
+                addPathSegment('l-io1-right'); addPathSegment('l-right-bus-top'); addPathSegment('l-right-bus-bottom'); 
+                addPathSegment('l-merge-horiz'); addPathSegment('l-end-down'); addPathSegment('a-end');
+                
+                document.getElementById('thermostat').className = "thermostat-container heat";
+                document.getElementById('tempIcon').innerText = "🔥";
+                playBeep(); 
+                printConsole("🔥 Εμφάνισε: Ενεργοποίηση Θέρμανσης", "var(--danger)");
+                state.pc = 9; 
+                break;
+            case 5: 
+                highlightUI('4', 'fc-d2'); 
+                let c2 = (state.val > 25);
+                updateRamRow(state.val, "Ψευδής", c2 ? "Αληθής" : "Ψευδής");
+
+                if(c2) {
+                    addPathSegment('l-d2-true'); addPathSegment('a-d2-true');
+                    state.pc = 6;
+                } else {
+                    addPathSegment('l-d2-false'); addPathSegment('a-d2-false');
+                    state.pc = 7;
+                }
+                break;
+            case 6:
+                highlightUI('5', 'fc-io2');
+                addPathSegment('l-io2-right'); addPathSegment('l-right-bus-bottom'); 
+                addPathSegment('l-merge-horiz'); addPathSegment('l-end-down'); addPathSegment('a-end');
+
+                document.getElementById('thermostat').className = "thermostat-container cool";
+                document.getElementById('tempIcon').innerText = "❄️";
+                playBeep(); 
+                printConsole("❄️ Εμφάνισε: Ενεργοποίηση Ψύξης", "var(--cool)");
+                state.pc = 9;
+                break;
+            case 7:
+                highlightUI('6', null); 
+                state.pc = 8;
+                break;
+            case 8:
+                highlightUI('7', 'fc-io3');
+                addPathSegment('l-io3-down'); addPathSegment('l-end-down'); addPathSegment('a-end');
+
+                document.getElementById('thermostat').className = "thermostat-container normal";
+                document.getElementById('tempIcon').innerText = "🌿";
+                printConsole("🌿 Εμφάνισε: Θερμοκρασία Κανονική", "var(--success)");
+                state.pc = 9;
+                break;
+            case 9:
+                highlightUI('8', null); 
+                state.pc = 10;
+                break;
+            case 10:
+                highlightUI(null, 'fc-end');
+                finishSim();
+                break;
+        }
+    }
+
+    function finishSim() {
+        state.isFinished = true; state.isPlaying = false;
+        document.getElementById('btnAuto').style.display='none';
+        document.getElementById('btnStep').style.display='none';
+        printConsole("<br><strong>✅ Ολοκληρώθηκε η εκτέλεση.</strong>", "var(--success)");
+        document.getElementById('btnExecute').style.display='flex';
+    }
+
+    function resetApp() {
+        state.isPlaying = false; clearTimeout(state.timer);
+        
+        document.getElementById('consoleOutput').innerHTML = "Περιμένοντας εκτέλεση...<br>";
+        document.getElementById('inputContainer').style.display = 'none';
+        document.getElementById('inputContainer').classList.remove('waiting-input');
+        document.getElementById('termInput').value = '';
+        document.getElementById('ramBody').innerHTML = "";
+        
+        document.getElementById('thermostat').className = "thermostat-container";
+        document.getElementById('tempValue').innerText = "--°";
+        document.getElementById('tempIcon').innerText = "⚪";
+        document.querySelectorAll('.active-path').forEach(el => el.classList.remove('active-path'));
+        
+        document.getElementById('btnExecute').style.display='flex';
+        document.getElementById('btnAuto').style.display='none';
+        document.getElementById('btnStep').style.display='none';
+        
+        state = { val: null, pc: 0, isPlaying: false, isFinished: false, waitingInput: false, timer: null };
+        highlightUI(null, null);
+    }
+
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+</script>
+
+</body>
+</html>
