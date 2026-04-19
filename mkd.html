@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Εύρεση ΜΚΔ - Εργαστήριο Αλγορίθμων</title>
+    <style>
+        :root {
+            --primary: #2563eb; --primary-hover: #1d4ed8;
+            --text-dark: #0f172a; --text-light: #64748b;
+            --bg-color: #f1f5f9; --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --success: #16a34a; --warning: #f59e0b; --danger: #ef4444;
+            --highlight: #fef08a; --code-bg: #f8fafc;
+            --screen-bg: #ffffff; --screen-text: #000000;
+        }
+
+        body.dark-mode {
+            --bg-color: #020617; --panel-bg: #1e293b;
+            --text-dark: #f8fafc; --text-light: #94a3b8;
+            --border-color: #334155; --code-bg: #0f172a;
+            --screen-bg: #e2e8f0; --screen-text: #000000;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background-color: var(--bg-color); color: var(--text-dark); 
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s;
+        }
+
+        /* --- TOOLBAR --- */
+        .toolbar { 
+            background: var(--panel-bg); border-bottom: 1px solid var(--border-color); 
+            padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 100;
+        }
+        .toolbar-title { font-weight: 800; font-size: 1.1rem; color: var(--primary); display: flex; align-items: center; gap: 8px;}
+        .controls-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;}
+
+        .tool-btn { 
+            padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);
+            background: var(--panel-bg); color: var(--text-dark); cursor: pointer; font-weight: bold;
+            display: flex; align-items: center; gap: 5px; font-size: 0.85rem; transition: 0.2s;
+        }
+        .tool-btn:hover:not(:disabled) { background: var(--border-color); }
+        .tool-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-solution { background: var(--success); color: white; border: none; }
+        .btn-execute { background: var(--warning); color: black; border: none; }
+        .btn-run { background: var(--primary); color: white; border: none; }
+        .btn-step { background: var(--primary); color: white; border: none; }
+
+        .speed-control { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; font-weight: bold; margin-right: 10px;}
+        .speed-control input { cursor: pointer; width: 60px;}
+
+        /* --- TABS --- */
+        .tabs-container { display: flex; gap: 5px; background: var(--border-color); padding: 5px 5px 0 5px; border-radius: 8px 8px 0 0; }
+        .tab-btn {
+            padding: 8px 15px; background: var(--code-bg); border: none; border-radius: 6px 6px 0 0;
+            font-weight: bold; cursor: pointer; color: var(--text-light); transition: 0.2s; font-size: 0.85rem;
+        }
+        .tab-btn:hover { color: var(--primary); }
+        .tab-btn.active { background: var(--primary); color: white; }
+
+        /* --- MAIN LAYOUT --- */
+        .main-container { display: flex; flex: 1; padding: 15px; gap: 15px; overflow: hidden; }
+        .col { 
+            background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color); 
+            display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .col-left { flex: 0 0 340px; padding: 20px; overflow-y: auto; line-height: 1.5;}
+        .theory-title { font-size: 1.05rem; font-weight: bold; margin-bottom: 12px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; }
+        .theory-text { font-size: 0.9rem; margin-bottom: 20px; text-align: justify; }
+
+        /* MID COLUMN */
+        .col-mid { flex: 1; display: flex; flex-direction: column; background: transparent; border: none; box-shadow: none; gap: 10px;} 
+        
+        .code-area { 
+            flex: 1; padding: 15px; background: var(--code-bg); border: 1px solid var(--border-color); border-radius: 0 0 12px 12px;
+            font-family: 'Consolas', monospace; font-size: 0.85rem; line-height: 1.7; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        
+        .code-line { padding: 2px 8px; border-radius: 4px; transition: 0.2s; white-space: nowrap; }
+        .code-line.active { background: var(--highlight); color: black; font-weight: bold; }
+        
+        .code-blank {
+            padding: 1px 2px; font-family: monospace; font-size: 0.85rem;
+            border: 2px dashed var(--primary); border-radius: 4px; text-align: center;
+            background: rgba(255, 255, 255, 0.9); color: #000; font-weight: bold; outline: none; width: 36px;
+        }
+        .code-blank.locked { border: 1px solid transparent; background: transparent; color: var(--primary); border-bottom: 2px solid var(--primary); border-radius: 0; text-align: center; width: 36px; padding: 0;}
+
+        /* ANIMATION AREA */
+        .anim-area {
+            flex: 0 0 180px; display: flex; flex-direction: column; background: var(--panel-bg); 
+            border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        
+        .anim-inputs { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;}
+        .anim-inputs input { width: 70px; padding: 5px; font-weight: bold; text-align: center; border: 1px solid var(--border-color); border-radius: 4px;}
+        
+        .bars-container { flex: 1; display: flex; flex-direction: column; justify-content: space-around; }
+        .bar-row { display: flex; align-items: center; gap: 10px; }
+        .bar-label { font-weight: bold; width: 20px; text-align: center; font-family: monospace;}
+        .bar-track { flex: 1; height: 25px; background: var(--code-bg); border-radius: 4px; overflow: hidden; border: 1px solid var(--border-color); position: relative;}
+        
+        .bar-fill { height: 100%; transition: width 0.3s ease-in-out, background-color 0.3s; display: flex; align-items: center; padding-left: 10px; font-weight: bold; color: white; font-family: monospace; font-size: 0.85rem; text-shadow: 1px 1px 1px rgba(0,0,0,0.5); white-space: nowrap;}
+        #bar-a { background: #3b82f6; width: 0%; }
+        #bar-b { background: #f97316; width: 0%; }
+        #bar-c { background: #eab308; width: 0%; }
+        .bar-row-c { opacity: 1; transition: 0.3s; }
+
+        /* RIGHT COLUMN */
+        .col-right { flex: 0 0 280px; display: flex; flex-direction: column; }
+        .ram-section { padding: 15px; flex: 1; border-bottom: 1px solid var(--border-color); overflow-y: auto; }
+        .ram-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: center; }
+        .ram-table th { background: var(--bg-color); padding: 8px 2px; border: 1px solid var(--border-color); position: sticky; top: 0; }
+        .ram-table td { padding: 6px 2px; border: 1px solid var(--border-color); font-family: monospace; }
+        
+        .screen-section { padding: 15px; height: 250px; display: flex; flex-direction: column; }
+        .screen-display { 
+            flex: 1; background: var(--screen-bg); color: var(--screen-text); border: 2px solid var(--border-color);
+            padding: 12px; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 0.85rem; overflow-y: auto; line-height: 1.4;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    <div class="toolbar-title">🔢 Εύρεση ΜΚΔ</div>
+    <div class="controls-group">
+        <div class="speed-control">
+            🐢 <input type="range" id="speedSlider" min="50" max="1000" value="300" dir="rtl"> 🐇
+        </div>
+        <button class="tool-btn" onclick="toggleTheme()">🌙</button>
+        <button class="tool-btn btn-solution" id="btnSolution" onclick="fillSolution()">💡 Λύση</button>
+        <button class="tool-btn btn-execute" id="btnExecute" onclick="prepareExecution(true)" disabled>🚀 Εκτέλεση</button>
+        <button class="tool-btn btn-step" id="btnStep" onclick="manualStep()" disabled>👣 Βήμα</button>
+        <button class="tool-btn btn-run" id="btnAuto" onclick="toggleAuto()" style="display:none;">▶️ Αυτόματα</button>
+        <button class="tool-btn" onclick="resetApp()">🔄 Αρχή</button>
+    </div>
+</div>
+
+<div class="main-container">
+    <div class="col col-left">
+        <div class="theory-title">Η Θεωρία</div>
+        <div class="theory-text">
+            <strong>Μέγιστος Κοινός Διαιρέτης (ΜΚΔ)</strong> δύο θετικών ακέραιων (α, β) ονομάζεται ο μεγαλύτερος ακέραιος που διαιρεί ακριβώς και τους δύο. <br><br>
+            <em>π.χ. ΜΚΔ(12, 20) = 4</em><br><br>
+            <hr style="margin: 10px 0; border: 0; border-top: 1px solid var(--border-color);">
+            <div id="theoryDynamic">
+            </div>
+        </div>
+    </div>
+
+    <div class="col col-mid">
+        <div class="tabs-container">
+            <button class="tab-btn active" id="tab1" onclick="switchTab(1)">1ος: Μείωση</button>
+            <button class="tab-btn" id="tab2" onclick="switchTab(2)">2ος: Αφαίρεση</button>
+            <button class="tab-btn" id="tab3" onclick="switchTab(3)">3ος: Ευκλείδης</button>
+        </div>
+        
+        <div class="code-area">
+            <div id="code-block-1">
+                <div class="code-line" style="color:var(--primary); font-weight:bold;">Αλγόριθμος ΜΚΔ_Μείωση</div>
+                <div class="code-line" id="1-L1">Διάβασε α, β</div>
+                <div class="code-line" id="1-L2">Αν α &lt; β τότε</div>
+                <div class="code-line" id="1-L3">&nbsp;&nbsp;γ &lt;- α</div>
+                <div class="code-line" id="1-L4">Αλλιώς</div>
+                <div class="code-line" id="1-L5">&nbsp;&nbsp;γ &lt;- β</div>
+                <div class="code-line" id="1-L6">Τέλος_αν</div>
+                <div class="code-line" id="1-L7">Όσο (α <input type="text" class="code-blank" id="b1-1" oninput="checkBlanks(1)"> γ &lt;&gt; 0) <input type="text" class="code-blank" id="b1-2" oninput="checkBlanks(1)"> (β <input type="text" class="code-blank" id="b1-3" oninput="checkBlanks(1)"> γ &lt;&gt; 0) επανάλαβε</div>
+                <div class="code-line" id="1-L8">&nbsp;&nbsp;γ &lt;- γ <input type="text" class="code-blank" id="b1-4" oninput="checkBlanks(1)"> 1</div>
+                <div class="code-line" id="1-L9">Τέλος_επανάληψης</div>
+                <div class="code-line" id="1-L10">Εμφάνισε γ</div>
+                <div class="code-line" style="color:var(--primary); font-weight:bold;">Τέλος ΜΚΔ_Μείωση</div>
+            </div>
+
+            <div id="code-block-2" style="display:none;">
+                <div class="code-line" style="color:var(--primary); font-weight:bold;">Αλγόριθμος ΜΚΔ_Αφαίρεση</div>
+                <div class="code-line" id="2-L1">Διάβασε α, β</div>
+                <div class="code-line" id="2-L2">Όσο α <input type="text" class="code-blank" id="b2-1" oninput="checkBlanks(2)"> β επανάλαβε</div>
+                <div class="code-line" id="2-L3">&nbsp;&nbsp;Αν α <input type="text" class="code-blank" id="b2-2" oninput="checkBlanks(2)"> β τότε</div>
+                <div class="code-line" id="2-L4">&nbsp;&nbsp;&nbsp;&nbsp;β &lt;- β <input type="text" class="code-blank" id="b2-3" oninput="checkBlanks(2)"> α</div>
+                <div class="code-line" id="2-L5">&nbsp;&nbsp;Αλλιώς</div>
+                <div class="code-line" id="2-L6">&nbsp;&nbsp;&nbsp;&nbsp;α &lt;- α <input type="text" class="code-blank" id="b2-4" oninput="checkBlanks(2)"> β</div>
+                <div class="code-line" id="2-L7">&nbsp;&nbsp;Τέλος_αν</div>
+                <div class="code-line" id="2-L8">Τέλος_επανάληψης</div>
+                <div class="code-line" id="2-L9">Εμφάνισε α</div>
+                <div class="code-line" style="color:var(--primary); font-weight:bold;">Τέλος ΜΚΔ_Αφαίρεση</div>
+            </div>
+
+            <div id="code-block-3" style="display:none;">
+                <div class="code-line" style="color:var(--primary); font-weight:bold;">Αλγόριθμος Ευκλείδης</div>
+                <div class="code-line" id="3-L1">Διάβασε α, β</div>
+                <div class="code-line" id="3-L2">Αν α &gt; β τότε</div>
+                <div class="code-line" id="3-L3">&nbsp;&nbsp;γ &lt;- β</div>
+                <div class="code-line" id="3-L4">Αλλιώς</div>
+                <div class="code-line" id="3-L5">&nbsp;&nbsp;γ &lt;- α</div>
+                <div class="code-line" id="3-L6">&nbsp;&nbsp;α &lt;- β</div>
+                <div class="code-line" id="3-L7">&nbsp;&nbsp;β &lt;- γ</div>
+                <div class="code-line" id="3-L8">&nbsp;&nbsp;γ &lt;- β</div>
+                <div class="code-line" id="3-L9">Τέλος_αν</div>
+                <div class="code-line" id="3-L10">Όσο γ <input type="text" class="code-blank" id="b3-1" oninput="checkBlanks(3)"> 0 επανάλαβε</div>
+                <div class="code-line" id="3-L11">&nbsp;&nbsp;γ &lt;- α <input type="text" class="code-blank" id="b3-2" oninput="checkBlanks(3)"> β</div>
+                <div class="code-line" id="3-L12">&nbsp;&nbsp;α &lt;- <input type="text" class="code-blank" id="b3-3" oninput="checkBlanks(3)"></div>
+                <div class="code-line" id="3-L13">&nbsp;&nbsp;β &lt;- <input type="text" class="code-blank" id="b3-4" oninput="checkBlanks(3)"></div>
+                <div class="code-line" id="3-L14">Τέλος_επανάληψης</div>
+                <div class="code-line" id="3-L15">Εμφάνισε α</div>
+                <div class="code-line" style="color:var(--primary); font-weight:bold;">Τέλος Ευκλείδης</div>
+            </div>
+        </div>
+
+        <div class="anim-area">
+            <div class="anim-inputs">
+                <span>Δώσε <strong>α</strong>:</span>
+                <input type="number" id="inputA" value="12" min="1" max="9999">
+                <span>Δώσε <strong>β</strong>:</span>
+                <input type="number" id="inputB" value="20" min="1" max="9999">
+            </div>
+            <div class="bars-container">
+                <div class="bar-row"><div class="bar-label">α</div><div class="bar-track"><div class="bar-fill" id="bar-a"></div></div></div>
+                <div class="bar-row"><div class="bar-label">β</div><div class="bar-track"><div class="bar-fill" id="bar-b"></div></div></div>
+                <div class="bar-row bar-row-c" id="row-c"><div class="bar-label">γ</div><div class="bar-track"><div class="bar-fill" id="bar-c"></div></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col col-right">
+        <div class="ram-section">
+            <div class="theory-title" style="border:none;">🧠 Μνήμη (RAM)</div>
+            <table class="ram-table">
+                <thead id="ramHead"><tr><th>α</th><th>β</th><th>γ</th></tr></thead>
+                <tbody id="ramBody"></tbody>
+            </table>
+        </div>
+        <div class="screen-section">
+            <div class="theory-title" style="border:none;">🖥️ Οθόνη Κονσόλας</div>
+            <div class="screen-display" id="screen"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentTab = 1;
+    let state = { a: 0, b: 0, c: 0, pc: 0, isPlaying: false, isFinished: false, timer: null, iters: 0 };
+    let maxBarVal = 100;
+
+    const theoryData = {
+        1: "<strong>Λογική Μείωσης:</strong><br>Παίρνουμε τον μικρότερο αριθμό και εξετάζουμε αν διαιρεί (με υπόλοιπο 0) και τους δύο. Αν όχι, τον <strong>μειώνουμε κατά 1</strong>. <br><br><span style='color:var(--danger);'>⚠️ Η χειρότερη περίπτωση! Μπορεί να χρειαστεί χιλιάδες αφαιρέσεις μέχρι να φτάσει στο 1.</span>",
+        2: "<strong>Λογική Αφαίρεσης:</strong><br>Ξεκινάμε με το ζευγάρι. Όσο δεν είναι ίσοι, αφαιρούμε τον μικρότερο από τον μεγαλύτερο. Συνεχίζουμε μέχρι οι δύο αριθμοί να <strong>εξισωθούν</strong>. Ο αριθμός που μένει είναι ο ΜΚΔ.<br><br>Είναι γρηγορότερος από τη μείωση κατά 1, αλλά κολλάει αν ο ένας αριθμός είναι τεράστιος (π.χ. 1000) και ο άλλος μικρός (π.χ. 3).",
+        3: "<strong>Ο Αλγόριθμος του Ευκλείδη:</strong><br>Ξεκινάμε με το ζευγάρι θετικών ακέραιων α, β. Αν ένας από τους δύο είναι μηδέν, ο άλλος είναι ο ΜΚΔ. Αν δεν είναι ίσοι σχηματίζουμε ένα νέο ζευγάρι αριθμών που αποτελείται από τον μικρότερο και το υπόλοιπο της διαίρεσης του μεγαλύτερου με τον μικρότερο. Επαναλαμβάνουμε την ανωτέρω διαδικασία μέχρι ο ένας από τους δύο αριθμούς γίνει μηδέν. Ο άλλος αριθμός είναι ο ΜΚΔ. <br><br><span style='color:var(--success);'>🚀 Είναι ο πιο γρήγορος τρόπος. 'Καταβροχθίζει' τα νούμερα με τεράστια άλματα!</span>"
+    };
+
+    const correctAnswers = {
+        1: ["mod", "ή", "mod", "-"],
+        2: ["<>", "<", "-", "-"],
+        3: ["<>", "mod", "β", "γ"]
+    };
+
+    switchTab(1);
+
+    function normalize(s) { 
+        return s.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); 
+    }
+
+    function switchTab(tabNum) {
+        if(state.isPlaying) return; 
+        currentTab = tabNum;
+        
+        for(let i=1; i<=3; i++) {
+            document.getElementById('tab'+i).classList.remove('active');
+            document.getElementById('code-block-'+i).style.display = 'none';
+        }
+        document.getElementById('tab'+tabNum).classList.add('active');
+        document.getElementById('code-block-'+tabNum).style.display = 'block';
+        document.getElementById('theoryDynamic').innerHTML = theoryData[tabNum];
+        
+        document.getElementById('ramHead').innerHTML = tabNum === 2 ? "<tr><th>α</th><th>β</th></tr>" : "<tr><th>α</th><th>β</th><th>γ</th></tr>";
+        document.getElementById('row-c').style.opacity = tabNum === 2 ? "0" : "1";
+        resetApp();
+    }
+
+    function checkBlanks(tab) {
+        let all = true;
+        for(let i=1; i<=4; i++) {
+            let el = document.getElementById('b'+tab+'-'+i);
+            if(el && el.value.trim() === '') all=false;
+        }
+        // Ενεργοποιούνται και τα δύο κουμπιά μόλις γεμίσουν τα κενά
+        document.getElementById('btnExecute').disabled = !all;
+        document.getElementById('btnStep').disabled = !all;
+    }
+
+    function fillSolution() {
+        let sol = correctAnswers[currentTab];
+        for(let i=1; i<=4; i++) {
+            let el = document.getElementById('b'+currentTab+'-'+i);
+            if(el) el.value = sol[i-1];
+        }
+        checkBlanks(currentTab);
+    }
+
+    // ΒΟΗΘΗΤΙΚΕΣ ΣΥΝΑΡΤΗΣΕΙΣ ΔΥΝΑΜΙΚΗΣ ΑΞΙΟΛΟΓΗΣΗΣ
+    function safeEvalMath(left, op, right) {
+        let nOp = normalize(op);
+        if (nOp === 'mod') nOp = '%';
+        if (nOp === 'div') { left = `Math.floor(${left}`; right = `${right})`; }
+        if (nOp === '=') nOp = '==='; 
+        try {
+            let res = eval(`${left} ${nOp} ${right}`);
+            return isNaN(res) ? 0 : res;
+        } catch(e) { return 0; }
+    }
+
+    function safeEvalCond(left, op, right) {
+        let nOp = normalize(op);
+        if (nOp === '=') nOp = '===';
+        else if (nOp === '<>') nOp = '!==';
+        else if (nOp === 'mod') nOp = '%';
+        try {
+            return eval(`${left} ${nOp} ${right}`);
+        } catch(e) { return false; }
+    }
+
+    function safeEvalVar(input) {
+        let n = normalize(input);
+        if (n === 'α' || n === 'a') return state.a;
+        if (n === 'β' || n === 'b') return state.b;
+        if (n === 'γ' || n === 'g' || n === 'c') return state.c;
+        try {
+            let res = parseInt(n);
+            return isNaN(res) ? 0 : res;
+        } catch(e) { return 0; }
+    }
+
+    function getRealMKD(a, b) {
+        while (b !== 0) { let temp = b; b = a % b; a = temp; }
+        return a;
+    }
+
+    // --- EXECUTION ENGINE ---
+    function prepareExecution(autoStart = true) {
+        let hasEmpty = false;
+        for(let i=1; i<=4; i++) {
+            let el = document.getElementById('b'+currentTab+'-'+i);
+            if(el && el.value.trim() === '') hasEmpty = true;
+        }
+
+        if(hasEmpty) {
+            document.getElementById('screen').innerHTML = "<span style='color:var(--danger);'>🚨 Λάθος: Πρέπει να συμπληρώσεις όλα τα κενά πρώτα!</span>";
+            return false;
+        }
+
+        for(let i=1; i<=4; i++) {
+            let el = document.getElementById('b'+currentTab+'-'+i);
+            el.classList.add('locked'); el.disabled = true;
+        }
+
+        document.getElementById('btnSolution').style.display='none';
+        document.getElementById('btnExecute').style.display='none';
+        
+        // Το κουμπί βήμα παραμένει ορατό
+        document.getElementById('btnAuto').style.display='flex';
+        document.getElementById('screen').innerHTML = "Εκτέλεση σε εξέλιξη...<br>";
+        document.getElementById('ramBody').innerHTML = "";
+        
+        let inA = parseInt(document.getElementById('inputA').value) || 12;
+        let inB = parseInt(document.getElementById('inputB').value) || 20;
+        
+        state = { a: inA, b: inB, c: 0, pc: 1, isPlaying: autoStart, isFinished: false, iters: 0, timer: null };
+        maxBarVal = Math.max(inA, inB);
+        
+        updateBars();
+        
+        if (autoStart) {
+            document.getElementById('btnAuto').innerText = "⏸️ Παύση";
+            document.getElementById('btnAuto').style.background = "var(--warning)";
+            document.getElementById('btnAuto').style.color = "black";
+            runLoop();
+        } else {
+            document.getElementById('btnAuto').innerText = "▶️ Συνέχεια";
+            document.getElementById('btnAuto').style.background = "var(--primary)";
+            document.getElementById('btnAuto').style.color = "white";
+        }
+        
+        return true;
+    }
+
+    function executeCurrentAlgoStep() {
+        if(currentTab === 1) stepAlgo1();
+        else if(currentTab === 2) stepAlgo2();
+        else stepAlgo3();
+    }
+
+    function toggleAuto() {
+        if (state.isPlaying) { 
+            state.isPlaying = false; clearTimeout(state.timer);
+            document.getElementById('btnAuto').innerText = "▶️ Συνέχεια";
+            document.getElementById('btnAuto').style.background = "var(--primary)";
+            document.getElementById('btnAuto').style.color = "white";
+        } else {
+            state.isPlaying = true;
+            document.getElementById('btnAuto').innerText = "⏸️ Παύση";
+            document.getElementById('btnAuto').style.background = "var(--warning)";
+            document.getElementById('btnAuto').style.color = "black";
+            
+            // Αν το πρόγραμμα είχε ξεκινήσει αλλά ήταν σε παύση, συνεχίζει.
+            // Αν δεν είχε ξεκινήσει ποτέ, τότε το ετοιμάζει.
+            if (state.pc === 0) prepareExecution(true);
+            else runLoop();
+        }
+    }
+
+    function manualStep() {
+        // Αν πατήθηκε το βήμα ΠΡΙΝ την εκτέλεση
+        if (state.pc === 0) {
+            let ready = prepareExecution(false); // Ξεκινάει αλλά μένει paused
+            if (ready) executeCurrentAlgoStep(); // Κάνει το 1ο βήμα αμέσως
+            return;
+        }
+        
+        if (state.isFinished) return;
+        
+        if (state.isPlaying) toggleAuto(); // Παύση αν έτρεχε αυτόματα
+        executeCurrentAlgoStep();
+    }
+
+    function runLoop() {
+        if (!state.isPlaying || state.isFinished) return;
+        
+        executeCurrentAlgoStep();
+
+        if(!state.isFinished && state.isPlaying) {
+            state.timer = setTimeout(runLoop, parseInt(document.getElementById('speedSlider').value));
+        }
+    }
+
+    function highlightLine(id) {
+        document.querySelectorAll('.code-line').forEach(l => l.classList.remove('active'));
+        if(id > 0) {
+            let el = document.getElementById(currentTab + '-L' + id);
+            if(el) el.classList.add('active');
+        }
+    }
+
+    function printScreen(txt, color="inherit") {
+        let scrDiv = document.getElementById('screen');
+        scrDiv.innerHTML += `<span style="color:${color};">${txt}</span><br>`;
+        scrDiv.scrollTop = scrDiv.scrollHeight;
+    }
+
+    function addRamRow() {
+        const body = document.getElementById('ramBody');
+        const row = document.createElement('tr');
+        if(currentTab === 2) row.innerHTML = `<td>${state.a}</td><td>${state.b}</td>`;
+        else row.innerHTML = `<td>${state.a}</td><td>${state.b}</td><td>${state.c}</td>`;
+        body.appendChild(row);
+        body.parentElement.scrollTop = body.parentElement.scrollHeight;
+    }
+
+    function updateBars() {
+        let wA = (state.a / maxBarVal) * 100;
+        let wB = (state.b / maxBarVal) * 100;
+        let wC = (state.c / maxBarVal) * 100;
+        
+        document.getElementById('bar-a').style.width = Math.min(wA, 100) + "%";
+        document.getElementById('bar-a').innerText = state.a;
+        
+        document.getElementById('bar-b').style.width = Math.min(wB, 100) + "%";
+        document.getElementById('bar-b').innerText = state.b;
+        
+        if(currentTab !== 2) {
+            document.getElementById('bar-c').style.width = Math.min(wC, 100) + "%";
+            document.getElementById('bar-c').innerText = state.c > 0 ? state.c : "";
+        }
+    }
+
+    // --- ALGO 1: ΜΕΙΩΣΗ ---
+    function stepAlgo1() {
+        highlightLine(state.pc);
+        switch(state.pc) {
+            case 1: addRamRow(); state.pc = 2; break;
+            case 2: if(state.a < state.b) state.pc = 3; else state.pc = 5; break;
+            case 3: state.c = state.a; state.pc = 6; updateBars(); addRamRow(); break;
+            case 5: state.c = state.b; state.pc = 6; updateBars(); addRamRow(); break;
+            case 6: state.pc = 7; break;
+            case 7: 
+                state.iters++;
+                if (state.iters > 2000) { finishEmergency(); return; } 
+                
+                let op1 = document.getElementById('b1-1').value;
+                let logOp = normalize(document.getElementById('b1-2').value);
+                let op2 = document.getElementById('b1-3').value;
+
+                let p1 = safeEvalMath(state.a, op1, state.c);
+                let p2 = safeEvalMath(state.b, op2, state.c);
+
+                let condition = false;
+                if(logOp === 'η' || logOp === 'ή' || logOp === 'or') {
+                    condition = (p1 !== 0) || (p2 !== 0);
+                } else if(logOp === 'και' || logOp === 'and') {
+                    condition = (p1 !== 0) && (p2 !== 0);
+                } else {
+                    condition = (p1 !== 0) || (p2 !== 0); // fallback
+                }
+
+                if (condition) state.pc = 8; 
+                else state.pc = 10;
+                break;
+            case 8: 
+                let op3 = document.getElementById('b1-4').value;
+                state.c = safeEvalMath(state.c, op3, 1);
+                updateBars(); addRamRow();
+                state.pc = 9; break;
+            case 9: state.pc = 7; break;
+            case 10: finishSim(state.c); break;
+        }
+    }
+
+    // --- ALGO 2: ΑΦΑΙΡΕΣΗ ---
+    function stepAlgo2() {
+        highlightLine(state.pc);
+        switch(state.pc) {
+            case 1: addRamRow(); state.pc = 2; break;
+            case 2: 
+                state.iters++;
+                if (state.iters > 2000) { finishEmergency(); return; }
+                let cond21 = safeEvalCond(state.a, document.getElementById('b2-1').value, state.b);
+                if (cond21) state.pc = 3; else state.pc = 9; 
+                break;
+            case 3: 
+                let cond22 = safeEvalCond(state.a, document.getElementById('b2-2').value, state.b);
+                if(cond22) state.pc = 4; else state.pc = 6; 
+                break;
+            case 4: 
+                state.b = safeEvalMath(state.b, document.getElementById('b2-3').value, state.a); 
+                updateBars(); addRamRow(); state.pc = 7; break;
+            case 6: 
+                state.a = safeEvalMath(state.a, document.getElementById('b2-4').value, state.b); 
+                updateBars(); addRamRow(); state.pc = 7; break;
+            case 7: state.pc = 8; break;
+            case 8: state.pc = 2; break;
+            case 9: finishSim(state.a); break;
+        }
+    }
+
+    // --- ALGO 3: ΕΥΚΛΕΙΔΗΣ ---
+    function stepAlgo3() {
+        highlightLine(state.pc);
+        switch(state.pc) {
+            case 1: addRamRow(); state.pc = 2; break;
+            case 2: if(state.a > state.b) state.pc = 3; else state.pc = 5; break;
+            case 3: state.c = state.b; updateBars(); addRamRow(); state.pc = 9; break;
+            case 5: state.c = state.a; updateBars(); addRamRow(); state.pc = 6; break;
+            case 6: state.a = state.b; updateBars(); addRamRow(); state.pc = 7; break;
+            case 7: state.b = state.c; updateBars(); addRamRow(); state.pc = 8; break;
+            case 8: state.c = state.b; updateBars(); addRamRow(); state.pc = 9; break;
+            case 9: state.pc = 10; break;
+            case 10: 
+                state.iters++;
+                if (state.iters > 2000) { finishEmergency(); return; }
+                let cond31 = safeEvalCond(state.c, document.getElementById('b3-1').value, 0);
+                if (cond31) state.pc = 11; else state.pc = 15; 
+                break;
+            case 11: 
+                state.c = safeEvalMath(state.a, document.getElementById('b3-2').value, state.b); 
+                updateBars(); addRamRow(); state.pc = 12; break;
+            case 12: 
+                state.a = safeEvalVar(document.getElementById('b3-3').value); 
+                updateBars(); addRamRow(); state.pc = 13; break;
+            case 13: 
+                state.b = safeEvalVar(document.getElementById('b3-4').value); 
+                updateBars(); addRamRow(); state.pc = 14; break;
+            case 14: state.pc = 10; break;
+            case 15: finishSim(state.a); break;
+        }
+    }
+
+    function finishEmergency() {
+        state.isFinished = true; state.isPlaying = false; highlightLine(0);
+        document.getElementById('btnAuto').style.display='none';
+        printScreen("<br><strong>🚨 ΔΙΑΚΟΠΗ ΛΟΓΩ ΛΑΘΟΥΣ:</strong> Ο αλγόριθμος μπήκε σε ατέρμονα βρόχο ή καθυστερεί υπερβολικά (>2000 επαναλήψεις). Έλεγξε τη λογική και τους τελεστές σου!", "var(--danger)");
+        unlockInputs();
+    }
+
+    function finishSim(result) {
+        state.isFinished = true; state.isPlaying = false; highlightLine(0);
+        document.getElementById('btnAuto').style.display='none';
+        
+        let inA = parseInt(document.getElementById('inputA').value) || 12;
+        let inB = parseInt(document.getElementById('inputB').value) || 20;
+        let expectedMKD = getRealMKD(inA, inB);
+
+        if (result !== expectedMKD) {
+            printScreen(`<br><strong style="color:var(--danger);">ΛΟΓΙΚΟ ΛΑΘΟΣ:</strong> Το αποτέλεσμα που βρήκες (${result}) δεν είναι ο σωστός ΜΚΔ (${expectedMKD}). Έλεγξε ξανά τους τελεστές και τη λογική σου!`);
+            document.getElementById('bar-a').style.backgroundColor = "var(--danger)";
+            document.getElementById('bar-b').style.backgroundColor = "var(--danger)";
+            if(currentTab !== 2) document.getElementById('bar-c').style.backgroundColor = "var(--danger)";
+        } else {
+            document.getElementById('bar-a').style.backgroundColor = "var(--success)";
+            document.getElementById('bar-b').style.backgroundColor = "var(--success)";
+            if(currentTab !== 2) document.getElementById('bar-c').style.backgroundColor = "var(--success)";
+            
+            printScreen(`> <strong>Τέλος! Ο ΜΚΔ είναι το ${result}.</strong>`, "var(--primary)");
+            let speedColor = state.iters > 50 ? "var(--danger)" : "var(--success)";
+            printScreen(`> Ολοκληρώθηκε σε <strong style="color:${speedColor};">${state.iters} επαναλήψεις (loops)</strong>.`);
+        }
+        
+        unlockInputs();
+    }
+
+    function unlockInputs() {
+        for(let i=1; i<=4; i++) { 
+            let el = document.getElementById('b'+currentTab+'-'+i);
+            if(el) { el.classList.remove('locked'); el.disabled=false; }
+        }
+        document.getElementById('btnSolution').style.display='flex';
+        document.getElementById('btnExecute').style.display='flex';
+    }
+
+    function resetApp() {
+        state.isPlaying = false; clearTimeout(state.timer);
+        
+        for(let i=1; i<=4; i++) {
+            let el = document.getElementById('b'+currentTab+'-'+i);
+            if(el) { el.value = ''; el.classList.remove('locked'); el.disabled=false; }
+        }
+        
+        document.getElementById('screen').innerHTML = "";
+        document.getElementById('ramBody').innerHTML = "";
+        
+        document.getElementById('bar-a').style.width = "0%"; document.getElementById('bar-a').innerText = ""; document.getElementById('bar-a').style.backgroundColor = "#3b82f6";
+        document.getElementById('bar-b').style.width = "0%"; document.getElementById('bar-b').innerText = ""; document.getElementById('bar-b').style.backgroundColor = "#f97316";
+        document.getElementById('bar-c').style.width = "0%"; document.getElementById('bar-c').innerText = ""; document.getElementById('bar-c').style.backgroundColor = "#eab308";
+        
+        document.getElementById('btnSolution').style.display='flex';
+        document.getElementById('btnExecute').style.display='flex';
+        document.getElementById('btnExecute').disabled=true;
+        document.getElementById('btnStep').disabled=true;
+        document.getElementById('btnAuto').style.display='none';
+        
+        highlightLine(0); checkBlanks(currentTab);
+    }
+
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+</script>
+
+</body>
+</html>
