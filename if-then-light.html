@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Σύνθετη Επιλογή - Έξυπνο Φως</title>
+    <style>
+        :root {
+            --primary: #2563eb; --primary-hover: #1d4ed8;
+            --text-dark: #0f172a; --text-light: #64748b;
+            --bg-color: #f1f5f9; --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --success: #16a34a; --warning: #f59e0b; --danger: #ef4444;
+            --highlight: #fef08a; --fc-active: #fde047; --code-bg: #f8fafc;
+            --screen-bg: #ffffff; --screen-text: #000000;
+        }
+
+        body.dark-mode {
+            --bg-color: #020617; --panel-bg: #1e293b;
+            --text-dark: #f8fafc; --text-light: #94a3b8;
+            --border-color: #334155; --code-bg: #0f172a;
+            --screen-bg: #e2e8f0; --screen-text: #000000;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background-color: var(--bg-color); color: var(--text-dark); 
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s;
+        }
+
+        /* --- TOOLBAR --- */
+        .toolbar { 
+            background: var(--panel-bg); border-bottom: 1px solid var(--border-color); 
+            padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 100;
+        }
+        .toolbar-title { font-weight: 800; font-size: 1.1rem; color: var(--primary); display: flex; align-items: center; gap: 8px;}
+        .controls-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;}
+
+        .tool-btn { 
+            padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);
+            background: var(--panel-bg); color: var(--text-dark); cursor: pointer; font-weight: bold;
+            display: flex; align-items: center; gap: 5px; font-size: 0.85rem; transition: 0.2s;
+        }
+        .tool-btn:hover:not(:disabled) { background: var(--border-color); }
+        .tool-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-execute { background: var(--warning); color: black; border: none; }
+        .btn-step { background: var(--primary); color: white; border: none; }
+        .btn-auto { background: var(--primary); color: white; border: none; }
+
+        .speed-control { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; font-weight: bold; margin-right: 10px;}
+        .speed-control input { cursor: pointer; width: 60px;}
+
+        /* --- MAIN LAYOUT --- */
+        .main-container { display: flex; flex: 1; padding: 15px; gap: 15px; overflow: hidden; }
+        .col { 
+            background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color); 
+            display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        /* LEFT COLUMN */
+        .col-left { flex: 0 0 380px; padding: 20px; overflow-y: auto; line-height: 1.5;}
+        .theory-title { font-size: 1.05rem; font-weight: bold; margin-bottom: 12px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; }
+        .theory-text { font-size: 0.9rem; margin-bottom: 20px; text-align: justify; }
+
+        /* MIDDLE COLUMN (Code + Flowchart) */
+        .col-mid { flex: 1; display: flex; flex-direction: row; gap: 15px; background: transparent; border: none; box-shadow: none; } 
+        
+        .code-area { 
+            flex: 1; padding: 15px; background: var(--code-bg); border: 1px solid var(--border-color); border-radius: 12px;
+            font-family: 'Consolas', monospace; font-size: 0.95rem; line-height: 2.2; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .code-line { padding: 4px 8px; border-radius: 4px; transition: 0.2s; white-space: nowrap; }
+        .code-line.active { background: var(--highlight); color: black; font-weight: bold; box-shadow: inset 4px 0 0 var(--warning); }
+
+        .keyword { color: var(--primary); font-weight: bold; }
+        .string { color: #16a34a; }
+        .number { color: #ea580c; }
+
+        /* FLOWCHART AREA (Absolute Positioning for Pixel Perfection) */
+        .fc-area { 
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; 
+            padding: 20px 10px; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: relative;
+        }
+
+        .fc-container {
+            position: relative; width: 320px; height: 420px; margin: 0 auto; margin-top: 10px;
+        }
+
+        /* Σχήματα Διαγράμματος */
+        .fc-node { 
+            position: absolute; display: flex; justify-content: center; align-items: center; text-align: center;
+            border: 2px solid var(--primary); background: var(--panel-bg); color: var(--text-dark);
+            font-weight: bold; font-size: 0.8rem; z-index: 2; transition: 0.3s ease;
+        }
+        .fc-node.active { background: var(--fc-active); color: black; border-color: #ca8a04; box-shadow: 0 0 12px rgba(250, 204, 21, 0.6); transform: scale(1.05); }
+
+        .fc-oval { border-radius: 20px; }
+        .fc-io { transform: skew(-15deg); }
+        .fc-io > span { transform: skew(15deg); display: block; }
+        
+        .fc-diamond { transform: rotate(45deg); }
+        .fc-diamond.active { transform: rotate(45deg) scale(1.05); }
+        .fc-diamond-text { transform: rotate(-45deg); font-size: 0.75rem; color: inherit; width: 90px;}
+
+        /* Γραμμές και Βελάκια */
+        .fc-line { position: absolute; background: var(--primary); z-index: 1; transition: 0.3s; }
+        .fc-arrow { position: absolute; border-width: 6px 5px 0; border-style: solid; border-color: var(--primary) transparent transparent transparent; z-index: 1; transition: 0.3s; }
+        
+        .fc-label { position: absolute; font-size: 0.8rem; font-weight: bold; }
+        .fc-label.no { color: var(--danger); }
+        .fc-label.yes { color: var(--success); }
+
+        /* Φωτισμός Διαδρομής (Όταν επιλέγεται) */
+        .fc-line.active-path { background: #ca8a04; box-shadow: 0 0 8px #fde047; }
+        .fc-arrow.active-path { border-top-color: #ca8a04; filter: drop-shadow(0 0 4px #fde047); }
+
+        /* Λάμπα Οπτικοποίησης */
+        .bulb { position: absolute; top: 350px; left: 135px; font-size: 3.5rem; filter: grayscale(100%) opacity(0.2); transition: all 0.4s ease; user-select: none; z-index: 0;}
+        .bulb.on { filter: grayscale(0%) opacity(1); text-shadow: 0 0 30px #fde047, 0 0 60px #fef08a; transform: scale(1.1); }
+
+        /* RIGHT COLUMN */
+        .col-right { flex: 0 0 280px; display: flex; flex-direction: column; }
+        .ram-section { padding: 15px; flex: 1; border-bottom: 1px solid var(--border-color); overflow-y: auto; }
+        .ram-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: center; }
+        .ram-table th { background: var(--bg-color); padding: 8px 2px; border: 1px solid var(--border-color); position: sticky; top: 0; }
+        .ram-table td { padding: 6px 2px; border: 1px solid var(--border-color); font-family: monospace; font-weight: bold;}
+        
+        .screen-section { padding: 15px; height: 260px; display: flex; flex-direction: column; }
+        .screen-display { 
+            flex: 1; background: var(--screen-bg); color: var(--screen-text); border: 2px solid var(--border-color);
+            padding: 12px; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 0.9rem; overflow-y: auto; line-height: 1.5;
+        }
+        
+        .console-input-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+        .console-input-row input { 
+            background: var(--code-bg); border: 1px solid var(--border-color); color: var(--text-dark); 
+            padding: 5px 8px; border-radius: 4px; outline: none; width: 70px; font-family: inherit; font-weight: bold;
+        }
+        
+        @keyframes pulseInput {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); border-color: var(--border-color); }
+            50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); border-color: #ef4444; }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); border-color: var(--border-color); }
+        }
+        .waiting-input input { animation: pulseInput 1.5s infinite; border-color: #ef4444 !important; }
+
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    <div class="toolbar-title">💡 Σύνθετη Επιλογή</div>
+    <div class="controls-group">
+        <div class="speed-control">
+            🐢 <input type="range" id="speedSlider" min="200" max="1500" value="700" dir="rtl"> 🐇
+        </div>
+        <button class="tool-btn" onclick="toggleTheme()">🌙</button>
+        <button class="tool-btn btn-execute" id="btnExecute" onclick="prepareExecution()">🚀 Εκτέλεση</button>
+        <button class="tool-btn btn-step" id="btnStep" onclick="manualStep()">👣 Βήμα</button>
+        <button class="tool-btn btn-auto" id="btnAuto" onclick="toggleAuto()" style="display:none;">▶️ Αυτόματα</button>
+        <button class="tool-btn" onclick="resetApp()">🔄 Αρχή</button>
+    </div>
+</div>
+
+<div class="main-container">
+    
+    <div class="col col-left">
+        <div class="theory-title">Παράδειγμα Σύνθετης Επιλογής</div>
+        <div class="theory-text">
+            Στο σπίτι μας έχουμε τοποθετήσει ένα φως στην είσοδο, το οποίο ανάβει αυτόματα όταν σκοτεινιάσει και σβήνει την ημέρα.
+            <br><br>
+            Να δημιουργηθεί αλγόριθμος ο οποίος θα ζητάει από τον χρήστη να πληκτρολογήσει μια <strong>τιμή για τη φωτεινότητα</strong> του χώρου και θα μας ενημερώνει εάν το φως της εισόδου είναι αναμμένο ή σβηστό.
+            <br><br>
+            <em style="color:var(--text-light); font-size: 0.8rem;">Σημείωση: Σε πραγματικές συνθήκες ο έλεγχος αυτός γίνεται συνεχώς. Στον αλγόριθμο δεν συμβαίνει αυτό και η τιμή δίνεται από τον χρήστη.</em>
+            <br><br>
+            <hr style="border:0; border-top: 1px solid var(--border-color); margin: 10px 0;">
+            <strong style="color:var(--primary)">Οδηγίες:</strong> Πάτα <strong>"Εκτέλεση"</strong>. Όταν ο κώδικας φτάσει στη `Διάβασε`, πληκτρολόγησε μια τιμή κάτω δεξιά. Παρατήρησε στο διάγραμμα ροής πώς το πρόγραμμα ακολουθεί τον κλάδο ΝΑΙ (Αληθής) ή ΟΧΙ (Ψευδής) ανάλογα με την τιμή σου!
+        </div>
+    </div>
+
+    <div class="col col-mid">
+        <div class="code-area">
+            <div class="code-line"><span class="keyword">Αλγόριθμος</span> Έλεγχος_Φωτός2</div>
+            <div class="code-line" id="L1"><span class="keyword">Διάβασε</span> τιμή</div>
+            <div class="code-line" id="L2"><span class="keyword">Αν</span> τιμή &lt;= <span class="number">650</span> <span class="keyword">τότε</span></div>
+            <div class="code-line" id="L3">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Εμφάνισε</span> <span class="string">"Φως αναμμένο"</span></div>
+            <div class="code-line" id="L4"><span class="keyword">Αλλιώς</span></div>
+            <div class="code-line" id="L5">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Εμφάνισε</span> <span class="string">"Φως σβηστό"</span></div>
+            <div class="code-line" id="L6"><span class="keyword">Τέλος_αν</span></div>
+            <div class="code-line"><span class="keyword">Τέλος</span> Έλεγχος_Φωτός2</div>
+        </div>
+
+        <div class="fc-area">
+            <div class="fc-container">
+                <div class="fc-line" style="top: 40px; left: 159px; width: 2px; height: 20px;"></div>
+                <div class="fc-arrow" style="top: 60px; left: 155px;"></div>
+                
+                <div class="fc-line" style="top: 95px; left: 159px; width: 2px; height: 25px;"></div>
+                <div class="fc-arrow" style="top: 120px; left: 155px;"></div>
+
+                <div class="fc-label no" style="top: 135px; left: 85px;">ΟΧΙ</div>
+                <div class="fc-line" id="path-f1" style="top: 154px; left: 70px; width: 55px; height: 2px;"></div>
+                <div class="fc-line" id="path-f2" style="top: 154px; left: 69px; width: 2px; height: 42px;"></div>
+                <div class="fc-arrow" id="arr-f1" style="top: 196px; left: 65px;"></div>
+
+                <div class="fc-label yes" style="top: 135px; left: 210px;">ΝΑΙ</div>
+                <div class="fc-line" id="path-t1" style="top: 154px; left: 195px; width: 55px; height: 2px;"></div>
+                <div class="fc-line" id="path-t2" style="top: 154px; left: 249px; width: 2px; height: 42px;"></div>
+                <div class="fc-arrow" id="arr-t1" style="top: 196px; left: 245px;"></div>
+
+                <div class="fc-line" id="path-f3" style="top: 245px; left: 69px; width: 2px; height: 35px;"></div>
+                <div class="fc-line" id="path-t3" style="top: 245px; left: 249px; width: 2px; height: 35px;"></div>
+                
+                <div class="fc-line" id="path-rejoin-left" style="top: 278px; left: 70px; width: 90px; height: 2px;"></div>
+                <div class="fc-line" id="path-rejoin-right" style="top: 278px; left: 160px; width: 90px; height: 2px;"></div>
+                
+                <div class="fc-line" id="path-end" style="top: 278px; left: 159px; width: 2px; height: 28px;"></div>
+                <div class="fc-arrow" id="arr-end" style="top: 306px; left: 155px;"></div>
+
+
+                <div class="fc-node fc-oval" id="fc-start" style="top: 10px; left: 120px; width: 80px; height: 30px;">Αρχή</div>
+                <div class="fc-node fc-io" id="fc-read" style="top: 60px; left: 100px; width: 120px; height: 35px;"><span>Διάβασε τιμή</span></div>
+                
+                <div class="fc-node fc-diamond" id="fc-cond" style="top: 120px; left: 125px; width: 70px; height: 70px;">
+                    <span class="fc-diamond-text">τιμή &lt;= 650</span>
+                </div>
+                
+                <div class="fc-node fc-io" id="fc-false" style="top: 200px; left: 15px; width: 110px; height: 45px;"><span>Εμφάνισε<br>"Φως σβηστό"</span></div>
+                <div class="fc-node fc-io" id="fc-true" style="top: 200px; left: 195px; width: 110px; height: 45px;"><span>Εμφάνισε<br>"Φως αναμμένο"</span></div>
+                
+                <div class="fc-node fc-oval" id="fc-end" style="top: 310px; left: 120px; width: 80px; height: 30px;">Τέλος</div>
+
+                <div class="bulb" id="bulb">💡</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col col-right">
+        <div class="ram-section">
+            <div class="theory-title" style="border:none;">🧠 Μνήμη (RAM)</div>
+            <table class="ram-table">
+                <thead><tr><th>τιμή</th><th>τιμή &lt;= 650</th></tr></thead>
+                <tbody id="ramBody"></tbody>
+            </table>
+        </div>
+        <div class="screen-section">
+            <div class="theory-title" style="border:none;">🖥️ Οθόνη Κονσόλας</div>
+            <div class="screen-display" id="screen">
+                <div id="consoleOutput">Περιμένοντας εκτέλεση...<br></div>
+                <div class="console-input-row" id="inputContainer" style="display:none;">
+                    <span style="color:var(--danger); font-weight:bold;">></span>
+                    <input type="number" id="termInput" onkeydown="if(event.key==='Enter') submitInput()">
+                    <button class="tool-btn" style="background:var(--primary); color:white; padding: 4px 8px;" onclick="submitInput()">Enter</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let state = { val: null, pc: 0, isPlaying: false, isFinished: false, waitingInput: false, timer: null };
+
+    // --- EXECUTION ENGINE ---
+    function prepareExecution() {
+        if(state.pc > 0 && !state.isFinished) return; 
+        
+        document.getElementById('btnExecute').style.display='none';
+        document.getElementById('btnAuto').style.display='flex';
+        
+        document.getElementById('consoleOutput').innerHTML = "";
+        document.getElementById('ramBody').innerHTML = "";
+        document.getElementById('bulb').classList.remove('on');
+        document.getElementById('inputContainer').style.display = 'none';
+        
+        // Καθαρισμός των highlight γραμμών
+        document.querySelectorAll('.active-path').forEach(el => el.classList.remove('active-path'));
+        
+        state = { val: null, pc: 1, isPlaying: true, isFinished: false, waitingInput: false, timer: null };
+        
+        document.getElementById('btnAuto').innerText = "⏸️ Παύση";
+        document.getElementById('btnAuto').style.background = "var(--warning)";
+        document.getElementById('btnAuto').style.color = "black";
+        
+        runLoop();
+    }
+
+    function toggleAuto() {
+        if (state.isPlaying) { 
+            state.isPlaying = false; clearTimeout(state.timer);
+            document.getElementById('btnAuto').innerText = "▶️ Συνέχεια";
+            document.getElementById('btnAuto').style.background = "var(--primary)";
+            document.getElementById('btnAuto').style.color = "white";
+        } else {
+            state.isPlaying = true;
+            document.getElementById('btnAuto').innerText = "⏸️ Παύση";
+            document.getElementById('btnAuto').style.background = "var(--warning)";
+            document.getElementById('btnAuto').style.color = "black";
+            if (state.pc === 0) prepareExecution(); else runLoop();
+        }
+    }
+
+    function manualStep() {
+        if (state.pc === 0 || state.isFinished) {
+            document.getElementById('btnExecute').style.display='none';
+            document.getElementById('btnAuto').style.display='flex';
+            document.getElementById('consoleOutput').innerHTML = "";
+            document.getElementById('ramBody').innerHTML = "";
+            document.getElementById('bulb').classList.remove('on');
+            document.querySelectorAll('.active-path').forEach(el => el.classList.remove('active-path'));
+            
+            state = { val: null, pc: 1, isPlaying: false, isFinished: false, waitingInput: false, timer: null };
+            document.getElementById('btnAuto').innerText = "▶️ Συνέχεια";
+            document.getElementById('btnAuto').style.background = "var(--primary)";
+            document.getElementById('btnAuto').style.color = "white";
+            stepAlgo();
+            return;
+        }
+        
+        if (state.waitingInput) return;
+        if (state.isPlaying) toggleAuto(); 
+        stepAlgo();
+    }
+
+    function runLoop() {
+        if (!state.isPlaying || state.isFinished || state.waitingInput) return;
+        stepAlgo();
+        if(!state.isFinished && state.isPlaying && !state.waitingInput) {
+            state.timer = setTimeout(runLoop, parseInt(document.getElementById('speedSlider').value));
+        }
+    }
+
+    function highlightUI(codeLine, fcNodeId) {
+        document.querySelectorAll('.code-line').forEach(l => l.classList.remove('active'));
+        if(codeLine) {
+            let el = document.getElementById('L' + codeLine);
+            if(el) el.classList.add('active');
+        }
+
+        document.querySelectorAll('.fc-node').forEach(n => n.classList.remove('active'));
+        if(fcNodeId) {
+            let n = document.getElementById(fcNodeId);
+            if(n) n.classList.add('active');
+        }
+    }
+
+    function highlightPath(isTrue) {
+        // Reset old path
+        document.querySelectorAll('.active-path').forEach(el => el.classList.remove('active-path'));
+        
+        if(isTrue) {
+            ['path-t1', 'path-t2', 'arr-t1', 'path-t3', 'path-rejoin-right', 'path-end', 'arr-end'].forEach(id => {
+                document.getElementById(id).classList.add('active-path');
+            });
+        } else {
+            ['path-f1', 'path-f2', 'arr-f1', 'path-f3', 'path-rejoin-left', 'path-end', 'arr-end'].forEach(id => {
+                document.getElementById(id).classList.add('active-path');
+            });
+        }
+    }
+
+    function printConsole(txt, color="inherit") {
+        let cText = document.getElementById('consoleOutput');
+        cText.innerHTML += `<span style="color:${color};">${txt}</span><br>`;
+        let scr = document.getElementById('screen');
+        scr.scrollTop = scr.scrollHeight;
+    }
+
+    function addRamRow(val, cond) {
+        const body = document.getElementById('ramBody');
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${val !== null ? val : '-'}</td><td>${cond}</td>`;
+        body.appendChild(row);
+        body.parentElement.scrollTop = body.parentElement.scrollHeight;
+    }
+
+    function submitInput() {
+        let v = document.getElementById('termInput').value;
+        if(v === '') return;
+        state.val = parseInt(v);
+        
+        document.getElementById('inputContainer').style.display = 'none';
+        document.getElementById('inputContainer').classList.remove('waiting-input');
+        document.getElementById('termInput').value = '';
+        
+        printConsole(`> Εισήχθη τιμή φωτεινότητας: <strong>${state.val}</strong>`, "var(--text-dark)");
+        
+        state.waitingInput = false;
+        state.pc = 3; 
+        
+        if(state.isPlaying) runLoop(); else stepAlgo();
+    }
+
+    // --- ALGORITHM STATE MACHINE ---
+    function stepAlgo() {
+        switch(state.pc) {
+            case 1: 
+                highlightUI(null, 'fc-start');
+                state.pc = 2; 
+                break;
+            case 2: 
+                highlightUI('1', 'fc-read');
+                printConsole("Εισάγετε τιμή (π.χ. 300 ή 900):", "var(--danger)");
+                document.getElementById('inputContainer').style.display = 'flex';
+                document.getElementById('inputContainer').classList.add('waiting-input');
+                document.getElementById('termInput').focus();
+                state.waitingInput = true;
+                break;
+            case 3: 
+                highlightUI('2', 'fc-cond');
+                let isTrue = (state.val <= 650);
+                addRamRow(state.val, isTrue ? "Αληθής (ΝΑΙ)" : "Ψευδής (ΟΧΙ)");
+                
+                // Ανάβουμε αμέσως τη γραμμή της διαδρομής
+                highlightPath(isTrue);
+                
+                if(isTrue) state.pc = 4; else state.pc = 5;
+                break;
+            case 4: 
+                highlightUI('3', 'fc-true');
+                document.getElementById('bulb').classList.add('on');
+                printConsole("💡 Εμφάνισε: Φως αναμμένο", "var(--success)");
+                state.pc = 6; 
+                break;
+            case 5: 
+                highlightUI('5', 'fc-false'); 
+                document.getElementById('bulb').classList.remove('on');
+                printConsole("🌑 Εμφάνισε: Φως σβηστό", "var(--text-light)");
+                state.pc = 6;
+                break;
+            case 6:
+                highlightUI('6', 'fc-end');
+                finishSim();
+                break;
+        }
+    }
+
+    function finishSim() {
+        state.isFinished = true; state.isPlaying = false;
+        document.getElementById('btnAuto').style.display='none';
+        printConsole("<br><strong>✅ Ολοκληρώθηκε η εκτέλεση.</strong>", "var(--success)");
+    }
+
+    function resetApp() {
+        state.isPlaying = false; clearTimeout(state.timer);
+        
+        document.getElementById('consoleOutput').innerHTML = "Περιμένοντας εκτέλεση...<br>";
+        document.getElementById('inputContainer').style.display = 'none';
+        document.getElementById('inputContainer').classList.remove('waiting-input');
+        document.getElementById('termInput').value = '';
+        document.getElementById('ramBody').innerHTML = "";
+        document.getElementById('bulb').classList.remove('on');
+        document.querySelectorAll('.active-path').forEach(el => el.classList.remove('active-path'));
+        
+        document.getElementById('btnExecute').style.display='flex';
+        document.getElementById('btnAuto').style.display='none';
+        
+        state = { val: null, pc: 0, isPlaying: false, isFinished: false, waitingInput: false, timer: null };
+        highlightUI(null, null);
+    }
+
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+</script>
+
+</body>
+</html>

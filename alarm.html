@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Σύνθετες Λογικές Συνθήκες - 3D Σπίτι (Fit Screen & Audio)</title>
+    <style>
+        :root {
+            --primary: #2563eb; --primary-hover: #1d4ed8;
+            --text-dark: #0f172a; --text-light: #64748b;
+            --bg-color: #f1f5f9; --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --success: #16a34a; --warning: #f59e0b; --danger: #ef4444;
+            --highlight: #fef08a; --code-bg: #f8fafc;
+        }
+
+        body.dark-mode {
+            --bg-color: #020617; --panel-bg: #1e293b;
+            --text-dark: #f8fafc; --text-light: #94a3b8;
+            --border-color: #334155; --code-bg: #0f172a;
+        }
+
+        /* ΒΑΣΙΚΗ ΡΥΘΜΙΣΗ ΓΙΑ 100% ΟΘΟΝΗ ΧΩΡΙΣ SCROLLING */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background-color: var(--bg-color); color: var(--text-dark); 
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s;
+        }
+
+        /* --- TOOLBAR --- */
+        .toolbar { 
+            background: var(--panel-bg); border-bottom: 1px solid var(--border-color); 
+            padding: 8px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100;
+            flex: 0 0 auto;
+        }
+        .toolbar-title { font-weight: 800; font-size: 1.1rem; color: var(--primary); display: flex; align-items: center; gap: 8px;}
+        .controls-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;}
+
+        .tool-btn { 
+            padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color);
+            background: var(--panel-bg); color: var(--text-dark); cursor: pointer; font-weight: bold;
+            display: flex; align-items: center; gap: 5px; font-size: 0.85rem; transition: 0.2s;
+        }
+        .tool-btn:hover:not(:disabled) { background: var(--border-color); }
+        .tool-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-execute { background: var(--warning); color: black; border: none; }
+        .btn-reset { background: var(--primary); color: white; border: none; }
+
+        /* --- MAIN LAYOUT --- */
+        .main-container { display: flex; flex: 1; padding: 10px; gap: 10px; overflow: hidden; min-height: 0; }
+        .col { 
+            background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color); 
+            display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        /* LEFT COLUMN: Theory */
+        .col-left { flex: 0 0 300px; padding: 15px; overflow-y: auto; line-height: 1.4;}
+        .theory-title { font-size: 1rem; font-weight: bold; margin-bottom: 10px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; }
+        .theory-text { font-size: 0.85rem; margin-bottom: 15px; text-align: justify; }
+        .logic-box { background: var(--code-bg); padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 10px; font-size: 0.8rem;}
+
+        /* MIDDLE COLUMN */
+        .col-mid { flex: 1; display: flex; flex-direction: row; gap: 10px; background: transparent; border: none; box-shadow: none; min-width: 0;} 
+        .mid-left { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0;}
+        .mid-right { flex: 0 0 300px; display: flex; flex-direction: column; }
+
+        /* CODE AREA */
+        .code-area { 
+            flex: 1; padding: 12px; background: var(--code-bg); border: 1px solid var(--border-color); border-radius: 12px;
+            font-family: 'Consolas', monospace; font-size: 0.85rem; line-height: 1.6; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            overflow-y: auto; overflow-x: hidden; min-height: 0;
+        }
+        .code-line { padding: 3px 6px; border-radius: 4px; transition: 0.2s; white-space: nowrap; }
+        .code-line.active { background: var(--highlight); color: black; font-weight: bold; box-shadow: inset 4px 0 0 var(--warning); }
+        .keyword { color: var(--primary); font-weight: bold; margin-right: 5px;}
+        .string { color: #16a34a; margin-left: 5px;}
+
+        /* INLINE ASSEMBLY AREA (Inside Code) */
+        .inline-code-row {
+            display: flex; align-items: center; flex-wrap: nowrap; 
+            width: 100%; overflow-x: auto; padding-bottom: 5px;
+        }
+        
+        .assembly-zone {
+            display: flex; align-items: center; flex-wrap: nowrap; min-height: 32px;
+            padding: 2px 6px; margin: 0 5px; background: rgba(0,0,0,0.05); 
+            border-radius: 6px; border: 1px dashed var(--border-color); gap: 5px;
+        }
+        
+        .inline-code-row::-webkit-scrollbar { height: 6px; }
+        .inline-code-row::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+
+        .empty-placeholder { color: #64748b; font-style: italic; font-size: 0.8rem; user-select: none; white-space: nowrap;}
+        
+        .assembled-block { 
+            animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            padding: 3px 8px; border-radius: 6px; color: white; font-weight: bold; font-size: 0.75rem; cursor: pointer; white-space: nowrap; box-shadow: 0 2px 0 rgba(0,0,0,0.2);
+        }
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.5); } 100% { opacity: 1; transform: scale(1); } }
+
+        /* TOOLBOX AREA */
+        .toolbox-area {
+            flex: 0 0 auto; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px;
+            padding: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .tb-title { font-size: 0.8rem; font-weight: bold; color: var(--primary); margin-bottom: 8px; text-transform: uppercase; display: flex; justify-content: space-between; align-items: center;}
+        .toolbox-grid { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        
+        .block { padding: 6px 12px; border-radius: 6px; color: white; font-weight: bold; font-size: 0.8rem; cursor: pointer; user-select: none; transition: 0.2s; box-shadow: 0 3px 0 rgba(0,0,0,0.2); display: inline-flex; align-items: center; gap: 5px; }
+        .block:active { transform: translateY(3px); box-shadow: none; }
+        .block-var { background: #3b82f6; }
+        .block-var:hover { background: #2563eb; }
+        .block-op { background: #f59e0b; border-radius: 20px; padding: 6px 16px;}
+        .block-op:hover { background: #d97706; }
+
+        /* 3D HOUSE AREA */
+        .house-area {
+            flex: 1; background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; align-items: center; padding: 10px; position: relative;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: hidden; justify-content: center; min-height: 0;
+        }
+        .house-title { position: absolute; top: 10px; left: 15px; font-weight: bold; font-size: 0.85rem; color: var(--primary); }
+        .click-hint { position: absolute; top: 30px; left: 15px; font-size: 0.7rem; background: var(--warning); color: black; padding: 4px 8px; border-radius: 12px; font-weight: bold; animation: pulseHint 2s infinite; }
+        @keyframes pulseHint { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        /* COMPACT HOUSE DIMENSIONS */
+        .house-wrapper { position: relative; width: 220px; height: 160px; margin-top: 15px; perspective: 1000px; transform: scale(0.95);}
+        
+        .roof { position: absolute; top: 0; left: 0; width: 0; height: 0; border-left: 110px solid transparent; border-right: 110px solid transparent; border-bottom: 60px solid #334155; transition: 0.3s; z-index: 2;}
+        .house-body { position: absolute; top: 60px; left: 15px; width: 190px; height: 100px; background: #e2e8f0; transition: 0.3s; z-index: 1; border-radius: 4px;}
+        
+        .frame { position: absolute; background: #0f172a; box-shadow: inset 0 0 10px #000; perspective: 800px; display: flex;}
+        .frame-door { bottom: 0; left: 50%; transform: translateX(-50%); width: 40px; height: 70px; border-radius: 4px 4px 0 0; }
+        .frame-win { top: 20px; width: 40px; height: 40px; border-radius: 4px; }
+        .frame-win.left { left: 20px; }
+        .frame-win.right { right: 20px; }
+
+        .element-3d { 
+            width: 100%; height: 100%; border: 3px solid #fff; border-radius: inherit;
+            display: flex; justify-content: center; align-items: center; 
+            font-size: 0.65rem; font-weight: bold; color: white; cursor: pointer;
+            transform-origin: left; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none; box-shadow: inset 0 0 10px rgba(0,0,0,0.2); text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        .element-3d:hover { filter: brightness(1.2); }
+        .element-3d.locked { pointer-events: none; }
+        
+        .door-model { background: #8b5cf6; border-bottom: none; }
+        .win-model { background: #3b82f6; }
+
+        .element-3d.open { transform: rotateY(-80deg); background: var(--danger); }
+
+        /* Alarm Effects */
+        @keyframes alarmFlash { 0%, 100% { filter: drop-shadow(0 0 0 rgba(239,68,68,0)); } 50% { filter: drop-shadow(0 0 25px rgba(239,68,68,0.8)); } }
+        .house-wrapper.alarm .house-body { background: #fca5a5; }
+        .house-wrapper.alarm .roof { border-bottom-color: #b91c1c; }
+        .house-wrapper.alarm { animation: alarmFlash 1s infinite; }
+        
+        .house-wrapper.safe .house-body { background: #bbf7d0; }
+        .house-wrapper.safe .roof { border-bottom-color: #16a34a; }
+
+        /* RIGHT COLUMN */
+        .col-right { flex: 0 0 260px; display: flex; flex-direction: column; gap: 10px; background: transparent; border: none; box-shadow: none; min-width: 0; }
+        
+        .ram-section { flex: 1; background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color); padding: 12px; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-height: 0;}
+        .ram-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: left; }
+        .ram-table th { background: var(--bg-color); padding: 6px; border-bottom: 2px solid var(--border-color); color: var(--text-light);}
+        .ram-table td { padding: 5px 6px; border-bottom: 1px solid #e2e8f0; font-weight: bold; font-family: monospace; font-size: 0.8rem;}
+        
+        .screen-section { flex: 0 0 160px; background: #0f172a; color: #10b981; border-radius: 12px; padding: 12px; font-family: 'Consolas', monospace; font-size: 0.8rem; overflow-y: auto; line-height: 1.4; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); border: 2px solid #334155; min-height: 0;}
+        
+        .val-true { color: #ef4444; } 
+        .val-false { color: #10b981; } 
+
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    <div class="toolbar-title">🚨 Συναγερμός: ΚΑΙ vs Ή</div>
+    <div class="controls-group">
+        <button class="tool-btn" onclick="toggleTheme()">🌙</button>
+        <button class="tool-btn btn-execute" id="btnExecute" onclick="prepareExecution()">🚀 Δοκιμή Συναγερμού</button>
+        <button class="tool-btn btn-reset" onclick="resetApp()">🔄 Αρχή</button>
+    </div>
+</div>
+
+<div class="main-container">
+    
+    <div class="col col-left">
+        <div class="theory-title">Πώς δουλεύει ο Συναγερμός;</div>
+        <div class="theory-text">
+            Για να είναι ασφαλές ένα σπίτι, θέλουμε ο συναγερμός να χτυπάει εάν παραβιαστεί <strong>έστω και ένα</strong> σημείο (Πόρτα, Παράθυρο 1, Παράθυρο 2).
+            <br><br>
+            <div class="logic-box">
+                <strong style="color:var(--danger);">Τελεστής Ή (OR):</strong> Αληθής, αν <strong>τουλάχιστον ΜΙΑ</strong> συνθήκη είναι Αληθής.<br><br>
+                <strong style="color:var(--success);">Τελεστής ΚΑΙ (AND):</strong> Αληθής, ΜΟΝΟ αν <strong>ΟΛΕΣ</strong> οι συνθήκες είναι Αληθείς ταυτόχρονα.
+            </div>
+            
+            <hr style="border:0; border-top: 1px solid var(--border-color); margin: 10px 0;">
+            <strong style="color:var(--primary)">Οδηγίες:</strong> 
+            <ol style="margin-left: 20px; margin-top: 5px; line-height: 1.5;">
+                <li>Κάνε <strong>κλικ στο σπίτι (δεξιά)</strong> για να ανοίξεις πόρτες/παράθυρα.</li>
+                <li>Από την Εργαλειοθήκη, <strong>κλίκαρε τα τουβλάκια</strong> για να χτίσεις τη συνθήκη στην ίδια γραμμή του κώδικα.</li>
+                <li>Πάτα <strong>Δοκιμή Συναγερμού</strong> (Αν πετύχεις, θα ακούσεις τη σειρήνα)!</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="col-mid">
+        <div class="mid-left">
+            <div class="code-area">
+                <div class="code-line"><span class="keyword">Αλγόριθμος</span> Σύστημα_Ασφαλείας</div>
+                <div class="code-line" id="L1"><span class="keyword">Διάβασε</span> πόρτα, παραθ_1, παραθ_2</div>
+                
+                <div class="code-line inline-code-row" id="L2">
+                    <span class="keyword">Αν</span> 
+                    <div class="assembly-zone" id="assemblyArea">
+                        <span class="empty-placeholder" id="emptyPlaceholder">Βάλε τουβλάκια...</span>
+                    </div> 
+                    <span class="keyword">τότε</span>
+                </div>
+                
+                <div class="code-line" id="L3">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Εμφάνισε</span> <span class="string">"🚨 ΣΥΝΑΓΕΡΜΟΣ!"</span></div>
+                <div class="code-line" id="L4"><span class="keyword">Αλλιώς</span></div>
+                <div class="code-line" id="L5">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">Εμφάνισε</span> <span class="string">"🛡️ Ασφάλεια"</span></div>
+                <div class="code-line" id="L6"><span class="keyword">Τέλος_αν</span></div>
+                <div class="code-line"><span class="keyword">Τέλος</span> Σύστημα_Ασφαλείας</div>
+            </div>
+
+            <div class="toolbox-area">
+                <div class="tb-title">
+                    <span>🧰 Εργαλειοθηκη</span>
+                    <button class="tool-btn" style="padding: 2px 8px; font-size: 0.7rem; background: #e2e8f0; border: none;" onclick="clearBlocks()">🗑️ Καθαρισμός</button>
+                </div>
+                <div class="toolbox-grid">
+                    <div class="block block-var" onclick="addBlock('var', 'Πόρτα Ανοιχτή', 'state.door')">Πόρτα Ανοιχτή</div>
+                    <div class="block block-var" onclick="addBlock('var', 'Παράθυρο 1 Ανοιχτό', 'state.win1')">Παράθυρο 1 Ανοιχτό</div>
+                    <div class="block block-var" onclick="addBlock('var', 'Παράθυρο 2 Ανοιχτό', 'state.win2')">Παράθυρο 2 Ανοιχτό</div>
+                    <div class="block block-op" onclick="addBlock('op', 'Ή', '||')">Ή</div>
+                    <div class="block block-op" onclick="addBlock('op', 'ΚΑΙ', '&&')">ΚΑΙ</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mid-right">
+            <div class="house-area">
+                <div class="house-title">Προσομοίωση</div>
+                <div class="click-hint" id="clickHint">👇 Κλικ για Άνοιγμα</div>
+                
+                <div class="house-wrapper" id="houseWrapper">
+                    <div class="roof"></div>
+                    <div class="house-body">
+                        <div class="frame frame-win left">
+                            <div class="element-3d win-model" id="win1" onclick="toggleElement('win1')">Π1</div>
+                        </div>
+                        <div class="frame frame-door">
+                            <div class="element-3d door-model" id="door" onclick="toggleElement('door')">ΠΟΡΤΑ</div>
+                        </div>
+                        <div class="frame frame-win right">
+                            <div class="element-3d win-model" id="win2" onclick="toggleElement('win2')">Π2</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-right">
+        <div class="ram-section">
+            <div class="theory-title" style="border:none;">Αισθητήρες (RAM)</div>
+            <table class="ram-table">
+                <tbody>
+                    <tr><td>Πόρτα:</td><td id="ram-door" class="val-false">Κλειστή</td></tr>
+                    <tr><td>Παράθ_1:</td><td id="ram-win1" class="val-false">Κλειστό</td></tr>
+                    <tr><td>Παράθ_2:</td><td id="ram-win2" class="val-false">Κλειστό</td></tr>
+                    <tr style="border-top: 2px solid var(--border-color);">
+                        <td>Διάρρηξη;</td><td id="ram-breach" class="val-false">ΟΧΙ</td>
+                    </tr>
+                    <tr>
+                        <td>Η Συνθήκη Σου:</td><td id="ram-eval">-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="screen-section" id="screen">
+            > Στήσε το σενάριο και τη λογική...<br>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ΣΤΑΤΙΣΤΙΚΑ ΣΠΙΤΙΟΥ & ΕΚΤΕΛΕΣΗΣ
+    let state = { door: false, win1: false, win2: false, isExecuting: false };
+    let userBlocks = []; 
+
+    // --- AUDIO SYSTEM (Web Audio API) ---
+    let audioCtx = null;
+    let oscillator = null;
+
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    function playSiren() {
+        initAudio();
+        if(oscillator) return; // Prevent multiple sirens
+
+        oscillator = audioCtx.createOscillator();
+        let gainNode = audioCtx.createGain();
+        
+        oscillator.type = 'square';
+        
+        // Siren Modulation Effect (High-Low-High-Low)
+        let now = audioCtx.currentTime;
+        oscillator.frequency.setValueAtTime(400, now);
+        oscillator.frequency.linearRampToValueAtTime(800, now + 0.3);
+        oscillator.frequency.linearRampToValueAtTime(400, now + 0.6);
+        oscillator.frequency.linearRampToValueAtTime(800, now + 0.9);
+        oscillator.frequency.linearRampToValueAtTime(400, now + 1.2);
+        oscillator.frequency.linearRampToValueAtTime(800, now + 1.5);
+        oscillator.frequency.linearRampToValueAtTime(400, now + 1.8);
+
+        // Very low volume so it's not irritating
+        gainNode.gain.setValueAtTime(0.05, now); 
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        oscillator.start(now);
+        oscillator.stop(now + 2.0); // Stop automatically after 2 seconds
+        
+        oscillator.onended = () => { oscillator = null; };
+    }
+
+    // --- UI INTERACTIONS ---
+    function toggleElement(id) {
+        if(state.isExecuting) return;
+        
+        state[id] = !state[id];
+        let el = document.getElementById(id);
+        
+        if(state[id]) {
+            el.classList.add('open');
+            el.innerHTML = ""; 
+        } else {
+            el.classList.remove('open');
+            if(id==='door') el.innerHTML = "ΠΟΡΤΑ";
+            if(id==='win1') el.innerHTML = "Π1";
+            if(id==='win2') el.innerHTML = "Π2";
+        }
+        
+        document.getElementById('clickHint').style.display = 'none';
+        updateRAMUI();
+    }
+
+    function updateRAMUI() {
+        document.getElementById('ram-door').innerText = state.door ? 'Ανοιχτή' : 'Κλειστή';
+        document.getElementById('ram-door').className = state.door ? 'val-true' : 'val-false';
+        
+        document.getElementById('ram-win1').innerText = state.win1 ? 'Ανοιχτό' : 'Κλειστό';
+        document.getElementById('ram-win1').className = state.win1 ? 'val-true' : 'val-false';
+        
+        document.getElementById('ram-win2').innerText = state.win2 ? 'Ανοιχτό' : 'Κλειστό';
+        document.getElementById('ram-win2').className = state.win2 ? 'val-true' : 'val-false';
+        
+        let hasBreach = state.door || state.win1 || state.win2;
+        document.getElementById('ram-breach').innerText = hasBreach ? 'ΝΑΙ' : 'ΟΧΙ';
+        document.getElementById('ram-breach').className = hasBreach ? 'val-true' : 'val-false';
+    }
+
+    function addBlock(type, label, js) {
+        if(state.isExecuting) return;
+        userBlocks.push({ type, label, js });
+        renderBlocks();
+    }
+
+    function removeBlock(index) {
+        if(state.isExecuting) return;
+        userBlocks.splice(index, 1);
+        renderBlocks();
+    }
+
+    function clearBlocks() {
+        if(state.isExecuting) return;
+        userBlocks = [];
+        renderBlocks();
+    }
+
+    function renderBlocks() {
+        let area = document.getElementById('assemblyArea');
+        
+        if (userBlocks.length === 0) {
+            area.innerHTML = `<span class="empty-placeholder" id="emptyPlaceholder">Βάλε τουβλάκια...</span>`;
+            return;
+        }
+
+        let blocksHTML = userBlocks.map((b, index) => {
+            let colorClass = b.type === 'var' ? 'block-var' : 'block-op';
+            return `<div class="assembled-block ${colorClass}" onclick="removeBlock(${index})" title="Κλικ για αφαίρεση">${b.label}</div>`;
+        }).join('');
+        
+        area.innerHTML = blocksHTML;
+    }
+
+    function printConsole(txt, color="#10b981") {
+        let scr = document.getElementById('screen');
+        scr.innerHTML += `<span style="color:${color};">${txt}</span><br>`;
+        scr.scrollTop = scr.scrollHeight;
+    }
+
+    // --- EXECUTION ENGINE ---
+    function prepareExecution() {
+        initAudio(); // Prepare audio context on user click
+
+        if(userBlocks.length === 0) {
+            printConsole("🚨 ΣΦΑΛΜΑ: Πρέπει πρώτα να βάλεις τουλάχιστον ένα τουβλάκι στη συνθήκη!", "#ef4444");
+            return;
+        }
+        if(state.isExecuting) return;
+
+        state.isExecuting = true;
+        document.getElementById('btnExecute').disabled = true;
+        document.querySelectorAll('.element-3d').forEach(el => el.classList.add('locked'));
+        
+        printConsole("-----------------------", "#64748b");
+        printConsole("> Αξιολόγηση Λογικής...");
+        
+        let hw = document.getElementById('houseWrapper');
+        hw.className = "house-wrapper"; 
+        document.getElementById('ram-eval').innerText = "-";
+        document.getElementById('ram-eval').className = "";
+
+        let jsExpression = userBlocks.map(b => b.js).join(' ');
+        let logicResult = false;
+        let syntaxError = false;
+
+        try {
+            logicResult = eval(jsExpression);
+            if(typeof logicResult !== "boolean") throw new Error("Invalid Logic");
+        } catch (e) {
+            syntaxError = true;
+        }
+
+        if (syntaxError) {
+            printConsole("ΣΥΝΤΑΚΤΙΚΟ ΛΑΘΟΣ: Η σειρά των τουβλακίων δεν βγάζει νόημα! Βάλε τα Τουβλάκια-Μεταβλητές και ενδιάμεσα τα Τουβλάκια-Πράξεις (Ή, ΚΑΙ).", "#ef4444");
+            document.getElementById('ram-eval').innerText = "ΣΦΑΛΜΑ";
+            document.getElementById('ram-eval').className = "val-true";
+            finishTest();
+            return;
+        }
+
+        document.getElementById('ram-eval').innerText = logicResult ? "ΑΛΗΘΗΣ (Χτυπάει)" : "ΨΕΥΔΗΣ (Σιωπή)";
+        document.getElementById('ram-eval').className = logicResult ? "val-true" : "val-false";
+
+        let actualBreach = state.door || state.win1 || state.win2;
+
+        setTimeout(() => {
+            if (logicResult) {
+                // Η ΛΟΓΙΚΗ ΕΙΠΕ ΝΑ ΧΤΥΠΗΣΕΙ
+                if (actualBreach) {
+                    printConsole("> ✅ Σωστά! Ο συναγερμός χτύπησε την ώρα της παραβίασης!", "#fef08a");
+                    hw.className = "house-wrapper alarm";
+                    playSiren(); // 📢 PLAY SOUND HERE!
+                } else {
+                    printConsole("> ❌ ΛΟΓΙΚΟ ΛΑΘΟΣ! Όλα είναι κλειστά αλλά ο συναγερμός χτυπάει! Μήπως έβαλες Ή αντί για ΚΑΙ (αν και το ΚΑΙ δεν συνιστάται εδώ);", "#ef4444");
+                    hw.className = "house-wrapper alarm";
+                    // No sound for false alarm per instruction: "ακούγεται όταν είναι οκ η συνθήκη ΚΑΙ είναι κάποια πόρτα ανοικτή"
+                }
+            } else {
+                // Η ΛΟΓΙΚΗ ΕΙΠΕ ΝΑ ΜΗΝ ΧΤΥΠΗΣΕΙ
+                if (actualBreach) {
+                    printConsole("> 🚨 ΚΡΙΤΙΚΟ ΛΑΘΟΣ! Έχουμε διάρρηξη αλλά ο συναγερμός είναι ΣΙΩΠΗΛΟΣ! Το ΚΑΙ απαιτεί να ανοίξουν ΟΛΑ ταυτόχρονα. Πρέπει να χρησιμοποιήσεις το Ή!", "#ef4444");
+                    hw.className = "house-wrapper safe"; 
+                } else {
+                    printConsole("> ✅ Ασφάλεια. Όλα κλειστά, ο συναγερμός δεν χτυπάει.", "#10b981");
+                    hw.className = "house-wrapper safe";
+                }
+            }
+            finishTest();
+        }, 800);
+    }
+
+    function finishTest() {
+        setTimeout(() => {
+            state.isExecuting = false;
+            document.getElementById('btnExecute').disabled = false;
+            document.querySelectorAll('.element-3d').forEach(el => el.classList.remove('locked'));
+            printConsole("--- Τέλος Δοκιμής ---", "#64748b");
+        }, 500);
+    }
+
+    function resetApp() {
+        state = { door: false, win1: false, win2: false, isExecuting: false };
+        if(oscillator) { oscillator.stop(); oscillator = null; }
+        
+        clearBlocks();
+        updateRAMUI();
+        
+        document.getElementById('ram-eval').innerText = "-";
+        document.getElementById('ram-eval').className = "";
+        
+        let hw = document.getElementById('houseWrapper');
+        hw.className = "house-wrapper";
+        
+        ['door', 'win1', 'win2'].forEach(id => {
+            let el = document.getElementById(id);
+            el.classList.remove('open', 'locked');
+            if(id==='door') el.innerHTML = "ΠΟΡΤΑ";
+            if(id==='win1') el.innerHTML = "Π1";
+            if(id==='win2') el.innerHTML = "Π2";
+        });
+        
+        document.getElementById('screen').innerHTML = "> Έγινε Επαναφορά. Στήσε νέο σενάριο!<br>";
+        document.getElementById('btnExecute').disabled = false;
+        document.getElementById('clickHint').style.display = 'block';
+    }
+
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+    
+    // Initial Setup
+    updateRAMUI();
+
+</script>
+
+</body>
+</html>
