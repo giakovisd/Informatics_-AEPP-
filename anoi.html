@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Οι Πύργοι του Ανόι - Α' Λυκείου</title>
+    <style>
+        :root {
+            --primary: #2563eb; --primary-hover: #1d4ed8;
+            --text-dark: #0f172a; --text-light: #64748b;
+            --bg-color: #f1f5f9; --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --success: #16a34a; --warning: #f59e0b; --danger: #ef4444;
+            --highlight: #fef08a; --code-bg: #f8fafc;
+            --screen-bg: #ffffff; --screen-text: #000000;
+        }
+
+        body.dark-mode {
+            --bg-color: #020617; --panel-bg: #1e293b;
+            --text-dark: #f8fafc; --text-light: #94a3b8;
+            --border-color: #334155; --code-bg: #0f172a;
+            --screen-bg: #e2e8f0; --screen-text: #000000;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background-color: var(--bg-color); color: var(--text-dark); 
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s;
+        }
+
+        /* --- TOOLBAR --- */
+        .toolbar { 
+            background: var(--panel-bg); border-bottom: 1px solid var(--border-color); 
+            padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 100;
+        }
+        .toolbar-title { font-weight: 800; font-size: 1.1rem; color: var(--primary); display: flex; align-items: center; gap: 8px;}
+        .controls-group { display: flex; align-items: center; gap: 8px; flex-direction: row-reverse; flex-wrap: wrap;}
+
+        .tool-btn { 
+            padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);
+            background: var(--panel-bg); color: var(--text-dark); cursor: pointer; font-weight: bold;
+            display: flex; align-items: center; gap: 5px; font-size: 0.85rem; transition: 0.2s;
+        }
+        .tool-btn:hover:not(:disabled) { filter: brightness(0.9); }
+        .tool-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-run { background: #8b5cf6; color: white; border: none; }
+        .btn-reset { background: var(--danger); color: white; border: none; }
+
+        .speed-control { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; font-weight: bold;}
+        .speed-control input { cursor: pointer; width: 60px;}
+
+        /* --- LAYOUT --- */
+        .main-container { display: flex; flex: 1; padding: 15px; gap: 15px; overflow: hidden; }
+        .col { background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+
+        /* LEFT COLUMN */
+        .col-left { flex: 0 0 320px; padding: 20px; overflow-y: auto; line-height: 1.5;}
+        .theory-title { font-size: 1.05rem; font-weight: bold; margin-bottom: 12px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; }
+        .theory-text { font-size: 0.9rem; margin-bottom: 15px; text-align: justify; }
+
+        /* MID COLUMN (SIMULATOR) */
+        .col-mid { flex: 1; display: flex; flex-direction: column; background: var(--bg-color); position: relative;}
+        
+        .game-header { padding: 15px; background: var(--panel-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-weight: bold;}
+        .score-board { display: flex; gap: 20px; font-size: 1.1rem; }
+        .score-item span { color: var(--primary); font-size: 1.3rem; }
+        
+        .disk-selector { display: flex; align-items: center; gap: 10px; }
+        .disk-selector input { width: 80px; }
+
+        /* HANOI STAGE - ANIMATION READY */
+        .hanoi-stage { 
+            flex: 1; display: flex; align-items: flex-end; justify-content: space-around; 
+            padding-bottom: 40px; position: relative; overflow: hidden;
+        }
+        
+        .peg-container { 
+            position: relative; width: 30%; height: 80%; display: flex; flex-direction: column-reverse; 
+            align-items: center; cursor: pointer; border-radius: 8px; transition: 0.2s; z-index: 5;
+        }
+        .peg-container:hover { background: rgba(0,0,0,0.03); }
+        .peg-container.selected { background: rgba(254, 240, 138, 0.3); box-shadow: inset 0 0 15px rgba(234, 179, 8, 0.2); }
+        
+        /* Ξύλινος Στύλος */
+        .peg-rod { position: absolute; bottom: 0; width: 14px; height: 100%; background: #b45309; border-radius: 10px 10px 0 0; z-index: 1; box-shadow: inset -3px 0 5px rgba(0,0,0,0.3); pointer-events: none;}
+        /* Ξύλινη Βάση */
+        .peg-base { position: absolute; bottom: -15px; width: 80%; height: 15px; background: #78350f; border-radius: 5px; z-index: 1; box-shadow: 0 4px 6px rgba(0,0,0,0.3); pointer-events: none;}
+        .peg-label { position: absolute; bottom: -45px; font-weight: bold; font-size: 1.2rem; color: var(--text-dark); pointer-events: none;}
+
+        /* ΔΙΣΚΟΙ - ΑΠΟΛΥΤΗ ΤΟΠΟΘΕΤΗΣΗ */
+        .disk { 
+            position: absolute; height: 30px; border-radius: 15px; z-index: 10;
+            display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3), inset 0 2px 5px rgba(255,255,255,0.4), inset 0 -2px 5px rgba(0,0,0,0.2); 
+            border: 1px solid rgba(0,0,0,0.3); text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            pointer-events: none; /* Επιτρέπει το κλικ να περάσει στο peg-container από κάτω! */
+        }
+
+        /* RIGHT COLUMN */
+        .col-right { flex: 0 0 280px; display: flex; flex-direction: column; }
+        .ram-section { padding: 15px; flex: 1; overflow-y: auto; }
+        .ram-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: center; }
+        .ram-table th { background: var(--bg-color); padding: 8px 2px; border: 1px solid var(--border-color); position: sticky; top: 0; }
+        .ram-table td { padding: 6px 2px; border: 1px solid var(--border-color); font-weight: bold;}
+
+        /* --- MODERN WIN MODAL --- */
+        #winModal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px);
+            display: none; align-items: center; justify-content: center; z-index: 50;
+            border-radius: 0 0 12px 12px;
+        }
+        .win-content {
+            background: var(--panel-bg); padding: 30px 40px; border-radius: 16px;
+            text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            border: 2px solid var(--success); transform: scale(0.9); animation: popUp 0.4s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popUp { to { transform: scale(1); } }
+        .win-title { font-size: 2rem; color: var(--success); margin-bottom: 10px; }
+        .win-msg { font-size: 1.1rem; margin-bottom: 25px; line-height: 1.5; color: var(--text-dark); }
+        .win-btn {
+            background: var(--primary); color: white; border: none; padding: 12px 25px;
+            font-size: 1.1rem; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.2s;
+        }
+        .win-btn:hover { background: var(--primary-hover); transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+
+<header class="toolbar">
+    <div class="toolbar-title">🏛️ Οι Πύργοι του Ανόι</div>
+    <div class="controls-group">
+        <button class="tool-btn" onclick="document.body.classList.toggle('dark-mode')">🌙</button>
+        <div class="speed-control">
+            🐢 <input type="range" id="speedSlider" min="50" max="1000" value="600" dir="rtl"> 🐇
+        </div>
+        <button class="tool-btn btn-run" id="btnAuto" onclick="startAutoSolve()">▶️ Αυτόματη Επίλυση</button>
+        <button class="tool-btn btn-reset" onclick="initGame()">🔄 Επαναφορά</button>
+    </div>
+</header>
+
+<div class="main-container">
+    <div class="col col-left">
+        <div class="theory-title">Ο Μύθος των Βραχμάνων</div>
+        <div class="theory-text">
+            Σε έναν ινδουιστικό ναό υπάρχει ένας μπρούτζινος δίσκος με τρεις στύλους. Στον πρώτο στύλο υπάρχουν χρυσοί δίσκοι, τοποθετημένοι από τον μεγαλύτερο στον μικρότερο. Οι μοναχοί πρέπει να μεταφέρουν όλους τους δίσκους στον τρίτο στύλο.
+        </div>
+        <div class="theory-title">Οι Χρυσοί Κανόνες</div>
+        <ul style="font-size: 0.9rem; margin-bottom: 20px; padding-left: 20px;">
+            <li>Μετακινείς μόνο <b>έναν δίσκο</b> τη φορά.</li>
+            <li>Μπορείς να πάρεις μόνο τον <b>πάνω δίσκο</b> ενός στύλου.</li>
+            <li>Απαγορεύεται αυστηρά να βάλεις <b>μεγαλύτερο δίσκο πάνω από μικρότερο</b>!</li>
+        </ul>
+        <div style="background:#f0fdf4; border:1px solid #16a34a; padding:12px; border-radius:8px; font-size:0.9rem; color:#166534; text-align: justify;">
+            🔢 <b>Μαθηματικό Μοντέλο:</b><br>
+            Ο ελάχιστος αριθμός κινήσεων για να λυθεί το πρόβλημα με <b>N</b> δίσκους δίνεται από τον τύπο: <br>
+            <div style="text-align:center; font-size: 1.4rem; font-weight:bold; margin: 10px 0;">2<sup>N</sup> - 1</div>
+            <i>Αν οι μοναχοί έχουν 64 δίσκους και κάνουν μία κίνηση το δευτερόλεπτο, θα χρειαστούν 585 δισεκατομμύρια χρόνια για να τελειώσουν!</i>
+        </div>
+    </div>
+
+    <div class="col-mid col">
+        <div class="game-header">
+            <div class="disk-selector">
+                Αριθμός Δίσκων (N): 
+                <input type="range" id="diskCount" min="3" max="7" value="3" oninput="document.getElementById('diskVal').innerText = this.value; initGame();">
+                <span id="diskVal" style="color:var(--primary); font-size:1.2rem;">3</span>
+            </div>
+            <div class="score-board">
+                <div class="score-item">Κινήσεις: <span id="moveCount">0</span></div>
+                <div class="score-item" style="color:var(--text-light)">Ελάχιστες: <span id="minMoves">7</span></div>
+            </div>
+        </div>
+
+        <div class="hanoi-stage" id="stage">
+            <div id="winModal">
+                <div class="win-content">
+                    <div class="win-title" id="winTitle">🎉 Μπράβο!</div>
+                    <div class="win-msg" id="winMessage">Το έλυσες!</div>
+                    <button class="win-btn" onclick="closeWinModal()">Παίξε Ξανά</button>
+                </div>
+            </div>
+
+            <div class="peg-container" id="peg-0" onclick="pegClick(0)">
+                <div class="peg-rod"></div><div class="peg-base"></div><div class="peg-label">A</div>
+            </div>
+            <div class="peg-container" id="peg-1" onclick="pegClick(1)">
+                <div class="peg-rod"></div><div class="peg-base"></div><div class="peg-label">B</div>
+            </div>
+            <div class="peg-container" id="peg-2" onclick="pegClick(2)">
+                <div class="peg-rod"></div><div class="peg-base"></div><div class="peg-label">Γ</div>
+            </div>
+            </div>
+    </div>
+
+    <div class="col col-right">
+        <div class="ram-section">
+            <div class="theory-title" style="border:none;">📝 Καταγραφή Κινήσεων</div>
+            <table class="ram-table">
+                <thead><tr><th>#</th><th>Δίσκος</th><th>Από</th><th>Προς</th></tr></thead>
+                <tbody id="movesBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let N = 3;
+    let pegs = [[], [], []];
+    let moves = 0;
+    let minMoves = 0;
+    
+    // States
+    let selectedPeg = null;
+    let isAutoPlaying = false;
+    let isAnimating = false;
+    let gameId = 0; // Αποτρέπει conflicts αν πατηθεί επαναφορά εν μέσω animation
+    
+    let moveQueue = [];
+
+    const colors = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#3b82f6", "#a855f7"];
+    const pegNames = ["A", "B", "Γ"];
+    const pegCenters = [16.666, 50, 83.333]; // Ακριβή κέντρα των στύλων σε %
+
+    // Helper για Async/Await Animations
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    // Υπολογισμός Συντεταγμένων
+    function getPegLeft(pegIndex, diskWidth) { return `calc(${pegCenters[pegIndex]}% - ${diskWidth / 2}px)`; }
+    function getSlotBottom(slotIndex) { return (40 + slotIndex * 32) + 'px'; }
+
+    function initGame() {
+        gameId++; // Ακυρώνει τυχόν pending animations
+        isAutoPlaying = false;
+        isAnimating = false;
+        moveQueue = [];
+        
+        N = parseInt(document.getElementById('diskCount').value);
+        moves = 0;
+        minMoves = Math.pow(2, N) - 1;
+        selectedPeg = null;
+
+        document.getElementById('moveCount').innerText = moves;
+        document.getElementById('minMoves').innerText = minMoves;
+        document.getElementById('movesBody').innerHTML = "";
+        document.getElementById('btnAuto').disabled = false;
+        document.getElementById('diskCount').disabled = false;
+        document.getElementById('winModal').style.display = 'none';
+
+        // Καθαρισμός Σκηνής
+        document.querySelectorAll('.disk').forEach(el => el.remove());
+        document.querySelectorAll('.peg-container').forEach(el => el.classList.remove('selected'));
+
+        pegs = [[], [], []];
+        const stage = document.getElementById('stage');
+        
+        // Δημιουργία Δίσκων
+        for(let i = N; i >= 1; i--) {
+            pegs[0].push(i);
+            
+            const disk = document.createElement('div');
+            disk.className = 'disk';
+            disk.id = `disk-${i}`;
+            disk.innerText = i;
+            
+            const baseWidth = 40; 
+            const step = 140 / N; 
+            const diskWidth = baseWidth + (i * step);
+            
+            disk.style.width = `${diskWidth}px`;
+            disk.dataset.width = diskWidth; // Αποθηκεύουμε το πλάτος για γρήγορο υπολογισμό
+            disk.style.backgroundColor = colors[(i - 1) % colors.length];
+            
+            // Τοποθέτηση στον πρώτο στύλο (A)
+            disk.style.left = getPegLeft(0, diskWidth);
+            disk.style.bottom = getSlotBottom(N - i);
+
+            stage.appendChild(disk);
+        }
+    }
+
+    // --- MANUAL PLAY WITH ANIMATIONS ---
+    async function pegClick(pegIndex) {
+        if(isAutoPlaying || isAnimating) return; 
+
+        if(selectedPeg === null) {
+            // Επιλογή Δίσκου: Σήκωμα στον αέρα
+            if(pegs[pegIndex].length > 0) {
+                selectedPeg = pegIndex;
+                let topDiskVal = pegs[pegIndex][pegs[pegIndex].length - 1];
+                let diskEl = document.getElementById(`disk-${topDiskVal}`);
+                
+                diskEl.style.transition = "bottom 0.15s ease-out";
+                diskEl.style.bottom = '85%'; // Σηκώνεται ψηλά
+                document.getElementById(`peg-${pegIndex}`).classList.add('selected');
+            }
+        } else {
+            // Έχει ήδη επιλεγεί δίσκος
+            if(selectedPeg === pegIndex) {
+                // Ακύρωση επιλογής: Επιστροφή κάτω
+                let topDiskVal = pegs[selectedPeg][pegs[selectedPeg].length - 1];
+                let diskEl = document.getElementById(`disk-${topDiskVal}`);
+                diskEl.style.transition = "bottom 0.15s ease-in";
+                diskEl.style.bottom = getSlotBottom(pegs[selectedPeg].length - 1);
+                document.getElementById(`peg-${selectedPeg}`).classList.remove('selected');
+                selectedPeg = null;
+            } else {
+                // Προσπάθεια Κίνησης
+                const topDisk = pegs[selectedPeg][pegs[selectedPeg].length - 1];
+                const targetTop = pegs[pegIndex].length > 0 ? pegs[pegIndex][pegs[pegIndex].length - 1] : 999;
+
+                if(topDisk < targetTop) {
+                    // --- ΕΓΚΥΡΗ ΚΙΝΗΣΗ ---
+                    isAnimating = true;
+                    let currentId = gameId;
+                    document.getElementById(`peg-${selectedPeg}`).classList.remove('selected');
+                    
+                    pegs[selectedPeg].pop();
+                    pegs[pegIndex].push(topDisk);
+                    
+                    let diskEl = document.getElementById(`disk-${topDisk}`);
+                    let diskWidth = parseFloat(diskEl.dataset.width);
+                    let targetSlot = pegs[pegIndex].length - 1;
+                    
+                    // Φάση 2: Μετατόπιση
+                    diskEl.style.transition = `left 0.2s ease-in-out`;
+                    diskEl.style.left = getPegLeft(pegIndex, diskWidth);
+                    await sleep(200);
+                    if(gameId !== currentId) return; // Abort if reset
+                    
+                    // Φάση 3: Πτώση
+                    diskEl.style.transition = `bottom 0.2s ease-in`;
+                    diskEl.style.bottom = getSlotBottom(targetSlot);
+                    await sleep(200);
+                    if(gameId !== currentId) return;
+                    
+                    moves++;
+                    document.getElementById('moveCount').innerText = moves;
+                    logMove(topDisk, selectedPeg, pegIndex);
+                    
+                    selectedPeg = null;
+                    isAnimating = false;
+                    checkWin();
+                } else {
+                    // --- ΑΚΥΡΗ ΚΙΝΗΣΗ ---
+                    const pegDiv = document.getElementById(`peg-${pegIndex}`);
+                    pegDiv.style.backgroundColor = "rgba(239, 68, 68, 0.3)"; 
+                    setTimeout(() => pegDiv.style.backgroundColor = "", 300);
+                    
+                    let diskEl = document.getElementById(`disk-${topDisk}`);
+                    diskEl.style.transition = "bottom 0.2s ease-in";
+                    diskEl.style.bottom = getSlotBottom(pegs[selectedPeg].length - 1);
+                    document.getElementById(`peg-${selectedPeg}`).classList.remove('selected');
+                    selectedPeg = null;
+                }
+            }
+        }
+    }
+
+    function logMove(disk, from, to) {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${moves}</td>
+                         <td><div style="background:${colors[(disk-1)%colors.length]}; width:20px; height:20px; border-radius:50%; margin:auto; color:white; line-height:20px;">${disk}</div></td>
+                         <td>${pegNames[from]}</td>
+                         <td>${pegNames[to]}</td>`;
+        document.getElementById('movesBody').appendChild(row);
+        document.getElementById('movesBody').parentElement.parentElement.scrollTop = 9999;
+    }
+
+    function checkWin() {
+        if(pegs[2].length === N) {
+            document.getElementById('btnAuto').disabled = true;
+            
+            let title = ""; let msg = "";
+            if(moves === minMoves) {
+                title = "🏆 Τέλεια Λύση!";
+                msg = `Τα κατάφερες κάνοντας <b>ακριβώς</b> τον ελάχιστο αριθμό κινήσεων (${minMoves})!<br>Είσαι πραγματικός master της Αλγοριθμικής!`;
+                document.getElementById('winTitle').style.color = "var(--warning)"; 
+            } else {
+                title = "🎉 Μπράβο!";
+                msg = `Έλυσες τον γρίφο σε <b>${moves}</b> κινήσεις.<br>Το ιδανικό είναι <b>${minMoves}</b> κινήσεις. Θέλεις να ξαναπροσπαθήσεις για το τέλειο σκορ;`;
+                document.getElementById('winTitle').style.color = "var(--success)"; 
+            }
+
+            document.getElementById('winTitle').innerHTML = title;
+            document.getElementById('winMessage').innerHTML = msg;
+            
+            setTimeout(() => document.getElementById('winModal').style.display = 'flex', 300);
+        }
+    }
+
+    function closeWinModal() {
+        document.getElementById('winModal').style.display = 'none';
+        initGame();
+    }
+
+    // --- AUTO SOLVE ALGORITHM ---
+    function solveHanoi(n, source, aux, target) {
+        if (n > 0) {
+            solveHanoi(n - 1, source, target, aux);
+            moveQueue.push({ disk: n, from: source, to: target });
+            solveHanoi(n - 1, aux, source, target);
+        }
+    }
+
+    function startAutoSolve() {
+        if(pegs[1].length > 0 || pegs[2].length > 0) initGame();
+        
+        isAutoPlaying = true;
+        selectedPeg = null;
+        document.getElementById('btnAuto').disabled = true;
+        document.getElementById('diskCount').disabled = true;
+        
+        moveQueue = [];
+        solveHanoi(N, 0, 1, 2); 
+        playNextMove();
+    }
+
+    async function playNextMove() {
+        if(!isAutoPlaying || moveQueue.length === 0) {
+            isAutoPlaying = false;
+            checkWin();
+            return;
+        }
+
+        let currentId = gameId;
+        const m = moveQueue.shift();
+        const d = pegs[m.from].pop();
+        pegs[m.to].push(d);
+        
+        let diskEl = document.getElementById(`disk-${d}`);
+        let diskWidth = parseFloat(diskEl.dataset.width);
+        let targetSlot = pegs[m.to].length - 1;
+        
+        // Ταχύτητα βάσει slider (Από 50ms έως 1000ms συνολικά)
+        let totalSpeed = 1050 - document.getElementById('speedSlider').value;
+        let phase = totalSpeed / 3;
+        
+        // Φάση 1: Up
+        diskEl.style.transition = `bottom ${phase}ms ease-out`;
+        diskEl.style.bottom = '85%';
+        await sleep(phase);
+        if(gameId !== currentId) return;
+        
+        // Φάση 2: Over
+        diskEl.style.transition = `left ${phase}ms ease-in-out`;
+        diskEl.style.left = getPegLeft(m.to, diskWidth);
+        await sleep(phase);
+        if(gameId !== currentId) return;
+
+        // Φάση 3: Down
+        diskEl.style.transition = `bottom ${phase}ms ease-in`;
+        diskEl.style.bottom = getSlotBottom(targetSlot);
+        await sleep(phase);
+        if(gameId !== currentId) return;
+
+        moves++;
+        document.getElementById('moveCount').innerText = moves;
+        logMove(d, m.from, m.to);
+        
+        playNextMove();
+    }
+
+    window.onload = initGame;
+</script>
+
+</body>
+</html>

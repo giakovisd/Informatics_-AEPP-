@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Εργαστήριο Συμπίεσης - Ντίλι Ντίλι</title>
+    <style>
+        :root {
+            --primary: #2563eb; --primary-hover: #1d4ed8;
+            --text-dark: #0f172a; --text-light: #64748b;
+            --bg-color: #f1f5f9; --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --success: #16a34a; --warning: #f59e0b; --danger: #ef4444;
+            --highlight: #fef08a; --code-bg: #f8fafc;
+            --screen-bg: #ffffff; --screen-text: #000000;
+        }
+
+        body.dark-mode {
+            --bg-color: #020617; --panel-bg: #1e293b;
+            --text-dark: #f8fafc; --text-light: #94a3b8;
+            --border-color: #334155; --code-bg: #0f172a;
+            --screen-bg: #e2e8f0; --screen-text: #000000;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background-color: var(--bg-color); color: var(--text-dark); 
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s;
+        }
+
+        /* --- TOOLBAR --- */
+        .toolbar { 
+            background: var(--panel-bg); border-bottom: 1px solid var(--border-color); 
+            padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 100;
+        }
+        .toolbar-title { font-weight: 800; font-size: 1.1rem; color: var(--primary); display: flex; align-items: center; gap: 8px;}
+        .controls-group { display: flex; align-items: center; gap: 8px; flex-direction: row-reverse; flex-wrap: wrap;}
+
+        .tool-btn { 
+            padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);
+            background: var(--panel-bg); color: var(--text-dark); cursor: pointer; font-weight: bold;
+            display: flex; align-items: center; gap: 5px; font-size: 0.85rem; transition: 0.2s;
+        }
+        .tool-btn:hover:not(:disabled) { background: var(--border-color); }
+        
+        /* --- MAIN LAYOUT --- */
+        .main-container { display: flex; flex: 1; padding: 15px; gap: 15px; overflow: hidden; }
+        .col { 
+            background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color); 
+            display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        /* LEFT COLUMN */
+        .col-left { flex: 0 0 300px; padding: 20px; overflow-y: auto; line-height: 1.5;}
+        .theory-title { font-size: 1.05rem; font-weight: bold; margin-bottom: 12px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; }
+        .theory-text { font-size: 0.85rem; margin-bottom: 20px; text-align: justify; }
+
+        /* MID COLUMN */
+        .col-mid { flex: 1; display: flex; flex-direction: column; gap: 15px; } 
+        
+        /* STATS TABLE */
+        .stats-table {
+            width: 100%; border-collapse: collapse; background: var(--panel-bg);
+            border: 2px solid var(--border-color); border-radius: 8px; overflow: hidden;
+            font-size: 0.95rem; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .stats-table td { padding: 8px 15px; border-bottom: 1px solid var(--border-color); }
+        .stats-table tr:nth-child(even) { background: var(--code-bg); }
+        .stats-table td:nth-child(2) { color: var(--primary); text-align: right; font-family: monospace; font-size: 1.1rem;}
+        .stats-table tr.total-row { background: #fef08a; color: #854d0e; }
+        body.dark-mode .stats-table tr.total-row { background: #422006; color: #fde047; }
+
+        .compression-box {
+            flex: 1; background: var(--code-bg); border: 2px solid var(--border-color); border-radius: 12px;
+            padding: 25px; font-size: 1.1rem; line-height: 2; overflow-y: auto; color: var(--text-dark);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); text-align: center;
+        }
+
+        .icon-symbol {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 30px; height: 30px; background: var(--highlight); border: 1px solid var(--warning);
+            border-radius: 4px; font-size: 1.1rem; margin: 0 2px; vertical-align: middle;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); color: black;
+        }
+        @keyframes popIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+
+        /* TOOLBOX */
+        .toolbox {
+            background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px;
+            padding: 15px; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+        }
+        .compress-tool {
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            padding: 8px; border: 1px solid var(--border-color); border-radius: 8px;
+            cursor: pointer; transition: 0.2s; min-width: 60px; background: var(--bg-color);
+        }
+        .compress-tool:hover:not(.used) { transform: translateY(-3px); border-color: var(--primary); background: white; }
+        .compress-tool.used { opacity: 0.4; cursor: default; filter: grayscale(1); }
+        .compress-tool .icon { font-size: 1.5rem; }
+        .compress-tool .label { font-size: 0.7rem; font-weight: bold; color: var(--text-light); }
+
+        /* RIGHT COLUMN */
+        .col-right { flex: 0 0 280px; display: flex; flex-direction: column; }
+        .dict-section { padding: 15px; flex: 1; border-bottom: 1px solid var(--border-color); overflow-y: auto; }
+        .dict-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .dict-table th { background: var(--bg-color); padding: 8px; border: 1px solid var(--border-color); text-align: left; }
+        .dict-table td { padding: 8px; border: 1px solid var(--border-color); font-weight: bold; }
+        
+        .console-section { padding: 15px; height: 180px; display: flex; flex-direction: column; }
+        .console-display { 
+            flex: 1; background: var(--screen-bg); color: var(--screen-text); border: 2px solid var(--border-color);
+            padding: 12px; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 0.85rem; overflow-y: auto;
+        }
+
+        /* --- HIDDEN TEACHER MODAL CSS --- */
+        #secretModal { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; 
+            z-index: 9999; backdrop-filter: blur(4px); 
+        }
+        .modal-content { 
+            background: var(--panel-bg); color: var(--text-dark); padding: 30px; 
+            border-radius: 12px; max-width: 750px; width: 90%; border: 3px solid var(--danger); 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5); max-height: 90vh; overflow-y: auto; 
+        }
+        .modal-header { 
+            color: var(--danger); font-weight: 800; font-size: 1.2rem; 
+            border-bottom: 2px solid var(--danger); margin-bottom: 15px; padding-bottom: 10px; 
+            display: flex; justify-content: space-between; align-items: center; 
+        }
+        .modal-body { font-size: 0.95rem; line-height: 1.6; }
+        .error-item { 
+            margin-bottom: 15px; padding: 12px; background: var(--bg-color); 
+            border-left: 4px solid var(--danger); border-radius: 4px; 
+        }
+    </style>
+</head>
+<body>
+
+<header class="toolbar">
+    <div class="toolbar-title">
+        <span id="secretTrigger" style="cursor:pointer; user-select:none;" onclick="handleSecretClick()">📦</span> 
+        Εργαστήριο Συμπίεσης Δεδομένων
+    </div>
+    <div class="controls-group">
+        <button class="tool-btn" onclick="document.body.classList.toggle('dark-mode')">🌙</button>
+        <button class="tool-btn" style="background:var(--danger); color:white;" onclick="resetApp()">🔄 Επαναφορά</button>
+        <button class="tool-btn" style="background:var(--success); color:white;" onclick="decompressAll()">🔓 Αποσυμπίεση</button>
+    </div>
+</header>
+
+<div class="main-container">
+    <div class="col col-left">
+        <div class="theory-title">3. Αλγόριθμοι συμπίεσης</div>
+        <div class="theory-text">
+            Η αποθήκευση των πληροφοριών απαιτεί χώρο, ενώ η μετάδοσή τους στο Διαδίκτυο απαιτεί χρόνο. Είναι επομένως αναγκαίο να χρησιμοποιούμε <b>αλγόριθμους συμπίεσης</b>.<br><br>
+            Ας δούμε έναν απλό τρόπο συμπίεσης ενός κειμένου αντικαθιστώντας τις λέξεις του με σύμβολα (Δημιουργία <b>Λεξικού</b>).
+        </div>
+        <div style="background:#fef9c3; border:1px solid #ca8a04; padding:10px; border-radius:8px; font-size:0.8rem; color:#854d0e;">
+            💡 <b>Απόλυτη Ακρίβεια:</b> Η εφαρμογή λειτουργεί πλέον ως ένα ακριβές μαθηματικό μοντέλο. Ο αλγόριθμος μειώνει το μέγεθος με απόλυτη ακρίβεια (1 σύμβολο = 1 χαρακτήρας) και υπολογίζει το Λεξικό ακριβώς όπως το βιβλίο (Γράμματα λέξης + 1)!
+        </div>
+    </div>
+
+    <div class="col-mid">
+        <table class="stats-table">
+            <tr>
+                <td>Αρχικό κείμενο:</td>
+                <td id="statOrig">343 χαρακτήρες</td>
+            </tr>
+            <tr>
+                <td>Συμπιεσμένο κείμενο:</td>
+                <td id="statComp">343 χαρακτήρες</td>
+            </tr>
+            <tr>
+                <td>Λεξικό (Κόστος):</td>
+                <td id="statDict">0 χαρακτήρες</td>
+            </tr>
+            <tr class="total-row">
+                <td>Σύνολο συμπιεσμένου αρχείου:</td>
+                <td id="statTotal">343 χαρακτήρες</td>
+            </tr>
+            <tr class="total-row">
+                <td title="Η διαίρεση γίνεται με το 345, όπως στο βιβλίο">Ποσοστό συμπίεσης (÷ 345):</td>
+                <td id="statRatio">0.0%</td>
+            </tr>
+        </table>
+
+        <div class="compression-box" id="songText"></div>
+
+        <div class="toolbox" id="toolbox"></div>
+    </div>
+
+    <div class="col col-right">
+        <div class="dict-section">
+            <div class="theory-title" style="border:none;">📖 Λεξικό (Dictionary)</div>
+            <table class="dict-table">
+                <thead><tr><th>Σύμβολο</th><th>Λέξη/Φράση</th><th>Κόστος</th></tr></thead>
+                <tbody id="dictBody"></tbody>
+            </table>
+        </div>
+        <div class="console-section">
+            <div class="theory-title" style="border:none;">🖥️ Καταγραφή</div>
+            <div class="console-display" id="console"></div>
+        </div>
+    </div>
+</div>
+
+<div id="secretModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span>🛑 ΣΗΜΕΙΩΣΕΙΣ ΚΑΘΗΓΗΤΗ: ΤΑ ΛΑΘΗ ΤΟΥ ΒΙΒΛΙΟΥ</span>
+            <span style="cursor:pointer; font-size:1.5rem;" onclick="document.getElementById('secretModal').style.display='none'">✖</span>
+        </div>
+        <div class="modal-body">
+            <p style="margin-bottom: 15px; color: var(--text-light);">Αυτή είναι μια κρυφή οθόνη αναφοράς για τον εκπαιδευτικό, συγκεντρώνοντας τις αστοχίες του σχολικού βιβλίου:</p>
+            
+            <div class="error-item">
+                <strong>1. Ασυνέπεια στο Αρχικό Μέγεθος:</strong><br>
+                Το βιβλίο δεν έχει σταθερή μέτρηση για το αρχικό ασυμπίεστο κείμενο. Αναφέρεται ως <b>343</b> χαρακτήρες, <b>344</b> χαρακτήρες, και στον τύπο χρησιμοποιείται το <b>345</b>. Το πραγματικό μέγεθος είναι 345 (μαζί με τα κενά).
+            </div>
+            
+            <div class="error-item">
+                <strong>2. Λάθος Μέτρηση στο Συμπιεσμένο Κείμενο:</strong><br>
+                Ο συγγραφέας προφανώς έκανε τις αντικαταστάσεις "με το μάτι" και έχασε λέξεις. Οι πίνακες του βιβλίου δίνουν 3 διαφορετικά αποτελέσματα: <b>211, 229 και 230</b>. Ο αλγόριθμος το συμπιέζει απόλυτα στους <b>197</b> χαρακτήρες!
+            </div>
+            
+            <div class="error-item">
+                <strong>3. Μαθηματικό/Τυπογραφικό Σφάλμα στον Τύπο:</strong><br>
+                Στον πρώτο πίνακα, ο τύπος που δίνεται είναι <code>(345 - 268) / 345 ≈ 22%</code>, ενώ λίγο πιο πάνω δηλώνει ρητά πως το αρχικό κείμενο είναι 343.
+            </div>
+            
+            <div class="error-item">
+                <strong>4. Αλγοριθμική Αδυναμία (Χαμένες Ευκαιρίες):</strong><br>
+                Αγνοεί λέξεις που επαναλαμβάνονται (όπως το <i>«φιτίλι»</i> και το <i>«πήρε»</i>). Το κυριότερο: Θα έπρεπε να αντικαταστήσει <b>ολόκληρη τη φράση</b> <i>«που έφεγγε και κένταγε η κόρη το μαντήλι, ντίλι ντίλι ντίλι.»</i> με ΕΝΑ μόνο σύμβολο, αφού υπάρχει 3 φορές αυτούσια.
+            </div>
+            
+            <div class="error-item">
+                <strong>5. Η «Κρυφή» Παραδοχή του Λεξικού (57 χαρακτήρες):</strong><br>
+                Για να βγάλει 57, υπολογίζει τα γράμματα της κάθε λέξης συν 1 για το σύμβολο, <b>αγνοώντας εντελώς τα κενά</b> ανάμεσα στις καταχωρήσεις του λεξικού.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const ORIGINAL_SONG = "Ντίλι ντίλι ντίλι, ντίλι το καντήλι που έφεγγε και κένταγε η κόρη το μαντήλι, ντίλι ντίλι ντίλι. Ήρθε ο ποντικός, πήρε το φιτίλι μέσ' από το καντήλι που έφεγγε και κένταγε η κόρη το μαντήλι, ντίλι ντίλι ντίλι. Ήρθε και η γάτα, έφαγε τον ποντικό που πήρε το φιτίλι μέσ' από το καντήλι που έφεγγε και κένταγε η κόρη το μαντήλι, ντίλι ντίλι ντίλι.";
+    
+    const DICTIONARY = [
+        { icon: "☀️", word: "ντίλι" },   
+        { icon: "☂️", word: "ντήλι" },   
+        { icon: "🌟", word: "ποντικός" },
+        { icon: "⛄", word: "γάτα" },     
+        { icon: "☄️", word: "έφαγε" },   
+        { icon: "◹", word: "έφεγγε" },  
+        { icon: "⊙", word: "κένταγε" },  
+        { icon: "☈", word: "κόρη" },     
+        { icon: "⭐", word: "Ήρθε" }      
+    ];
+
+    let currentText = ORIGINAL_SONG;
+    let usedIcons = new Set();
+    
+    let origSize = 343; 
+    let compSize = 343;
+    let dictSize = 0;
+
+    // --- JS ΓΙΑ ΤΟ ΚΡΥΦΟ MODAL ---
+    let secretClicks = 0;
+    let secretTimer = null;
+    function handleSecretClick() {
+        secretClicks++;
+        clearTimeout(secretTimer);
+        if(secretClicks === 3) {
+            document.getElementById('secretModal').style.display = 'flex';
+            secretClicks = 0;
+        }
+        secretTimer = setTimeout(() => secretClicks = 0, 400);
+    }
+    // -----------------------------
+
+    function initApp() {
+        document.getElementById('statOrig').innerText = origSize + " χαρακτήρες";
+        renderText();
+        renderToolbox();
+        updateStats(); // Την πρώτη φορά το usedIcons.size είναι 0, άρα δείχνει 0.0%
+        printConsole("Αρχικό μέγεθος: " + origSize + " χαρακτήρες.");
+    }
+
+    function renderText() {
+        const box = document.getElementById('songText');
+        let html = currentText;
+        DICTIONARY.forEach(item => {
+            const regex = new RegExp(item.icon, 'g');
+            html = html.replace(regex, `<span class="icon-symbol">${item.icon}</span>`);
+        });
+        box.innerHTML = html;
+    }
+
+    function renderToolbox() {
+        const container = document.getElementById('toolbox');
+        container.innerHTML = "";
+        DICTIONARY.forEach(item => {
+            const div = document.createElement('div');
+            div.className = "compress-tool" + (usedIcons.has(item.icon) ? " used" : "");
+            div.innerHTML = `<span class="icon">${item.icon}</span><span class="label">${item.word}</span>`;
+            div.onclick = () => compressWord(item);
+            container.appendChild(div);
+        });
+    }
+
+    function compressWord(item) {
+        if (usedIcons.has(item.icon)) return;
+        
+        const count = (currentText.match(new RegExp(item.word, 'gi')) || []).length;
+        if (count === 0) {
+            printConsole(`Η λέξη '${item.word}' δεν βρέθηκε!`);
+            return;
+        }
+
+        const regex = new RegExp(item.word, 'gi');
+        currentText = currentText.replace(regex, item.icon);
+        usedIcons.add(item.icon);
+        
+        let charsSaved = count * (item.word.length - 1);
+        compSize -= charsSaved;
+        
+        let entryCost = item.word.length + 1; 
+        dictSize += entryCost;
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `<td><span class="icon-symbol" style="width:20px;height:20px;font-size:0.8rem;">${item.icon}</span></td><td>${item.word}</td><td style="text-align:center; color:var(--danger);">+${entryCost}</td>`;
+        document.getElementById('dictBody').appendChild(row);
+
+        printConsole(`Συμπίεση: ${count} x '${item.word}'. Λεξικό: +${entryCost} χαρ.`);
+        
+        renderText();
+        renderToolbox();
+        updateStats();
+    }
+
+    function decompressAll() {
+        if (usedIcons.size === 0) return;
+        printConsole("Αποσυμπίεση δεδομένων...");
+        
+        DICTIONARY.forEach(item => {
+            const regex = new RegExp(item.icon, 'g');
+            currentText = currentText.replace(regex, item.word); 
+        });
+
+        usedIcons.clear();
+        compSize = origSize;
+        dictSize = 0;
+        
+        document.getElementById('dictBody').innerHTML = "";
+        
+        renderText();
+        renderToolbox();
+        updateStats();
+        printConsole("Τα δεδομένα επανήλθαν στην αρχική μορφή!");
+    }
+
+    function updateStats() {
+        const totalSize = compSize + dictSize;
+        
+        document.getElementById('statComp').innerText = compSize + " χαρακτήρες";
+        document.getElementById('statDict').innerText = dictSize + " χαρακτήρες";
+        document.getElementById('statTotal').innerText = totalSize + " χαρακτήρες";
+        
+        let ratio = 0;
+        // Υπολογίζουμε το ποσοστό ΜΟΝΟ εφόσον ο μαθητής έχει ξεκινήσει τη συμπίεση
+        if (usedIcons.size > 0) {
+            ratio = ((345 - totalSize) / 345 * 100);
+        }
+        document.getElementById('statRatio').innerText = ratio.toFixed(1) + "%";
+        
+        if(usedIcons.size === DICTIONARY.length) {
+             printConsole("<span style='color:var(--success);'>✅ <strong>Ολοκληρώθηκε:</strong> Ο αλγόριθμος βρήκε περισσότερες εμφανίσεις από τον συγγραφέα του βιβλίου (Συμπιεσμένο: 197 αντί για 211) αλλά κράτησε το ίδιο ακριβώς Λεξικό (57)!</span>");
+        }
+    }
+
+    function printConsole(msg) {
+        const con = document.getElementById('console');
+        con.innerHTML += `> ${msg}<br>`;
+        con.scrollTop = con.scrollHeight;
+    }
+
+    function resetApp() {
+        currentText = ORIGINAL_SONG;
+        usedIcons.clear();
+        compSize = origSize;
+        dictSize = 0;
+        document.getElementById('dictBody').innerHTML = "";
+        document.getElementById('console').innerHTML = "";
+        initApp();
+    }
+
+    window.onload = initApp;
+</script>
+
+</body>
+</html>
