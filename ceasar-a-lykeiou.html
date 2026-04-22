@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Το Εργαστήρι του Καίσαρα - Α' Λυκείου</title>
+    <style>
+        :root {
+            --primary: #2563eb; --primary-hover: #1d4ed8;
+            --text-dark: #0f172a; --text-light: #64748b;
+            --bg-color: #f1f5f9; --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --success: #16a34a; --warning: #f59e0b; --danger: #ef4444;
+            --highlight: #fef08a; --code-bg: #f8fafc;
+            --screen-bg: #ffffff; --screen-text: #000000;
+        }
+
+        body.dark-mode {
+            --bg-color: #020617; --panel-bg: #1e293b;
+            --text-dark: #f8fafc; --text-light: #94a3b8;
+            --border-color: #334155; --code-bg: #0f172a;
+            --screen-bg: #e2e8f0; --screen-text: #000000;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background-color: var(--bg-color); color: var(--text-dark); 
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s;
+        }
+
+        /* --- TOOLBAR --- */
+        .toolbar { 
+            background: var(--panel-bg); border-bottom: 1px solid var(--border-color); 
+            padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 100;
+        }
+        .toolbar-title { font-weight: 800; font-size: 1.1rem; color: var(--primary); display: flex; align-items: center; gap: 8px;}
+        .controls-group { display: flex; align-items: center; gap: 8px; flex-direction: row-reverse; flex-wrap: wrap;}
+
+        .tool-btn { 
+            padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);
+            background: var(--panel-bg); color: var(--text-dark); cursor: pointer; font-weight: bold;
+            display: flex; align-items: center; gap: 5px; font-size: 0.85rem; transition: 0.2s;
+        }
+        .tool-btn:hover:not(:disabled) { background: var(--border-color); }
+        .tool-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-execute { background: var(--warning); color: black; border: none; }
+        .btn-run { background: var(--primary); color: white; border: none; }
+        .btn-step { background: var(--primary); color: white; border: none; }
+
+        .speed-control { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; font-weight: bold; margin-left: 10px;}
+        .speed-control input { cursor: pointer; width: 60px;}
+
+        /* --- TABS --- */
+        .tabs-container { display: flex; gap: 5px; background: var(--border-color); padding: 5px 5px 0 5px; border-radius: 8px 8px 0 0; }
+        .tab-btn {
+            padding: 8px 15px; background: var(--code-bg); border: none; border-radius: 6px 6px 0 0;
+            font-weight: bold; cursor: pointer; color: var(--text-light); transition: 0.2s; font-size: 0.85rem;
+        }
+        .tab-btn:hover { color: var(--primary); }
+        .tab-btn.active { background: var(--primary); color: white; }
+
+        /* --- MAIN LAYOUT --- */
+        .main-container { display: flex; flex: 1; padding: 15px; gap: 15px; overflow: hidden; }
+        .col { 
+            background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color); 
+            display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        /* LEFT COLUMN (REDUCED BY ~7%) */
+        .col-left { flex: 0 0 275px; padding: 20px; overflow-y: auto; line-height: 1.5;}
+        .theory-title { font-size: 1.05rem; font-weight: bold; margin-bottom: 12px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; }
+        .theory-text { font-size: 0.85rem; margin-bottom: 20px; text-align: justify; }
+
+        /* MID COLUMN (GAME AREA - INCREASED) */
+        .col-mid { flex: 1; display: flex; flex-direction: column; background: var(--panel-bg); } 
+        
+        .game-area {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 20px; position: relative; background: radial-gradient(circle, var(--panel-bg) 0%, var(--bg-color) 100%);
+            border-radius: 0 0 12px 12px;
+        }
+
+        /* Centurion Character & Speech Bubble */
+        .caesar-stage { display: flex; flex-direction: column; align-items: center; margin-bottom: 30px; position: relative; }
+        .caesar-avatar { font-size: 5rem; line-height: 1; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2)); transition: transform 0.3s; }
+        .caesar-avatar.thinking { transform: scale(1.1) rotate(5deg); }
+        .caesar-avatar.working { transform: scale(1.1) rotate(-5deg); filter: drop-shadow(0 4px 15px rgba(245, 158, 11, 0.5)); }
+
+        .speech-bubble {
+            position: absolute; top: -60px; background: white; color: black; font-weight: bold;
+            padding: 10px 15px; border-radius: 12px; border: 2px solid var(--border-color);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15); font-size: 0.9rem; white-space: nowrap;
+            opacity: 0; transform: translateY(10px); transition: all 0.3s ease; z-index: 10;
+        }
+        .speech-bubble::after {
+            content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
+            border-width: 10px 10px 0; border-style: solid; border-color: white transparent transparent transparent;
+        }
+        .speech-bubble.show { opacity: 1; transform: translateY(0); }
+
+        /* Alphabet Array */
+        .array-wrapper { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 5px; margin-bottom: 20px;}
+        .array-grid { display: flex; flex-wrap: nowrap; gap: 4px; padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.05); border: 2px solid var(--border-color); overflow-x: auto;}
+        .array-cell { 
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            min-width: 36px; height: 45px; border-radius: 6px; background: var(--panel-bg); 
+            border: 2px solid var(--border-color); transition: all 0.2s ease;
+        }
+        .cell-val { font-size: 1.2rem; font-weight: bold; }
+        .cell-idx { font-size: 0.6rem; color: var(--text-light); }
+        
+        .cell-active-src { background: #fef08a !important; border-color: #ca8a04 !important; transform: translateY(-5px); box-shadow: 0 4px 10px rgba(202, 138, 4, 0.3); }
+        .cell-active-tgt { background: #86efac !important; border-color: #16a34a !important; transform: translateY(-5px) scale(1.1); box-shadow: 0 4px 15px rgba(22, 163, 74, 0.4); }
+
+        /* Scrolls */
+        .scrolls-container { display: flex; justify-content: space-around; width: 100%; margin-top: 10px;}
+        .scroll { 
+            background: #fef3c7; color: #78350f; padding: 15px 25px; border-radius: 4px;
+            box-shadow: inset 0 0 15px rgba(180, 83, 9, 0.2), 0 4px 6px rgba(0,0,0,0.1);
+            border: 1px solid #d97706; font-family: monospace; font-size: 1.2rem; font-weight: bold;
+            position: relative; min-width: 200px; text-align: center; letter-spacing: 2px;
+        }
+        .scroll-title { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 0.8rem; color: var(--text-light); font-family: sans-serif; letter-spacing: normal;}
+
+        /* RIGHT COLUMN (REDUCED BY ~7%) */
+        .col-right { flex: 0 0 220px; display: flex; flex-direction: column; }
+        .ram-section { padding: 15px; flex: 1; border-bottom: 1px solid var(--border-color); overflow-y: auto; }
+        .ram-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: center; }
+        .ram-table th { background: var(--bg-color); padding: 8px 2px; border: 1px solid var(--border-color); position: sticky; top: 0; font-size: 0.7rem;}
+        .ram-table td { padding: 8px 2px; border: 1px solid var(--border-color); font-family: monospace; font-weight: bold; font-size: 0.9rem;}
+        
+        .screen-section { padding: 15px; height: 200px; display: flex; flex-direction: column; }
+        .screen-display { 
+            flex: 1; background: var(--screen-bg); color: var(--screen-text); border: 2px solid var(--border-color);
+            padding: 12px; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 0.9rem; overflow-y: auto; line-height: 1.4;
+        }
+
+        /* --- Modal --- */
+        #startupModal {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(6px);
+            display: flex; align-items: center; justify-content: center; z-index: 9999;
+        }
+        .modal-content {
+            background: var(--panel-bg); color: var(--text-dark);
+            width: 90%; max-width: 600px; padding: 30px; border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3); text-align: center; line-height: 1.6;
+        }
+        .modal-title { color: var(--primary); font-size: 1.4rem; margin-top: 0; margin-bottom: 15px; border-bottom: 2px solid var(--primary); padding-bottom: 10px;}
+        .modal-btn { background: var(--success); color: white; border: none; padding: 12px 25px; font-size: 1.1rem; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.2s;}
+        
+        /* Inputs Form */
+        .inputs-overlay {
+            position: absolute; bottom: 20px; background: var(--panel-bg); padding: 15px;
+            border-radius: 8px; border: 2px solid var(--primary); display: flex; gap: 10px; align-items: center;
+        }
+        .inputs-overlay input { padding: 6px; border: 1px solid var(--border-color); border-radius: 4px; font-weight: bold; text-transform: uppercase;}
+    </style>
+</head>
+<body>
+
+<div id="startupModal">
+    <div class="modal-content">
+        <h2 class="modal-title">Κρυπτογράφηση – Αποκρυπτογράφηση</h2>
+        <div style="text-align: justify; font-size: 1rem; margin-bottom: 25px;">
+            Η κρυπτογραφία (cryptography) αποτελεί γνωστικό πεδίο των εφαρμοσμένων μαθηματικών και της πληροφορικής, που ασχολείται με τη μελέτη, την ανάπτυξη και τη χρήση τεχνικών με σκοπό την απόκρυψη του περιεχομένου των μηνυμάτων. Με την εκτεταμένη χρήση του Διαδικτύου και γενικότερα των επικοινωνιών δεδομένων.
+        </div>
+        <button class="modal-btn" onclick="document.getElementById('startupModal').style.display='none'">✓ Είσοδος στο Εργαστήρι</button>
+    </div>
+</div>
+
+<header class="toolbar">
+    <div class="toolbar-title">🏛️ Το Εργαστήρι του Καίσαρα</div>
+    <div class="controls-group">
+        <button class="tool-btn" onclick="initApp()">🔄 Αρχή</button>
+        <button class="tool-btn btn-step" id="btnStep" onclick="manualStep()" disabled>👣 Βήμα</button>
+        <button class="tool-btn btn-run" id="btnAuto" onclick="toggleAuto()" style="display:none;">▶️ Αυτόματα</button>
+        <button class="tool-btn btn-execute" id="btnExecute" onclick="showInputs()">🚀 Εκτέλεση</button>
+        <div class="speed-control">
+            🐢 <input type="range" id="speedSlider" min="1" max="5" value="3" dir="rtl"> 🐇
+        </div>
+        <button class="tool-btn" onclick="document.body.classList.toggle('dark-mode')">🌙</button>
+    </div>
+</header>
+
+<div class="main-container">
+    <div class="col col-left">
+        <div class="theory-title">2. Αλγόριθμοι κρυπτογράφησης</div>
+        <div class="theory-text">
+            Ένας από τους πιο απλούς και παλιούς αλγόριθμους είναι ο <b>αλγόριθμος κρυπτογράφησης του Καίσαρα (Caesar cipher)</b>, τον οποίο χρησιμοποιούσε ο ίδιος ο Ιούλιος Καίσαρας (100 π.Χ. - 44 π.Χ.) για τις επικοινωνίες του. Ο αλγόριθμος αυτός λειτουργεί ως εξής:<br><br>
+            
+            <em style="color: var(--primary);">«Αντικαθιστούμε κάθε γράμμα του κειμένου με ένα διαφορετικό το οποίο βρίσκεται, στο αλφάβητο, σε κάποια από τις επόμενες ή προηγούμενες θέσεις. Στην απλούστερη μορφή του αντικαθιστούμε κάθε γράμμα με το επόμενό του στο αλφάβητο, δηλαδή το Α μετατρέπεται σε Β, το Β σε Γ... ενώ το Ω μετατρέπεται σε Α».</em><br><br>
+            
+            Για παράδειγμα, η λέξη <b>ΚΑΛΗΜΕΡΑ</b> μετασχηματίζεται ως εξής:<br>
+            <div style="background: rgba(239,68,68,0.1); padding: 5px; text-align: center; font-weight: bold; border: 1px solid #ef4444; border-radius: 4px; margin: 10px 0;">
+                ΚΑΛΗΜΕΡΑ ➔ ΛΒΜΘΝΖΣΒ
+            </div>
+            
+            Η τιμή μετατόπισης ονομάζεται <b>κλειδί της κρυπτογράφησης</b>.<br><br>
+            
+            <hr style="margin: 15px 0; border: 0; border-top: 1px solid var(--border-color);">
+            
+            <b>Ασκήσεις:</b><br>
+            α) Ποιο κλειδί χρησιμοποιήθηκε παραπάνω;<br><br>
+            β) Λάβατε το μήνυμα: <b>ΕΑΛΧΠΕΓΗΛΨΗΒΣΛΨΚΕ</b><br>
+            Ξεκινάει με το άρθρο "Η". Μπορείτε να το αποκρυπτογραφήσετε;
+        </div>
+    </div>
+
+    <div class="col col-mid">
+        <div class="tabs-container">
+            <button class="tab-btn active" id="tab1" onclick="switchMode('ENC')">🔒 Κρυπτογράφηση</button>
+            <button class="tab-btn" id="tab2" onclick="switchMode('DEC')">🔓 Αποκρυπτογράφηση</button>
+        </div>
+        
+        <div class="game-area">
+            <div class="caesar-stage">
+                <div class="speech-bubble" id="caesarBubble">Χαίρε! Είμαι έτοιμος!</div>
+                <img src="centurion.png" class="caesar-avatar" id="caesarAvatar" style="width: 120px; height: auto;"> </div>
+
+            <div class="array-wrapper">
+                <div class="array-grid" id="ab-array"></div>
+            </div>
+
+            <div class="scrolls-container">
+                <div class="scroll">
+                    <div class="scroll-title" id="lblIn">Είσοδος</div>
+                    <span id="scrollIn">-</span>
+                </div>
+                <div class="scroll">
+                    <div class="scroll-title" id="lblOut">Έξοδος</div>
+                    <span id="scrollOut" style="color: #059669;">-</span>
+                </div>
+            </div>
+
+            <div class="inputs-overlay" id="inputsPanel" style="display:none;">
+                <input type="text" id="inMsg" placeholder="ΜΗΝΥΜΑ" style="width:120px;">
+                <input type="number" id="inKey" placeholder="ΚΛΕΙΔΑ" style="width:60px;">
+                <button class="tool-btn btn-run" onclick="startSim()">ΟΚ</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col col-right">
+        <div class="ram-section">
+            <div class="theory-title" style="border:none;">📊 Πίνακας Τιμών</div>
+            <table class="ram-table">
+                <thead><tr><th>Γράμμα</th><th>Αλλαγή</th><th>Νέο</th></tr></thead>
+                <tbody id="ramBody"></tbody>
+            </table>
+        </div>
+        <div class="screen-section">
+            <div class="theory-title" style="border:none;">🖥️ Εξέλιξη</div>
+            <div class="screen-display" id="screen"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const AB = "ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ";
+    let mode = 'ENC';
+    let state = { msg: "", key: 0, charIdx: 0, phase: 0, outMsg: "", isPlaying: false, isFinished: false, timer: null };
+
+    function buildArrayUI() {
+        const grid = document.getElementById('ab-array');
+        grid.innerHTML = "";
+        for(let i=0; i<24; i++) {
+            let cell = document.createElement('div');
+            cell.className = 'array-cell';
+            cell.id = 'cell-' + i;
+            cell.innerHTML = `<div class="cell-val">${AB[i]}</div><div class="cell-idx">${i+1}</div>`;
+            grid.appendChild(cell);
+        }
+    }
+
+    function switchMode(m) {
+        if(state.isPlaying) return;
+        mode = m;
+        document.getElementById('tab1').classList.toggle('active', mode==='ENC');
+        document.getElementById('tab2').classList.toggle('active', mode==='DEC');
+        document.getElementById('lblIn').innerText = mode==='ENC'?'Αρχικό':'Κρυφό';
+        document.getElementById('lblOut').innerText = mode==='ENC'?'Κρυφό':'Αρχικό';
+        resetApp();
+    }
+
+    function showInputs() {
+        document.getElementById('btnExecute').style.display = 'none';
+        document.getElementById('inputsPanel').style.display = 'flex';
+        document.getElementById('inMsg').value = mode==='ENC'?'ΚΑΛΗΜΕΡΑ':'ΕΑΛΧΠΕΓΗΛΨΗΒΣΛΨΚΕ';
+        document.getElementById('inKey').value = mode==='ENC'?'1':'21';
+    }
+
+    function startSim() {
+        let m = document.getElementById('inMsg').value.trim().toUpperCase().replace(/[^Α-Ω]/g, "");
+        let k = parseInt(document.getElementById('inKey').value) || 1;
+        if(!m) return;
+        
+        document.getElementById('inputsPanel').style.display = 'none';
+        document.getElementById('btnAuto').style.display = 'flex';
+        document.getElementById('btnStep').disabled = false;
+        
+        state = { msg: m, key: k, charIdx: 0, phase: 1, outMsg: "", isPlaying: false, isFinished: false };
+        document.getElementById('scrollIn').innerText = m;
+        document.getElementById('scrollOut').innerText = "_";
+        document.getElementById('screen').innerHTML = `Έναρξη...<br>`;
+        document.getElementById('ramBody').innerHTML = "";
+        manualStep();
+    }
+
+    function stepLogic() {
+        if(state.charIdx >= state.msg.length) {
+            setCaesar("Τέλος! Το μήνυμα είναι έτοιμο!", "");
+            document.getElementById('btnAuto').style.display='none';
+            document.getElementById('btnStep').disabled = true;
+            state.isFinished = true; state.isPlaying = false;
+            return;
+        }
+
+        let char = state.msg[state.charIdx];
+        let pos = AB.indexOf(char);
+
+        if(state.phase === 1) { // Selection
+            clearH();
+            document.getElementById('cell-'+pos).classList.add('cell-active-src');
+            setCaesar(`Παίρνω το "${char}"...`, "thinking");
+            state.phase = 2;
+        } else if(state.phase === 2) { // Shift
+            let nPos;
+            if(mode==='ENC') {
+                nPos = pos + state.key;
+                if(nPos >= 24) nPos -= 24; // IF Logic
+            } else {
+                nPos = pos - state.key;
+                if(nPos < 0) nPos += 24; // IF Logic
+            }
+            document.getElementById('cell-'+nPos).classList.add('cell-active-tgt');
+            let nChar = AB[nPos];
+            state.outMsg += nChar;
+            document.getElementById('scrollOut').innerText = state.outMsg;
+            addRamRow(char, `${mode==='ENC'?'+':'-'}${state.key}`, nChar);
+            setCaesar(`Μετατόπιση! Γίνεται "${nChar}"`, "working");
+            state.phase = 3;
+        } else { // Next
+            state.charIdx++;
+            state.phase = 1;
+        }
+    }
+
+    function setCaesar(txt, mood) {
+        document.getElementById('caesarBubble').innerText = txt;
+        document.getElementById('caesarBubble').classList.add('show');
+        document.getElementById('caesarAvatar').className = 'caesar-avatar ' + mood;
+    }
+
+    function addRamRow(c1, c2, c3) {
+        const r = document.createElement('tr');
+        r.innerHTML = `<td>${c1}</td><td>${c2}</td><td>${c3}</td>`;
+        document.getElementById('ramBody').appendChild(r);
+        document.getElementById('screen').innerHTML += `${c1} ➔ ${c3}<br>`;
+    }
+
+    function clearH() { for(let i=0; i<24; i++) document.getElementById('cell-'+i).className='array-cell'; }
+
+    function manualStep() { if(!state.isFinished) stepLogic(); }
+    function toggleAuto() {
+        state.isPlaying = !state.isPlaying;
+        document.getElementById('btnAuto').innerText = state.isPlaying ? "⏸️ Παύση" : "▶️ Συνέχεια";
+        if(state.isPlaying) runLoop();
+    }
+    function runLoop() {
+        if(!state.isPlaying || state.isFinished) return;
+        stepLogic();
+        let s = 2500 - (document.getElementById('speedSlider').value * 450);
+        state.timer = setTimeout(runLoop, s);
+    }
+
+    function initApp() { location.reload(); }
+    function resetApp() { clearH(); document.getElementById('scrollIn').innerText="-"; document.getElementById('scrollOut').innerText="-"; document.getElementById('btnExecute').style.display='flex'; }
+    window.onload = buildArrayUI;
+</script>
+
+</body>
+</html>
