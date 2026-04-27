@@ -325,6 +325,8 @@
 
     // --- ΕΚΤΕΛΕΣΗ ΚΩΔΙΚΑ ---
     function prepareExecution() {
+        stopAuto(); // ΚΟΒΕΙ ΚΑΘΕ ΠΑΛΙΟ ΧΡΟΝΟΜΕΤΡΟ
+        
         for(let i=1; i<=4; i++) userVals['p'+i] = document.getElementById('b'+i).value;
         for(let i=1; i<=4; i++) { let el=document.getElementById('b'+i); el.classList.add('locked'); el.disabled=true; }
         
@@ -427,7 +429,7 @@
                 let r2 = evalPart(state.attempts, normalize(userVals.p4), 3);
                 let conn = normalize(userVals.p3);
                 
-                let condUntil = (conn === "και" || conn === "and") ? (r1 && r2) : (r1 || r2);
+                let condUntil = (conn === "και" || conn === "and" || conn === "&&") ? (r1 && r2) : (r1 || r2);
                 updateLastRam(condUntil ? "Αληθής" : "Ψευδής");
                 
                 if(condUntil) { state.pc=10; } else { state.pc=2; }
@@ -457,25 +459,39 @@
     }
 
     function evalPart(val, op, target) {
-        if(op === "=") return val === target;
-        if(op === "<>") return val !== target;
+        if(op === "=" || op === "==") return val === target;
+        if(op === "<>" || op === "!=") return val !== target;
         return false;
     }
 
     function finishSim() {
         highlightLine(0);
+        stopAuto(); // ΕΞΑΣΦΑΛΙΖΕΙ ΟΤΙ ΣΤΑΜΑΤΑΕΙ ΤΟ AUTO
+        document.getElementById('btnAuto').style.display = 'none';
+        document.getElementById('btnStep').style.display = 'none';
         
-        let correctSol = state.bonus ? ["<>","=","και","="] : ["<>","=","η","="];
+        let p1 = normalize(userVals['p1']);
+        let p2 = normalize(userVals['p2']);
+        let p3 = normalize(userVals['p3']);
+        let p4 = normalize(userVals['p4']);
+        
         let userCorrect = true;
-        for(let i=1; i<=4; i++) {
-            if(normalize(userVals['p'+i]) !== correctSol[i-1]) userCorrect = false;
+        
+        if (p1 !== "<>" && p1 !== "!=") userCorrect = false;
+        if (p2 !== "=" && p2 !== "==") userCorrect = false;
+        
+        if (state.bonus) {
+            if (p3 !== "και" && p3 !== "and" && p3 !== "&&") userCorrect = false;
+        } else {
+            if (p3 !== "η" && p3 !== "or" && p3 !== "||") userCorrect = false;
         }
+        
+        if (p4 !== "=" && p4 !== "==") userCorrect = false;
 
         if(!userCorrect && !state.bonus) {
-            printScreen("<br><strong>Παρατήρηση:</strong> Η λογική σου δεν είναι η βέλτιστη. Έλεγξε τους τελεστές σου.", "#b45309");
-        } else if(userCorrect) {
+            printScreen("<br><strong>Παρατήρηση:</strong> Το πρόγραμμα εκτελέστηκε, αλλά η λογική δεν είναι η αναμενόμενη. Έλεγξε ξανά τους τελεστές σου.", "#b45309");
+        } else {
             printScreen("<br><strong>✅ Συγχαρητήρια!</strong> Ο έλεγχος εγκυρότητας και προστασίας ολοκληρώθηκε σωστά.", "#16a34a");
-            
         }
 
         unlockInputs();

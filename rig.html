@@ -380,7 +380,15 @@
         document.getElementById('instructionBox').style.background = "rgba(16, 185, 129, 0.1)";
         document.getElementById('instructionBox').style.borderColor = "var(--success)";
         
-        state.pc = 1; state.isFinished = false; state.iters = 0; highlightLine(1);
+        // ΜΗΔΕΝΙΣΜΟΣ ΟΛΩΝ ΤΩΝ ΜΕΤΑΒΛΗΤΩΝ ΠΡΙΝ ΤΗ ΝΕΑ ΕΚΤΕΛΕΣΗ
+state.vathos = 0; 
+state.money = 0; 
+state.price = 0; 
+state.currentY = 100;
+state.pc = 1; 
+state.isFinished = false; 
+state.iters = 0; 
+highlightLine(1);
     }
 
     function step() {
@@ -518,9 +526,15 @@
         }
     }
     
-    function runAuto() {
+   function runAuto() {
         if (!state.isPlaying || state.isFinished) return;
-        step();
+        
+        step(); // Εκτελεί το βήμα
+        
+        // ΠΡΟΣΘΗΚΗ: Αν το βήμα (step) προκάλεσε λάθος και τερμάτισε την προσομοίωση, 
+        // απαγορεύουμε τη δημιουργία νέου χρονομέτρου!
+        if (!state.isPlaying || state.isFinished) return;
+        
         let speed = parseInt(document.getElementById('speedSlider').value);
         state.timer = setTimeout(runAuto, speed);
     }
