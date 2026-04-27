@@ -380,7 +380,7 @@
         ],
         3: [
             "Για i από 1 μέχρι 5",
-            "  Για j από 1 μέχρι 5 - i",
+            "  Για j από 1 μέχρι 6 - i",
             "    Αν π[j] > π[j + 1] τότε",
             "      temp ← π[j + 1]",
             "      π[j + 1] ← π[j]",
@@ -594,7 +594,7 @@
              // 3. Sort (j vs j+1)
              for (let i = 1; i <= 5; i++) {
                 steps.push({ line: 0, type: 'loop_outer', i: i, msg: `Πέρασμα ${i}` });
-                for (let j = 1; j <= 5 - i; j++) {
+                for (let j = 1; j <= 6 - i; j++) {
                      let idx1 = j - 1; // P[j]
                      let idx2 = j;     // P[j+1]
                      steps.push({ line: 1, type: 'loop_inner', msg: `j=${j}`, p1: idx1, p2: idx2 });
