@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>Πλήθος Μεγίστου (Mobile Ready & Animations)</title>
+    <style>
+        :root {
+            --primary: #8b5cf6; 
+            --primary-hover: #7c3aed;
+            --text-dark: #0f172a; 
+            --text-light: #64748b;
+            --bg-color: #f8fafc; 
+            --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --success: #10b981; 
+            --warning: #f59e0b; 
+            --danger: #ef4444;
+            --highlight: #fef08a; 
+            --code-bg: #f1f5f9;
+        }
+
+        /* --- DARK MODE SETTINGS --- */
+        body.dark-mode {
+            --bg-color: #020617; 
+            --panel-bg: #1e293b;
+            --text-dark: #f8fafc; 
+            --text-light: #94a3b8;
+            --border-color: #334155; 
+            --code-bg: #0f172a;
+        }
+
+        /* Επιπλέον ρυθμίσεις για να είναι όμορφο το Night Mode στο Βάθρο και την Ουρά */
+        body.dark-mode .status-overlay { background: #1e293b; color: #f8fafc; border-color: #334155; }
+        
+        body.dark-mode .paper { background: #1e293b; color: #f8fafc; border-color: #475569; }
+        body.dark-mode .paper.crowned { background: #451a03; color: #fde047; border-color: #f59e0b; }
+        body.dark-mode .paper.rejected { background: #450a0a; color: #fca5a5; border-color: #ef4444; }
+        
+        body.dark-mode .q-box { background: #1e293b; color: #f8fafc; border-color: #475569; }
+        body.dark-mode .q-box.done { background: #0f172a; color: #64748b; border-color: #334155; }
+        body.dark-mode .q-box.active { background: var(--warning); border-color: #d97706; color: white; }
+        
+        body.dark-mode .manual-input-box { background: #451a03; border-color: #d97706; }
+        body.dark-mode .manual-input-box label { color: #fde047 !important; }
+        body.dark-mode .manual-input-box input { background: #1e293b; color: white; border-color: #f59e0b; }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background-color: var(--bg-color); color: var(--text-dark); 
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* --- TOOLBAR --- */
+        .toolbar { 
+            background: var(--panel-bg); border-bottom: 1px solid var(--border-color); 
+            padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 100;
+            flex-shrink: 0; transition: background-color 0.3s;
+        }
+        .toolbar-title { font-weight: 800; font-size: 1.1rem; color: var(--primary); display: flex; align-items: center; gap: 8px;}
+        
+        .controls-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;}
+
+        .tool-btn { 
+            padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);
+            background: var(--panel-bg); color: var(--text-dark); cursor: pointer; font-weight: bold;
+            display: flex; align-items: center; gap: 5px; font-size: 0.85rem; transition: 0.2s;
+            touch-action: manipulation;
+        }
+        .tool-btn:hover:not(:disabled) { filter: brightness(0.9); }
+        .tool-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-execute { background: var(--primary); color: white; border: none; }
+        .btn-run { background: #3b82f6; color: white; border: none; }
+        .btn-mode { background: var(--warning); color: black; border: none; }
+
+        .speed-control { display: flex; align-items: center; }
+        .speed-control input { cursor: pointer; width: 80px;}
+        
+        /* --- MAIN LAYOUT --- */
+        .main-container { display: flex; flex: 1; padding: 15px; gap: 15px; overflow: hidden; }
+        .col { 
+            background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color); 
+            display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: background-color 0.3s;
+        }
+
+        /* LEFT COLUMN: Theory */
+        .col-left { flex: 0 0 300px; padding: 20px; overflow-y: auto; line-height: 1.6;}
+        .theory-title { font-size: 1.05rem; font-weight: bold; margin-bottom: 12px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; }
+        .theory-text { font-size: 0.85rem; text-align: justify; margin-bottom: 15px;}
+        .logic-box { background: var(--code-bg); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.85rem; font-weight: bold; color: var(--text-dark); transition: 0.3s;}
+
+        /* MID COLUMN: Code & Animation */
+        .col-mid { flex: 1; display: flex; flex-direction: row; gap: 10px; background: transparent; border: none; box-shadow: none;} 
+        
+        /* Code Container (Left Mid) */
+        .code-col { flex: 0 0 420px; display: flex; flex-direction: column; gap: 10px; }
+        
+        /* Queue Area (Above Code) */
+        .queue-wrapper {
+            background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px;
+            padding: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: 0.3s;
+        }
+        .queue-label { font-size: 0.8rem; font-weight: bold; color: var(--text-light); margin-bottom: 5px; display: block; }
+        .queue-boxes {
+            display: flex; gap: 5px; overflow-x: auto; padding-bottom: 5px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .queue-boxes::-webkit-scrollbar { height: 6px; }
+        .queue-boxes::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        
+        .q-box {
+            width: 32px; height: 32px; flex-shrink: 0; display: flex; justify-content: center; align-items: center;
+            border-radius: 6px; font-weight: bold; font-size: 0.9rem; border: 2px solid var(--border-color);
+            background: var(--bg-color); color: var(--text-dark); transition: 0.3s;
+        }
+        .q-box.active { background: var(--warning); border-color: #d97706; color: white; transform: scale(1.1); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .q-box.done { background: #e2e8f0; color: #94a3b8; border-color: #cbd5e1; }
+
+        /* Manual Input Box (Κρυμμένο από default) */
+        .manual-input-box {
+            display: none; /* Αλλάζει σε flex δυναμικά */
+            align-items: center; justify-content: space-between; gap: 10px;
+            background: #fffbeb; border: 1px solid #fcd34d; padding: 10px; border-radius: 8px; margin-top: 5px;
+        }
+        .manual-input-box input { width: 60px; padding: 5px; font-size: 1rem; font-weight: bold; text-align: center; border: 1px solid #f59e0b; border-radius: 4px; }
+        .manual-input-box input:disabled { background: #e2e8f0; cursor: not-allowed; border-color: #cbd5e1;}
+
+        .code-area { 
+            flex: 1; padding: 15px; background: var(--code-bg); border: 1px solid var(--border-color); border-radius: 12px;
+            font-family: 'Consolas', monospace; font-size: 0.85rem; line-height: 1.5; overflow-y: auto; transition: 0.3s;
+        }
+        .code-line { padding: 2px 8px; border-radius: 4px; transition: 0.2s; white-space: pre; border-left: 4px solid transparent; }
+        .code-line.active { background: var(--highlight); color: black; font-weight: bold; border-left-color: var(--warning);}
+        .kw { color: #0000CD; font-weight: bold; } body.dark-mode .kw { color: #60a5fa;}
+        .var { color: #ea580c; font-weight: bold;} body.dark-mode .var { color: #fb923c;}
+
+        /* ANIMATION AREA (Το Βάθρο) */
+        .anim-area {
+            flex: 1; 
+            background: var(--panel-bg); /* Η Λύση για το Night Mode! */
+            border-radius: 12px; border: 2px solid var(--border-color); 
+            position: relative; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            display: flex; flex-direction: column; transition: background-color 0.3s;
+        }
+
+        .podium-container {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding-top: 40px; position: relative; z-index: 10;
+        }
+        
+        .podium-title { color: var(--primary); font-weight: 900; font-size: 1.4rem; letter-spacing: 1px; margin-bottom: 30px; text-transform: uppercase;}
+        
+        .podium-base {
+            background: linear-gradient(to bottom, #fde047, #f59e0b); border-radius: 10px 10px 0 0;
+            width: 220px; height: 40px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            display: flex; justify-content: center; align-items: center; position: relative; border: 2px solid #d97706; border-bottom: none;
+        }
+        .podium-base::after { content: 'ΑΡΙΣΤΟΙ'; font-size: 0.8rem; color: #78350f; font-weight: bold; opacity: 0.8; letter-spacing: 2px;}
+
+        .crowned-papers-zone {
+            display: flex; gap: 5px; height: 80px; align-items: flex-end; margin-bottom: 5px;
+        }
+
+        /* The Paper Graphic */
+        .paper {
+            width: 50px; height: 70px; background: #f8fafc; border-radius: 4px; box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-weight: 900; font-size: 1.4rem; color: var(--text-dark); border: 2px solid var(--border-color);
+            position: absolute; transform: scale(0); opacity: 0; transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .paper::before { content: 'Βαθμός'; font-size: 0.5rem; color: #64748b; position: absolute; top: 5px; }
+
+        /* Animation States for Paper */
+        .paper.entering { transform: scale(1) translateY(120px); opacity: 1; }
+        .paper.crowned { position: relative; transform: scale(1); opacity: 1; border-color: #f59e0b; box-shadow: 0 -5px 15px rgba(245, 158, 11, 0.4); background: #fffbeb; color: #b45309;}
+        .paper.rejected { transform: scale(0.8) translateY(200px) rotate(20deg); opacity: 0; border-color: #ef4444; background: #fee2e2; color: #991b1b;}
+
+        /* MAX & PL_MAX OVERLAYS */
+        .status-overlay {
+            position: absolute; top: 15px; left: 15px; background: var(--bg-color);
+            border: 2px solid var(--border-color); padding: 12px 20px; border-radius: 8px;
+            color: var(--text-dark); font-family: monospace; font-size: 1.1rem; font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: 0.3s;
+        }
+        .status-overlay span { display: block; margin-bottom: 8px; }
+        .status-overlay span:last-child { margin-bottom: 0; }
+        .val-display { color: var(--primary); font-size: 1.4rem; font-weight: 900; display: inline-block;}
+
+        /* CSS ANIMATION ΓΙΑ ΤΟ MAX (Οπτικοποίηση αλλαγής) */
+        @keyframes popMax {
+            0% { transform: scale(1); color: var(--primary); }
+            50% { transform: scale(2.2); color: var(--danger); text-shadow: 0 0 10px rgba(239,68,68,0.4); }
+            100% { transform: scale(1); color: var(--primary); }
+        }
+        .pop-anim { animation: popMax 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+        /* RIGHT COLUMN: RAM & Output */
+        .col-right { flex: 0 0 260px; display: flex; flex-direction: column; }
+        .ram-section { padding: 15px; flex: 1; border-bottom: 1px solid var(--border-color); overflow-y: auto; transition: 0.3s;}
+        .ram-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left; }
+        .ram-table th { background: var(--bg-color); padding: 8px 5px; border: 1px solid var(--border-color); position: sticky; top: 0; transition: 0.3s;}
+        .ram-table td { padding: 8px 5px; border: 1px solid var(--border-color); font-family: monospace; font-weight: bold; font-size: 0.95rem;}
+        
+        .screen-section { padding: 15px; height: 250px; display: flex; flex-direction: column; }
+        .screen-display { 
+            flex: 1; background: #0f172a; color: #10b981; border: 2px solid var(--border-color);
+            padding: 12px; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 0.85rem; overflow-y: auto; line-height: 1.4;
+        }
+
+        /* ==========================================
+           --- RESPONSIVE DESIGN (MOBILE & TABLET) ---
+           ========================================== */
+        @media (max-width: 1050px) {
+            body { height: auto; min-height: 100vh; overflow-y: auto; overflow-x: hidden; }
+            .toolbar { flex-wrap: wrap; gap: 12px; padding: 12px; }
+            .toolbar-title { font-size: 1rem; width: 100%; }
+            .controls-group { width: 100%; justify-content: flex-start; }
+            
+            .main-container { flex-direction: column; height: auto; overflow: visible; padding-bottom: 30px; }
+            .col { flex: none; width: 100%; height: auto; margin-bottom: 10px; }
+            .col-left { height: auto; max-height: none; }
+            
+            .col-mid { flex-direction: column; gap: 15px; margin-bottom: 10px;}
+            .code-col { flex: none; width: 100%; height: auto; }
+            .code-area { min-height: 250px; }
+            .anim-area { flex: none; width: 100%; height: 400px; }
+            
+            .col-right { height: auto; }
+            .ram-section { min-height: 200px; height: auto;}
+            .screen-section { min-height: 150px; height: auto;}
+        }
+    </style>
+</head>
+<body>
+
+<header class="toolbar">
+    <div class="toolbar-title">🏆 Εύρεση & Πλήθος Μεγίστου</div>
+    
+    <div class="controls-group" style="margin-left: auto;">
+        <button class="tool-btn btn-mode" id="btnMode" onclick="toggleInputMode()">⚙️ Λειτουργία: Αυτόματη</button>
+        <div style="border-left: 2px solid var(--border-color); height: 24px; margin: 0 5px;"></div>
+        
+        <button class="tool-btn btn-toggle" id="btnToggleCode" onclick="toggleCode()">🙈 Απόκρυψη Κώδικα</button>
+        <button class="tool-btn btn-execute" id="btnExecute" onclick="resetApp()">🔄 Αρχή</button>
+        <button class="tool-btn btn-run" id="btnAuto" onclick="toggleAuto()">▶️ Αυτόματα</button>
+        <button class="tool-btn btn-run" id="btnStep" onclick="manualStep()">👣 Βήμα</button>
+        
+        <div class="speed-control">
+            <!-- Ρυθμίστηκε: Δεξιά = Γρήγορα, Αριστερά = Αργά -->
+            <input type="range" id="speedSlider" min="0" max="1800" value="1000" title="Ταχύτητα (Δεξιά = Γρηγορότερα)">
+        </div>
+        
+        <button class="tool-btn" onclick="document.body.classList.toggle('dark-mode')">🌙</button>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <!-- LEFT: THEORY -->
+    <div class="col col-left">
+        <div class="theory-title">Το Πρόβλημα</div>
+        <div class="theory-text">
+            Μας ζητείται να διαβάσουμε 10 βαθμούς και να βρούμε <b>πόσοι μαθητές έγραψαν τον μεγαλύτερο βαθμό</b>.<br><br>
+            Για να λυθεί σωστά, σε κάθε επανάληψη συγκρίνουμε τον βαθμό με το τρέχον <code>max</code>:
+        </div>
+        <div class="logic-box">
+            <span style="color:var(--success)">ΑΝ β > max</span><br>
+            Έχουμε <b>Νέο Ρεκόρ</b>! Διαγράφουμε τους παλιούς "άριστους", ενημερώνουμε το max, και ξεκινάμε το μέτρημα από το 1.<br><br>
+            <span style="color:var(--warning)">ΑΛΛΙΩΣ_ΑΝ β = max</span><br>
+            Έχουμε <b>Ισοβαθμία</b>! Ο μαθητής προστίθεται στους "άριστους", οπότε απλώς αυξάνουμε το πλήθος κατά 1.
+        </div>
+    </div>
+
+    <!-- MID: CODE & ANIMATION -->
+    <div class="col-mid">
+        
+        <div class="code-col">
+            <!-- Η Ουρά των Βαθμών -->
+            <div class="queue-wrapper">
+                <span class="queue-label">Επερχόμενοι Βαθμοί (Ουρά):</span>
+                <div class="queue-boxes" id="queueBoxes">
+                    <!-- Γεμίζει από JS -->
+                </div>
+                
+                <!-- Εμφανίζεται ΜΟΝΟ στη χειροκίνητη λειτουργία -->
+                <div class="manual-input-box" id="manualInputUI" style="display: none;">
+                    <label style="font-weight:bold; color:#b45309;">Πληκτρολόγησε Βαθμό:</label>
+                    <input type="number" id="manualGradeIn" min="0" max="20" placeholder="0-20" disabled>
+                    <button class="tool-btn btn-execute" id="btnManualSubmit" onclick="submitManualGrade()" disabled>ΟΚ</button>
+                </div>
+            </div>
+
+            <!-- Ο Κώδικας -->
+            <div class="code-area" id="codeDisplay">
+<div class="code-line" id="L1"><span class="var">max</span> &lt;- <span class="num">-1</span></div>
+<div class="code-line" id="L2"><span class="var">πλmax</span> &lt;- <span class="num">1</span></div>
+<div class="code-line" id="L3"><span class="kw">ΓΙΑ</span> ι <span class="kw">ΑΠΟ</span> <span class="num">1</span> <span class="kw">ΜΕΧΡΙ</span> <span class="num">10</span></div>
+<div class="code-line" id="L4">    <span class="kw">ΔΙΑΒΑΣΕ</span> β</div>
+<div class="code-line" id="L5">    <span class="kw">ΑΝ</span> β &gt; max <span class="kw">ΤΟΤΕ</span></div>
+<div class="code-line" id="L6">        <span class="var">max</span> &lt;- β</div>
+<div class="code-line" id="L7">        <span class="var">πλmax</span> &lt;- <span class="num">1</span></div>
+<div class="code-line" id="L8">    <span class="kw">ΑΛΛΙΩΣ_ΑΝ</span> β = max <span class="kw">ΤΟΤΕ</span></div>
+<div class="code-line" id="L9">        <span class="var">πλmax</span> &lt;- πλmax + <span class="num">1</span></div>
+<div class="code-line" id="L10">    <span class="kw">ΤΕΛΟΣ_ΑΝ</span></div>
+<div class="code-line" id="L11"><span class="kw">ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span></div>
+<div class="code-line" id="L12"><span class="kw">ΓΡΑΨΕ</span> πλmax</div>
+            </div>
+        </div>
+
+        <div class="anim-area">
+            <div class="status-overlay">
+                <span>Τρέχον MAX: <span class="val-display" id="statMax">-1</span></span>
+                <span>ΠΛΗΘΟΣ: <span class="val-display" id="statPl">0</span></span>
+            </div>
+
+            <div class="podium-container">
+                <div class="podium-title">Βάθρο</div>
+                <div class="crowned-papers-zone" id="crownedZone">
+                    <!-- Papers that are MAX will appear here -->
+                </div>
+                <div class="podium-base"></div>
+            </div>
+
+            <!-- Εδώ εμφανίζεται το χαρτί κατά τον έλεγχο -->
+            <div id="incomingPaper" class="paper">18</div>
+        </div>
+    </div>
+
+    <!-- RIGHT: RAM & OUTPUT -->
+    <div class="col col-right">
+        <div class="ram-section">
+            <div class="theory-title" style="border:none;">📊 Μνήμη (RAM)</div>
+            <table class="ram-table">
+                <thead><tr><th>Μεταβλητή</th><th>Τιμή</th></tr></thead>
+                <tbody id="ramBody">
+                    <tr><td>ι (Μετρητής)</td><td id="ram-i">-</td></tr>
+                    <tr><td>β (Βαθμός)</td><td id="ram-b">-</td></tr>
+                    <tr style="background: rgba(245, 158, 11, 0.1);"><td>max</td><td id="ram-max" style="color:var(--warning);">-</td></tr>
+                    <tr style="background: rgba(245, 158, 11, 0.1);"><td>πλmax</td><td id="ram-plmax" style="color:var(--warning);">-</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="screen-section">
+            <div class="theory-title" style="border:none; color:white;">🖥️ Οθόνη</div>
+            <div class="screen-display" id="screen"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- UI TOGGLES ---
+    let codeVisible = true;
+    function toggleCode() {
+        codeVisible = !codeVisible;
+        const codeDiv = document.getElementById('codeDisplay');
+        const btn = document.getElementById('btnToggleCode');
+        
+        if (codeVisible) {
+            codeDiv.style.display = 'block';
+            btn.innerText = '🙈 Απόκρυψη Κώδικα';
+            btn.style.background = '#64748b';
+        } else {
+            codeDiv.style.display = 'none';
+            btn.innerText = '👁️ Εμφάνιση Κώδικα';
+            btn.style.background = '#8b5cf6';
+        }
+    }
+
+    // --- ALGORITHM STATE ---
+    let GRADES = [];
+    let inputMode = 'auto'; // 'auto' or 'manual'
+    
+    let state = {
+        pc: 0, 
+        isPlaying: false, 
+        isFinished: false, 
+        waitingForInput: false,
+        timer: null,
+        i: 1, b: 0, max: -1, plmax: 0
+    };
+
+    function toggleInputMode() {
+        inputMode = (inputMode === 'auto') ? 'manual' : 'auto';
+        let btn = document.getElementById('btnMode');
+        btn.innerText = (inputMode === 'auto') ? '⚙️ Λειτουργία: Αυτόματη' : '✍️ Λειτουργία: Χειροκίνητη';
+        btn.style.background = (inputMode === 'auto') ? 'var(--warning)' : '#10b981';
+        btn.style.color = (inputMode === 'auto') ? 'black' : 'white';
+        
+        // Το πεδίο εισαγωγής εμφανίζεται αποκλειστικά στη χειροκίνητη λειτουργία
+        document.getElementById('manualInputUI').style.display = (inputMode === 'manual') ? 'flex' : 'none';
+        
+        resetApp();
+    }
+
+    // Η "Έξυπνη" Τυχαία Γεννήτρια (Monte Carlo Distribution)
+    function generateRandomGrades() {
+        GRADES = [];
+        let rand = Math.random();
+        let targetMaxCount = 1;
+
+        if (rand < 0.10) {
+            targetMaxCount = Math.floor(Math.random() * 2) + 4; // 10%: 4-5 max
+        } else if (rand < 0.40) {
+            targetMaxCount = 3; // 30%: 3 max
+        } else if (rand < 0.70) {
+            targetMaxCount = 2; // 30%: 2 max
+        } else {
+            targetMaxCount = 1; // 30%: 1 max
+        }
+
+        // Ταβάνι από 12 έως 20
+        let maxGrade = Math.floor(Math.random() * 9) + 12;
+
+        for (let j = 0; j < targetMaxCount; j++) {
+            GRADES.push(maxGrade);
+        }
+
+        // Τα υπόλοιπα αυστηρά μικρότερα (από 3 έως max-1)
+        while (GRADES.length < 10) {
+            let lowerGrade = Math.floor(Math.random() * (maxGrade - 3)) + 3;
+            GRADES.push(lowerGrade);
+        }
+
+        // Shuffle
+        for (let i = GRADES.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [GRADES[i], GRADES[j]] = [GRADES[j], GRADES[i]];
+        }
+    }
+
+    function renderQueue() {
+        let html = '';
+        for(let j=0; j<10; j++) {
+            let val = '?';
+            if (inputMode === 'auto') {
+                val = GRADES[j];
+            } else {
+                if (j < state.i - 1 || (j === state.i - 1 && state.pc > 4)) {
+                    val = GRADES[j];
+                }
+            }
+
+            let stateClass = '';
+            if (j < state.i - 1) stateClass = 'done';
+            else if (j === state.i - 1 && state.pc >= 4) stateClass = 'active'; 
+
+            html += `<div class="q-box ${stateClass}" id="qbox-${j}">${val}</div>`;
+        }
+        document.getElementById('queueBoxes').innerHTML = html;
+        
+        if(state.i > 3) {
+            let qBoxes = document.getElementById('queueBoxes');
+            let activeBox = document.getElementById(`qbox-${state.i-1}`);
+            if(activeBox) qBoxes.scrollLeft = activeBox.offsetLeft - 50;
+        }
+    }
+
+    // --- VISUALIZATION HELPERS ---
+    const paperEl = document.getElementById('incomingPaper');
+    const crownedZone = document.getElementById('crownedZone');
+
+    function resetVisuals() {
+        crownedZone.innerHTML = '';
+        paperEl.className = 'paper'; 
+        
+        let statMax = document.getElementById('statMax');
+        statMax.innerText = '-1';
+        statMax.classList.remove('pop-anim');
+        
+        document.getElementById('statPl').innerText = '0';
+    }
+
+    function spawnPaper(grade) {
+        paperEl.innerText = grade;
+        paperEl.className = 'paper entering';
+    }
+
+    function crownPaper(grade, isNewRecord) {
+        if (isNewRecord) {
+            crownedZone.innerHTML = ''; 
+            // Εντυπωσιακό Animation στο κείμενο του MAX
+            let statMax = document.getElementById('statMax');
+            statMax.classList.remove('pop-anim');
+            void statMax.offsetWidth; 
+            statMax.classList.add('pop-anim');
+        }
+        
+        paperEl.className = 'paper'; 
+        
+        let newPaper = document.createElement('div');
+        newPaper.className = 'paper crowned';
+        newPaper.innerText = grade;
+        crownedZone.appendChild(newPaper);
+    }
+
+    function rejectPaper() {
+        paperEl.className = 'paper rejected';
+    }
+
+    function updateRAM() {
+        document.getElementById('ram-i').innerText = state.i <= 10 ? state.i : '-';
+        document.getElementById('ram-b').innerText = state.b !== '-' ? state.b : '-';
+        document.getElementById('ram-max').innerText = state.max;
+        document.getElementById('ram-plmax').innerText = state.plmax;
+
+        document.getElementById('statMax').innerText = state.max;
+        document.getElementById('statPl').innerText = state.plmax;
+        
+        renderQueue();
+    }
+
+    function printScreen(txt, color="#10b981") {
+        let scrDiv = document.getElementById('screen');
+        scrDiv.innerHTML += `<span style="color:${color};">${txt}</span><br>`;
+        scrDiv.scrollTop = scrDiv.scrollHeight;
+    }
+
+    // --- EXECUTION ENGINE ---
+    function resetApp() {
+        stopAuto();
+        if (inputMode === 'auto') {
+            generateRandomGrades();
+        } else {
+            GRADES = new Array(10).fill('?');
+            document.getElementById('manualGradeIn').disabled = true;
+            document.getElementById('btnManualSubmit').disabled = true;
+            document.getElementById('manualGradeIn').value = '';
+        }
+
+        state = { pc: 1, isPlaying: false, isFinished: false, waitingForInput: false, timer: null, i: 1, b: '-', max: -1, plmax: 0 };
+        
+        document.getElementById('screen').innerHTML = "> <i>Αρχικοποίηση...</i><br>";
+        resetVisuals();
+        updateRAM();
+        
+        document.getElementById('btnStep').disabled = false;
+        document.getElementById('btnAuto').disabled = false;
+        
+        highlightLine(1);
+    }
+
+    function submitManualGrade() {
+        let val = parseInt(document.getElementById('manualGradeIn').value);
+        if(isNaN(val) || val < 0 || val > 20) return; 
+        
+        GRADES[state.i - 1] = val;
+        state.b = val;
+        document.getElementById('manualGradeIn').value = '';
+        
+        // Ξανακλειδώνουμε το πεδίο μόλις δοθεί ο βαθμός
+        document.getElementById('manualGradeIn').disabled = true;
+        document.getElementById('btnManualSubmit').disabled = true;
+        
+        state.waitingForInput = false;
+        
+        updateRAM();
+        spawnPaper(state.b);
+        printScreen(`> Διαβάστηκε βαθμός: ${state.b}`, "#94a3b8");
+        
+        state.pc = 5;
+        document.getElementById('btnStep').disabled = false;
+        document.getElementById('btnAuto').disabled = false;
+        highlightLine(5);
+        
+        if(state.isPlaying) runLoop();
+    }
+
+    function step() {
+        if (state.isFinished || state.waitingForInput) return;
+        highlightLine(state.pc);
+
+        switch(state.pc) {
+            case 1:
+                state.max = -1;
+                updateRAM();
+                state.pc = 2; break;
+            case 2:
+                state.plmax = 1; 
+                updateRAM();
+                state.pc = 3; break;
+            case 3: // ΓΙΑ i ΑΠΟ 1 ΜΕΧΡΙ 10
+                if (state.i <= 10) {
+                    updateRAM();
+                    state.pc = 4;
+                } else {
+                    document.getElementById('ram-i').innerText = '11 (Τέλος)';
+                    state.pc = 12; // Jump to ΓΡΑΨΕ
+                }
+                break;
+            case 4: // ΔΙΑΒΑΣΕ β
+                if (inputMode === 'auto') {
+                    state.b = GRADES[state.i - 1];
+                    updateRAM();
+                    spawnPaper(state.b);
+                    printScreen(`> Διαβάστηκε βαθμός: ${state.b}`, "#94a3b8");
+                    state.pc = 5; 
+                } else {
+                    // Manual Input Mode - Ενεργοποιούμε το πεδίο
+                    state.waitingForInput = true;
+                    stopAuto();
+                    document.getElementById('manualGradeIn').disabled = false;
+                    document.getElementById('btnManualSubmit').disabled = false;
+                    document.getElementById('manualGradeIn').focus();
+                    
+                    document.getElementById('btnStep').disabled = true;
+                    document.getElementById('btnAuto').disabled = true;
+                    printScreen(`> <i style="color:var(--warning);">Περιμένω εισαγωγή βαθμού...</i>`);
+                    updateRAM(); 
+                }
+                break;
+            case 5: // ΑΝ β > max
+                if (state.b > state.max) {
+                    printScreen(`  [${state.b} > ${state.max}] ΝΕΟ ΡΕΚΟΡ!`, "#f59e0b");
+                    state.pc = 6; 
+                } else {
+                    state.pc = 8; 
+                }
+                break;
+            case 6: // max <- b
+                state.max = state.b;
+                updateRAM();
+                state.pc = 7; break;
+            case 7: // plmax <- 1
+                state.plmax = 1;
+                updateRAM();
+                crownPaper(state.b, true); // True = New record 
+                state.pc = 10; // Jump to ΤΕΛΟΣ_ΑΝ
+                break;
+            case 8: // ΑΛΛΙΩΣ_ΑΝ β = max
+                if (state.b === state.max) {
+                    printScreen(`  [${state.b} = ${state.max}] ΙΣΟΒΑΘΜΙΑ!`, "#38bdf8");
+                    state.pc = 9;
+                } else {
+                    printScreen(`  [${state.b} < ${state.max}] Απορρίπτεται.`, "#ef4444");
+                    rejectPaper();
+                    state.pc = 10; // Jump to ΤΕΛΟΣ_ΑΝ
+                }
+                break;
+            case 9: // plmax <- plmax + 1
+                state.plmax++;
+                updateRAM();
+                crownPaper(state.b, false); // False = Adds to existing podium
+                state.pc = 10; break;
+            case 10: // ΤΕΛΟΣ_ΑΝ
+                state.pc = 11; break;
+            case 11: // ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ
+                state.i++;
+                state.pc = 3; break; // Loop back
+            case 12: // ΓΡΑΨΕ
+                printScreen(`ΑΠΟΤΕΛΕΣΜΑ: Πλήθος Αρίστων = <b style="color:white; font-size:1.2rem;">${state.plmax}</b>`);
+                finishSim(); break;
+        }
+    }
+
+    function finishSim() {
+        state.isFinished = true;
+        stopAuto();
+        document.getElementById('btnStep').disabled = true;
+        document.getElementById('btnAuto').disabled = true;
+        highlightLine(0);
+    }
+
+    function toggleAuto() {
+        if(state.isFinished || state.waitingForInput) return;
+        if (state.isPlaying) {
+            stopAuto();
+        } else {
+            state.isPlaying = true;
+            document.getElementById('btnAuto').innerText = "⏸️ Παύση";
+            document.getElementById('btnAuto').style.background = "var(--warning)";
+            runLoop();
+        }
+    }
+
+    function stopAuto() {
+        state.isPlaying = false;
+        clearTimeout(state.timer);
+        document.getElementById('btnAuto').innerText = "▶️ Αυτόματα";
+        document.getElementById('btnAuto').style.background = "#3b82f6";
+    }
+
+    function runLoop() {
+        if (!state.isPlaying || state.isFinished || state.waitingForInput) return;
+        step();
+        if (!state.isPlaying || state.isFinished || state.waitingForInput) return;
+        
+        // Ο υπολογισμός άλλαξε: Το range πάει από 0 έως 1800
+        // Αν το slider είναι τέρμα δεξιά (1800), η καθυστέρηση είναι 2000 - 1800 = 200ms (Γρήγορο)
+        // Αν το slider είναι τέρμα αριστερά (0), η καθυστέρηση είναι 2000 - 0 = 2000ms (Αργό)
+        let sliderVal = parseInt(document.getElementById('speedSlider').value);
+        let delay = 2000 - sliderVal;
+        
+        state.timer = setTimeout(runLoop, delay);
+    }
+
+    function manualStep() {
+        if (state.isFinished || state.waitingForInput) return;
+        stopAuto(); 
+        step();
+    }
+
+    function highlightLine(id) {
+        document.querySelectorAll('.code-line').forEach(l => l.classList.remove('active'));
+        if(id > 0) {
+            let el = document.getElementById('L' + id);
+            if(el) el.classList.add('active');
+        }
+    }
+
+    // Submit with Enter Key
+    document.getElementById('manualGradeIn').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') submitManualGrade();
+    });
+
+    // Auto-init on load
+    window.onload = resetApp;
+
+</script>
+
+</body>
+</html>
