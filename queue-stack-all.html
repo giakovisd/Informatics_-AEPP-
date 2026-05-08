@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📦 Στοίβα vs Ουρά (LIFO vs FIFO)</title>
+    <style>
+        /* --- CSS VARIABLES (Day/Night) --- */
+        :root {
+            --primary: #3b82f6; --primary-hover: #2563eb;
+            --text-dark: #1e293b; --text-light: #64748b;
+            --bg-color: #f8fafc; --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
+            --stack-color: #8b5cf6; 
+            --queue-color: #06b6d4; 
+            --box-color: #f8fafc;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a; --panel-bg: #1e293b;
+            --text-dark: #f8fafc; --text-light: #cbd5e1;
+            --border-color: #334155;
+            --box-color: #334155;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg-color); color: var(--text-dark); height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s; }
+
+        /* --- TOOLBAR --- */
+        .toolbar { background-color: var(--panel-bg); border-bottom: 1px solid var(--border-color); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 100; }
+        .toolbar-title { font-weight: 800; font-size: 1.3rem; color: var(--primary); display: flex; align-items: center; gap: 8px;}
+        .controls-group { display: flex; align-items: center; gap: 8px;}
+        
+        .tool-btn { background-color: var(--panel-bg); color: var(--text-dark); border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; font-size: 0.9rem;}
+        .tool-btn:hover:not(:disabled) { background-color: var(--border-color); }
+        .tool-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .speed-slider-container { display: flex; align-items: center; gap: 6px; background: var(--bg-color); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-color); }
+        .rheostat { -webkit-appearance: none; width: 80px; height: 6px; border-radius: 3px; background: #cbd5e1; outline: none; cursor: pointer; }
+        .rheostat::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+
+        /* --- 3-COLUMN LAYOUT --- */
+        .main-container { display: flex; flex: 1; padding: 15px; gap: 15px; height: calc(100% - 60px); }
+        .col { background: var(--panel-bg); border-radius: 10px; border: 1px solid var(--border-color); display: flex; flex-direction: column; box-shadow: 0 4px 6px rgba(0,0,0,0.02); overflow: hidden; }
+        
+        /* Left: Theory & Controls */
+        .col-left { flex: 0 0 320px; padding: 20px; overflow-y: auto; display: flex; flex-direction: column;}
+        .panel-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid var(--border-color); padding-bottom: 5px; color: var(--primary); }
+        
+        .analogy-box { padding: 15px; border-radius: 6px; margin-bottom: 15px; font-size: 0.9rem; line-height: 1.5; background: rgba(59, 130, 246, 0.1); border-left: 4px solid var(--primary); }
+        
+        /* Action Controls Panel */
+        .action-panel { background: var(--bg-color); border: 1px solid var(--border-color); padding: 15px; border-radius: 8px; margin-bottom: 15px;}
+        .action-input { width: 100%; padding: 8px; border: 2px dashed var(--border-color); border-radius: 6px; text-align: center; font-weight: bold; font-size: 1.2rem; background: var(--panel-bg); color: var(--primary); margin-bottom: 15px;}
+        
+        .action-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        .btn-stack { flex: 1; background: rgba(139, 92, 246, 0.1); color: var(--stack-color); border: 2px solid var(--stack-color); padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s;}
+        .btn-stack:hover:not(:disabled) { background: var(--stack-color); color: white; }
+        .btn-stack:disabled { opacity: 0.5; cursor: not-allowed; border-color: var(--border-color); color: var(--text-light);}
+        
+        .btn-queue { flex: 1; background: rgba(6, 182, 212, 0.1); color: var(--queue-color); border: 2px solid var(--queue-color); padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s;}
+        .btn-queue:hover:not(:disabled) { background: var(--queue-color); color: white; }
+        .btn-queue:disabled { opacity: 0.5; cursor: not-allowed; border-color: var(--border-color); color: var(--text-light);}
+
+        .status-box { margin-top: auto; padding: 15px; background: var(--bg-color); border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.95rem; color: var(--text-dark); min-height: 100px;}
+        .status-title { display: block; color: var(--primary); font-family: monospace; font-size: 1.1rem; font-weight: bold; margin-bottom: 6px; border-bottom: 1px dashed var(--border-color); padding-bottom: 4px;}
+
+        /* Middle: SPLIT VISUALS (Stack Left, Queue Right) */
+        .col-mid { flex: 1; display: flex; flex-direction: row; gap: 15px; background: var(--bg-color); padding: 0; border: none; box-shadow: none; overflow: hidden;}
+        
+        .struct-panel { flex: 1; background: var(--panel-bg); border-radius: 10px; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.02);}
+        .struct-header { padding: 10px; text-align: center; font-weight: 900; font-size: 1.2rem; color: white; letter-spacing: 1px;}
+        .struct-header.stack { background: var(--stack-color); }
+        .struct-header.queue { background: var(--queue-color); }
+
+        /* --- VISUAL PLAYGROUNDS --- */
+        .playground { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: var(--bg-color); border-bottom: 2px solid var(--border-color); overflow: hidden; padding: 20px;}
+        
+        /* DATA BOXES */
+        .data-box { position: absolute; width: 50px; height: 50px; background: var(--box-color); border: 3px solid; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: bold; font-family: monospace; box-shadow: 0 4px 8px rgba(0,0,0,0.15); transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); z-index: 10;}
+        .data-box.stack-box { border-color: var(--stack-color); color: var(--stack-color); }
+        .data-box.queue-box { border-color: var(--queue-color); color: var(--queue-color); }
+        
+        /* POINTERS */
+        .pointer { position: absolute; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.8rem; color: white; padding: 4px 8px; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); z-index: 20;}
+        .pointer::after { content: ''; position: absolute; width: 0; height: 0; border-style: solid; }
+        
+        /* Top Pointer (Points right -> ) */
+        .ptr-top { background: var(--stack-color); left: 10px; }
+        .ptr-top::after { right: -6px; top: calc(50% - 6px); border-width: 6px 0 6px 6px; border-color: transparent transparent transparent var(--stack-color); }
+        
+        /* Front Pointer (Points down v ) */
+        .ptr-front { background: #10b981; }
+        .ptr-front::after { bottom: -6px; left: calc(50% - 6px); border-width: 6px 6px 0 6px; border-color: #10b981 transparent transparent transparent; }
+        
+        /* Rear Pointer (Points up ^ ) */
+        .ptr-rear { background: var(--danger); }
+        .ptr-rear::after { top: -6px; left: calc(50% - 6px); border-width: 0 6px 6px 6px; border-color: transparent transparent var(--danger) transparent; }
+
+        /* CONTAINERS BACKGROUNDS */
+        .stack-silo { width: 70px; height: 320px; border: 4px solid var(--border-color); border-top: none; border-radius: 0 0 10px 10px; position: relative; background: rgba(139, 92, 246, 0.05); margin-left: 40px;}
+        .queue-line { width: 320px; height: 70px; border-top: 4px solid var(--border-color); border-bottom: 4px solid var(--border-color); position: relative; background: rgba(6, 182, 212, 0.05); margin-top: 20px;}
+        
+        /* Index labels */
+        .idx-lbl { position: absolute; font-size: 0.85rem; font-weight: bold; color: var(--text-light); }
+        
+        /* Zero position zones (when pointers = 0) */
+        .zero-zone-stack { position: absolute; bottom: -25px; left: -45px; font-size: 0.8rem; font-weight: bold; color: var(--danger); opacity: 0.5;}
+        .zero-zone-queue { position: absolute; left: -30px; top: 50%; transform: translateY(-50%); font-size: 0.8rem; font-weight: bold; color: var(--danger); opacity: 0.5;}
+
+        /* Error Flashes */
+        @keyframes error-flash {
+            0% { background-color: var(--bg-color); }
+            50% { background-color: rgba(239, 68, 68, 0.2); }
+            100% { background-color: var(--bg-color); }
+        }
+        .flash-error { animation: error-flash 0.5s ease-in-out; }
+
+        /* CODE AREAS */
+        .code-embedded { flex: 0 0 230px; background: #ffffff !important; color: #1e293b !important; padding: 15px; font-family: 'Consolas', 'Monaco', monospace; font-size: 0.95rem; font-weight: bold; overflow-y: auto;}
+        .code-line { padding: 2px 6px; border-radius: 4px; transition: 0.2s; border-left: 4px solid transparent; margin-bottom: 1px;}
+        .code-line.active { background: #eff6ff !important; border-left-color: #3b82f6 !important; color: #2563eb !important; }
+
+        /* Right: RAM */
+        .col-right { flex: 0 0 280px; display: flex; flex-direction: column; }
+        .ram-area { padding: 15px; flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-color);}
+        
+        .ram-table { width: 100%; border-collapse: collapse; text-align: center; font-family: monospace; font-size: 1.1rem; background: var(--panel-bg); border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color); margin-bottom: 20px;}
+        .ram-table th { background: rgba(59, 130, 246, 0.1); color: var(--primary); padding: 8px; border-bottom: 2px solid var(--border-color); }
+        .ram-table td { padding: 8px; border-bottom: 1px solid var(--border-color); font-weight: bold;}
+        
+        .ram-array-box { display: flex; flex-direction: column; gap: 5px; background: var(--panel-bg); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); flex: 1;}
+        .ram-slot { display: flex; justify-content: space-between; padding: 5px 15px; border-bottom: 1px dashed var(--border-color); font-family: monospace; font-size: 1rem;}
+        .ram-slot.highlight { background: rgba(16, 185, 129, 0.2); transition: 0.3s;}
+
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    <div class="toolbar-title">📦 Στοίβα vs Ουρά (LIFO vs FIFO)</div>
+    <div class="controls-group">
+        <button class="tool-btn" onclick="resetAll()">🔄 Αρχική Κατάσταση</button>
+        <div class="speed-slider-container" title="Ταχύτητα Animation">
+            <span>🐢</span><input type="range" id="speedSlider" min="1" max="100" value="60" class="rheostat"><span>🚀</span>
+        </div>
+        <button class="tool-btn btn-theme" onclick="toggleTheme()">🌙</button>
+    </div>
+</div>
+
+<div class="main-container">
+    
+    <div class="col col-left">
+        <div class="panel-title">🎛️ Control Panel</div>
+
+        <div class="action-panel">
+            <input type="number" id="inputVal" class="action-input" value="42" title="Η τιμή που θα εισαχθεί">
+            
+            <div class="action-row">
+                <button class="btn-stack" id="btnPush" onclick="execPush()">⬇️ Ώθηση (Push)</button>
+                <button class="btn-stack" id="btnPop" onclick="execPop()">⬆️ Απώθηση (Pop)</button>
+            </div>
+            
+            <div class="action-row">
+                <button class="btn-queue" id="btnEnq" onclick="execEnq()">➡️ Εισαγωγή (Enq)</button>
+                <button class="btn-queue" id="btnDeq" onclick="execDeq()">⬅️ Εξαγωγή (Deq)</button>
+            </div>
+        </div>
+
+        <div class="analogy-box">
+            <strong>📦 Στοίβα (LIFO):</strong><br>
+            Last In, First Out. Ο τελευταίος που μπαίνει στο σιλό, είναι ο πρώτος που θα βγει. Ο δείκτης <code>top</code> ανεβοκατεβαίνει.
+        </div>
+        
+        <div class="analogy-box" style="border-left-color: var(--queue-color); background: rgba(6, 182, 212, 0.1);">
+            <strong>🚶 Ουρά (FIFO):</strong><br>
+            First In, First Out. Η εισαγωγή γίνεται από πίσω <code>rear</code> (οριζόντια) και η εξαγωγή από μπροστά <code>front</code>.
+        </div>
+
+        <div class="status-box" id="statusMsg">
+            <div class="status-title">Αρχικοποίηση</div>
+            <div>Οι δομές είναι άδειες. Δώσε μια εντολή από το Control Panel!</div>
+        </div>
+    </div>
+
+    <div class="col-mid">
+        
+        <div class="struct-panel">
+            <div class="struct-header stack">ΣΤΟΙΒΑ [5]</div>
+            <div class="playground" id="stackPlayground">
+                <div class="stack-silo" id="stackSilo">
+                    <div class="idx-lbl" style="bottom: 22px; right: -25px;">1</div>
+                    <div class="idx-lbl" style="bottom: 82px; right: -25px;">2</div>
+                    <div class="idx-lbl" style="bottom: 142px; right: -25px;">3</div>
+                    <div class="idx-lbl" style="bottom: 202px; right: -25px;">4</div>
+                    <div class="idx-lbl" style="bottom: 262px; right: -25px;">5</div>
+                    
+                    <div class="zero-zone-stack">top=0</div>
+                    <div class="pointer ptr-top" id="ptrTop">top</div>
+                </div>
+            </div>
+            <div class="code-embedded">
+                <div id="codeStackPush" style="display:none;">
+                    <div class="code-line" id="sp1">ΑΝ top = 5 ΤΟΤΕ</div>
+                    <div class="code-line" id="sp2" style="padding-left: 20px; color: var(--danger);">ΓΡΑΨΕ 'Υπερχείλιση'</div>
+                    <div class="code-line" id="sp3">ΑΛΛΙΩΣ</div>
+                    <div class="code-line" id="sp4" style="padding-left: 20px;">top &lt;- top + 1</div>
+                    <div class="code-line" id="sp5" style="padding-left: 20px;">Στοίβα[top] &lt;- x</div>
+                    <div class="code-line" id="sp6">ΤΕΛΟΣ_ΑΝ</div>
+                </div>
+                <div id="codeStackPop" style="display:block;">
+                    <div class="code-line" id="so1">ΑΝ top = 0 ΤΟΤΕ</div>
+                    <div class="code-line" id="so2" style="padding-left: 20px; color: var(--danger);">ΓΡΑΨΕ 'Υποχείλιση'</div>
+                    <div class="code-line" id="so3">ΑΛΛΙΩΣ</div>
+                    <div class="code-line" id="so4" style="padding-left: 20px;">x &lt;- Στοίβα[top]</div>
+                    <div class="code-line" id="so5" style="padding-left: 20px;">top &lt;- top - 1</div>
+                    <div class="code-line" id="so6">ΤΕΛΟΣ_ΑΝ</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="struct-panel">
+            <div class="struct-header queue">ΟΥΡΑ [5]</div>
+            <div class="playground" id="queuePlayground">
+                <div class="queue-line" id="queueLine">
+                    <div class="idx-lbl" style="left: 20px; top: -25px;">1</div>
+                    <div class="idx-lbl" style="left: 80px; top: -25px;">2</div>
+                    <div class="idx-lbl" style="left: 140px; top: -25px;">3</div>
+                    <div class="idx-lbl" style="left: 200px; top: -25px;">4</div>
+                    <div class="idx-lbl" style="left: 260px; top: -25px;">5</div>
+
+                    <div class="zero-zone-queue">0</div>
+                    <div class="pointer ptr-front" id="ptrFront">front</div>
+                    <div class="pointer ptr-rear" id="ptrRear">rear</div>
+                </div>
+            </div>
+            <div class="code-embedded">
+                <div id="codeQueueEnq" style="display:none;">
+                    <div class="code-line" id="qe1">ΑΝ rear = 5 ΤΟΤΕ</div>
+                    <div class="code-line" id="qe2" style="padding-left: 20px; color: var(--danger);">ΓΡΑΨΕ 'Υπερχείλιση'</div>
+                    <div class="code-line" id="qe3">ΑΛΛΙΩΣ</div>
+                    <div class="code-line" id="qe4" style="padding-left: 20px;">ΑΝ front = 0 ΤΟΤΕ front &lt;- 1</div>
+                    <div class="code-line" id="qe5" style="padding-left: 20px;">rear &lt;- rear + 1</div>
+                    <div class="code-line" id="qe6" style="padding-left: 20px;">Ουρά[rear] &lt;- x</div>
+                    <div class="code-line" id="qe7">ΤΕΛΟΣ_ΑΝ</div>
+                </div>
+                <div id="codeQueueDeq" style="display:block;">
+                    <div class="code-line" id="qd1">ΑΝ front = 0 ΤΟΤΕ</div>
+                    <div class="code-line" id="qd2" style="padding-left: 20px; color: var(--danger);">ΓΡΑΨΕ 'Υποχείλιση'</div>
+                    <div class="code-line" id="qd3">ΑΛΛΙΩΣ</div>
+                    <div class="code-line" id="qd4" style="padding-left: 20px;">x &lt;- Ουρά[front]</div>
+                    <div class="code-line" id="qd5" style="padding-left: 20px;">ΑΝ front = rear ΤΟΤΕ</div>
+                    <div class="code-line" id="qd6" style="padding-left: 40px;">front &lt;- 0; rear &lt;- 0</div>
+                    <div class="code-line" id="qd7" style="padding-left: 20px;">ΑΛΛΙΩΣ front &lt;- front + 1</div>
+                    <div class="code-line" id="qd8">ΤΕΛΟΣ_ΑΝ</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="col col-right">
+        <div class="panel-title" style="margin: 15px 15px 0 15px;">🧠 Μνήμη (RAM)</div>
+        <div class="ram-area">
+            
+            <table class="ram-table">
+                <tr><th>top</th><th>front</th><th>rear</th></tr>
+                <tr>
+                    <td id="ramTop" style="color: var(--stack-color);">0</td>
+                    <td id="ramFront" style="color: #10b981;">0</td>
+                    <td id="ramRear" style="color: var(--danger);">0</td>
+                </tr>
+            </table>
+
+            <div style="display:flex; gap:10px; flex:1;">
+                <div class="ram-array-box">
+                    <div style="text-align:center; font-weight:bold; color:var(--stack-color); border-bottom:1px solid var(--border-color); padding-bottom:5px;">Στοίβα</div>
+                    <div class="ram-slot" id="rs5"><span>[5]</span><span id="rv5">-</span></div>
+                    <div class="ram-slot" id="rs4"><span>[4]</span><span id="rv4">-</span></div>
+                    <div class="ram-slot" id="rs3"><span>[3]</span><span id="rv3">-</span></div>
+                    <div class="ram-slot" id="rs2"><span>[2]</span><span id="rv2">-</span></div>
+                    <div class="ram-slot" id="rs1"><span>[1]</span><span id="rv1">-</span></div>
+                </div>
+                
+                <div class="ram-array-box">
+                    <div style="text-align:center; font-weight:bold; color:var(--queue-color); border-bottom:1px solid var(--border-color); padding-bottom:5px;">Ουρά</div>
+                    <div class="ram-slot" id="qr1"><span>[1]</span><span id="qv1">-</span></div>
+                    <div class="ram-slot" id="qr2"><span>[2]</span><span id="qv2">-</span></div>
+                    <div class="ram-slot" id="qr3"><span>[3]</span><span id="qv3">-</span></div>
+                    <div class="ram-slot" id="qr4"><span>[4]</span><span id="qv4">-</span></div>
+                    <div class="ram-slot" id="qr5"><span>[5]</span><span id="qv5">-</span></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- APP STATE ---
+    let isAnimating = false;
+    const MAX = 5;
+
+    let S = [null, null, null, null, null, null]; 
+    let topPtr = 0;
+
+    let Q = [null, null, null, null, null, null]; 
+    let frontPtr = 0;
+    let rearPtr = 0;
+
+    // --- DOM ELEMENTS ---
+    const btnPush = document.getElementById('btnPush'); const btnPop = document.getElementById('btnPop');
+    const btnEnq = document.getElementById('btnEnq'); const btnDeq = document.getElementById('btnDeq');
+    const inputVal = document.getElementById('inputVal');
+    const statusMsg = document.getElementById('statusMsg');
+    const speedSlider = document.getElementById('speedSlider');
+
+    const stackSilo = document.getElementById('stackSilo');
+    const queueLine = document.getElementById('queueLine');
+    const ptrTop = document.getElementById('ptrTop');
+    const ptrFront = document.getElementById('ptrFront');
+    const ptrRear = document.getElementById('ptrRear');
+
+    const ramTop = document.getElementById('ramTop');
+    const ramFront = document.getElementById('ramFront');
+    const ramRear = document.getElementById('ramRear');
+
+    const STACK_SLOT_H = 60; 
+    const QUEUE_SLOT_W = 60; 
+
+    window.addEventListener('load', () => { resetAll(); });
+
+    // --- HELPERS ---
+    function getDelay() {
+        let sliderVal = parseInt(speedSlider.value);
+        return 1200 - ((sliderVal - 1) * (1000 / 99)); 
+    }
+
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+
+    function updateStatus(title, msg, isError = false) {
+        statusMsg.innerHTML = `<div class="status-title" style="color: ${isError ? 'var(--danger)' : 'var(--primary)'}">${title}</div><div>${msg}</div>`;
+    }
+
+    function highlightCode(id) {
+        document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+        if(id) {
+            let el = document.getElementById(id);
+            if(el) el.classList.add('active');
+        }
+    }
+
+    function showCodePanel(panelId) {
+        ['codeStackPush', 'codeStackPop', 'codeQueueEnq', 'codeQueueDeq'].forEach(id => {
+            document.getElementById(id).style.display = (id === panelId) ? 'block' : 'none';
+        });
+    }
+
+    function lockButtons(lock) {
+        btnPush.disabled = lock; btnPop.disabled = lock;
+        btnEnq.disabled = lock; btnDeq.disabled = lock;
+        isAnimating = lock;
+    }
+
+    function randomizeInput() {
+        inputVal.value = Math.floor(Math.random() * 90) + 10;
+    }
+
+    function updateRAM() {
+        ramTop.innerText = topPtr;
+        ramFront.innerText = frontPtr;
+        ramRear.innerText = rearPtr;
+        
+        for(let i=1; i<=MAX; i++) {
+            document.getElementById(`rv${i}`).innerText = S[i] !== null ? S[i] : '-';
+            document.getElementById(`qv${i}`).innerText = Q[i] !== null ? Q[i] : '-';
+        }
+    }
+
+    // --- POINTERS VISUALS ---
+    function updatePointersVisuals() {
+        // TOP - Ευθυγραμμισμένο με το κέντρο του κουτιού και τον δείκτη!
+        if (topPtr === 0) {
+            ptrTop.style.bottom = '-10px';
+            ptrTop.style.left = '-45px';
+        } else {
+            // (topPtr - 1) * 60 + 17 ευθυγραμμίζει το βελάκι τέλεια με το index 1,2,3...
+            ptrTop.style.bottom = `${(topPtr - 1) * STACK_SLOT_H + 17}px`;
+            ptrTop.style.left = '-45px';
+        }
+
+        // FRONT & REAR
+        if (frontPtr === 0) {
+            ptrFront.style.left = '-35px';
+            ptrRear.style.left = '-35px';
+            ptrFront.style.top = '-15px';
+            ptrRear.style.bottom = '-15px';
+        } else {
+            ptrFront.style.left = `${(frontPtr - 1) * QUEUE_SLOT_W + 10}px`;
+            ptrRear.style.left = `${(rearPtr - 1) * QUEUE_SLOT_W + 10}px`;
+            // Ο Front pointer ψηλά για να μη κρύβει τα νούμερα
+            ptrFront.style.top = '-48px'; 
+            ptrRear.style.bottom = '-35px';
+        }
+    }
+
+    function resetAll() {
+        S = [null, null, null, null, null, null]; topPtr = 0;
+        Q = [null, null, null, null, null, null]; frontPtr = 0; rearPtr = 0;
+        
+        document.querySelectorAll('.data-box').forEach(e => e.remove());
+        document.querySelectorAll('.ram-slot').forEach(e => e.classList.remove('highlight'));
+        
+        updateRAM();
+        updatePointersVisuals();
+        updateStatus("Αρχικοποίηση", "Οι δομές είναι άδειες. Δώσε εντολή!");
+        highlightCode(null);
+        randomizeInput();
+    }
+
+    // --- STACK OPERATIONS ---
+    async function execPush() {
+        if(isAnimating) return;
+        lockButtons(true);
+        showCodePanel('codeStackPush');
+        let delay = getDelay();
+        let val = parseInt(inputVal.value);
+
+        highlightCode('sp1');
+        updateStatus("Ώθηση (Push)", `Έλεγχος αν top = 5.`);
+        await new Promise(r => setTimeout(r, delay));
+
+        if (topPtr === MAX) {
+            highlightCode('sp2');
+            updateStatus("🚨 ΥΠΕΡΧΕΙΛΙΣΗ", `Η στοίβα είναι γεμάτη! Το στοιχείο ${val} ΔΕΝ χωράει.`, true);
+            document.getElementById('stackPlayground').classList.add('flash-error');
+            setTimeout(() => document.getElementById('stackPlayground').classList.remove('flash-error'), 500);
+        } else {
+            highlightCode('sp4');
+            updateStatus("Ώθηση", `Το top αυξάνεται.`);
+            topPtr++;
+            updateRAM();
+            updatePointersVisuals();
+            await new Promise(r => setTimeout(r, delay));
+
+            highlightCode('sp5');
+            updateStatus("Ώθηση", `Εισαγωγή του ${val} στη θέση Στοίβα[${topPtr}].`);
+            S[topPtr] = val;
+            updateRAM();
+            
+            let rSlot = document.getElementById(`rs${topPtr}`);
+            rSlot.classList.add('highlight');
+            setTimeout(() => rSlot.classList.remove('highlight'), 1000);
+
+            // Animate Box Drop
+            let box = document.createElement('div');
+            box.className = 'data-box stack-box';
+            box.id = `sbox-${topPtr}`;
+            box.innerText = val;
+            box.style.bottom = '350px';
+            box.style.left = '6px';
+            stackSilo.appendChild(box);
+            
+            void box.offsetWidth;
+            box.style.bottom = `${(topPtr - 1) * STACK_SLOT_H + 5}px`;
+            
+            randomizeInput();
+        }
+
+        await new Promise(r => setTimeout(r, delay));
+        highlightCode('sp6'); 
+        lockButtons(false);
+    }
+
+    async function execPop() {
+        if(isAnimating) return;
+        lockButtons(true);
+        showCodePanel('codeStackPop');
+        let delay = getDelay();
+
+        highlightCode('so1');
+        updateStatus("Απώθηση (Pop)", `Έλεγχος αν top = 0.`);
+        await new Promise(r => setTimeout(r, delay));
+
+        if (topPtr === 0) {
+            highlightCode('so2');
+            updateStatus("🚨 ΥΠΟΧΕΙΛΙΣΗ", `Η στοίβα είναι άδεια! Δεν υπάρχει τίποτα για αφαίρεση.`, true);
+            document.getElementById('stackPlayground').classList.add('flash-error');
+            setTimeout(() => document.getElementById('stackPlayground').classList.remove('flash-error'), 500);
+        } else {
+            highlightCode('so4');
+            let val = S[topPtr];
+            updateStatus("Απώθηση", `Ανάκτηση του ${val} από τη θέση Στοίβα[${topPtr}].`);
+            
+            let box = document.getElementById(`sbox-${topPtr}`);
+            if(box) {
+                box.style.bottom = '350px';
+                box.style.opacity = '0';
+                setTimeout(() => box.remove(), 500);
+            }
+            
+            let rSlot = document.getElementById(`rs${topPtr}`);
+            rSlot.classList.add('highlight');
+            setTimeout(() => rSlot.classList.remove('highlight'), 1000);
+
+            S[topPtr] = null;
+            updateRAM();
+            await new Promise(r => setTimeout(r, delay));
+
+            highlightCode('so5');
+            updateStatus("Απώθηση", `Το top μειώνεται.`);
+            topPtr--;
+            updateRAM();
+            updatePointersVisuals();
+        }
+
+        await new Promise(r => setTimeout(r, delay));
+        highlightCode('so6'); 
+        lockButtons(false);
+    }
+
+    // --- QUEUE OPERATIONS ---
+    async function execEnq() {
+        if(isAnimating) return;
+        lockButtons(true);
+        showCodePanel('codeQueueEnq');
+        let delay = getDelay();
+        let val = parseInt(inputVal.value);
+
+        highlightCode('qe1');
+        updateStatus("Εισαγωγή (Enqueue)", `Έλεγχος αν rear = 5.`);
+        await new Promise(r => setTimeout(r, delay));
+
+        if (rearPtr === MAX) {
+            highlightCode('qe2');
+            updateStatus("🚨 ΥΠΕΡΧΕΙΛΙΣΗ", `Το rear έφτασε στο τέλος. Η Ουρά είναι γεμάτη!`, true);
+            document.getElementById('queuePlayground').classList.add('flash-error');
+            setTimeout(() => document.getElementById('queuePlayground').classList.remove('flash-error'), 500);
+        } else {
+            highlightCode('qe4');
+            if (frontPtr === 0) {
+                updateStatus("Εισαγωγή", `Η Ουρά ήταν άδεια. Το front γίνεται 1.`);
+                frontPtr = 1;
+                updateRAM();
+                updatePointersVisuals();
+                await new Promise(r => setTimeout(r, delay));
+            }
+
+            highlightCode('qe5');
+            updateStatus("Εισαγωγή", `Το rear αυξάνεται για να δεχτεί το νέο στοιχείο.`);
+            rearPtr++;
+            updateRAM();
+            updatePointersVisuals();
+            await new Promise(r => setTimeout(r, delay));
+
+            highlightCode('qe6');
+            updateStatus("Εισαγωγή", `Εισαγωγή του ${val} στη θέση Ουρά[${rearPtr}].`);
+            Q[rearPtr] = val;
+            updateRAM();
+
+            let rSlot = document.getElementById(`qr${rearPtr}`);
+            rSlot.classList.add('highlight');
+            setTimeout(() => rSlot.classList.remove('highlight'), 1000);
+
+            // Animate Box Slide In from right
+            let box = document.createElement('div');
+            box.className = 'data-box queue-box';
+            box.id = `qbox-${rearPtr}`;
+            box.innerText = val;
+            
+            box.style.top = '6px';
+            box.style.left = '380px'; // Έξω δεξιά!
+            queueLine.appendChild(box);
+            
+            void box.offsetWidth; 
+            // Έρχεται οριζόντια στη σωστή θέση
+            box.style.left = `${(rearPtr - 1) * QUEUE_SLOT_W + 10}px`; 
+            
+            randomizeInput();
+        }
+
+        await new Promise(r => setTimeout(r, delay));
+        highlightCode('qe7');
+        lockButtons(false);
+    }
+
+    async function execDeq() {
+        if(isAnimating) return;
+        lockButtons(true);
+        showCodePanel('codeQueueDeq');
+        let delay = getDelay();
+
+        highlightCode('qd1');
+        updateStatus("Εξαγωγή (Dequeue)", `Έλεγχος αν front = 0.`);
+        await new Promise(r => setTimeout(r, delay));
+
+        if (frontPtr === 0) {
+            highlightCode('qd2');
+            updateStatus("🚨 ΥΠΟΧΕΙΛΙΣΗ", `Η Ουρά είναι άδεια! Δεν υπάρχει κανείς να εξυπηρετηθεί.`, true);
+            document.getElementById('queuePlayground').classList.add('flash-error');
+            setTimeout(() => document.getElementById('queuePlayground').classList.remove('flash-error'), 500);
+        } else {
+            highlightCode('qd4');
+            let val = Q[frontPtr];
+            updateStatus("Εξαγωγή", `Ο πελάτης ${val} εξυπηρετείται (θέση front=${frontPtr}).`);
+            
+            let box = document.getElementById(`qbox-${frontPtr}`);
+            if(box) {
+                // Φεύγει οριζόντια προς τα αριστερά!
+                box.style.left = '-100px'; 
+                box.style.opacity = '0';
+                setTimeout(() => box.remove(), 500);
+            }
+
+            let rSlot = document.getElementById(`qr${frontPtr}`);
+            rSlot.classList.add('highlight');
+            setTimeout(() => rSlot.classList.remove('highlight'), 1000);
+
+            Q[frontPtr] = null;
+            updateRAM();
+            await new Promise(r => setTimeout(r, delay));
+
+            highlightCode('qd5');
+            updateStatus("Εξαγωγή", `Ήταν αυτός ο τελευταίος πελάτης στην Ουρά; (front = rear)`);
+            await new Promise(r => setTimeout(r, delay));
+
+            if (frontPtr === rearPtr) {
+                highlightCode('qd6');
+                updateStatus("Εξαγωγή", `Ναι! Άρα η Ουρά αδειάζει τελείως. front=0, rear=0.`);
+                frontPtr = 0; rearPtr = 0;
+            } else {
+                highlightCode('qd7');
+                updateStatus("Εξαγωγή", `Όχι. Το front απλά προχωράει δεξιά στον επόμενο.`);
+                frontPtr++;
+            }
+            updateRAM();
+            updatePointersVisuals();
+        }
+
+        await new Promise(r => setTimeout(r, delay));
+        highlightCode('qd8');
+        lockButtons(false);
+    }
+
+</script>
+</body>
+</html>
