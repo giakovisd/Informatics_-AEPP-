@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>Μετατροπή Πολλαπλής σε Απλές Επιλογές (Αποκάλυψη του ΟΧΙ)</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fde047;
+            
+            --primary: #3b82f6; 
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --border-color: #cbd5e1;
+            
+            --code-kw: #0000CD; 
+            --code-var: #000000; 
+            --code-num: #008000;
+            --code-str: #800080;
+        }
+
+        /* --- DARK MODE --- */
+        body.dark-mode { --bg-color: #020617; --panel-bg: #1e293b; --text-color: #f8fafc; --border-color: #334155; }
+        body.dark-mode .code-line.active { background-color: #854d0e; color: white; border-left-color: var(--warning);}
+        body.dark-mode .nc-line.active { background-color: #854d0e; color: white; border-left-color: var(--primary);}
+        body.dark-mode .kw { color: #60a5fa; } body.dark-mode .num { color: #fb923c; } body.dark-mode .var { color: #e2e8f0; } body.dark-mode .str { color: #e879f9; }
+        body.dark-mode .input-group { background: #334155; border-color: #475569; }
+        body.dark-mode .input-group input { background: #1e293b; color: white; border-color: #64748b; }
+        body.dark-mode .col-output, body.dark-mode .code-area { background: #0f172a; border-color: #334155; color: #10b981; }
+        body.dark-mode .output-header { background: #1e293b; border-bottom: 1px solid #334155; color: white; }
+        body.dark-mode .method-box { background: #451a03; border-color: #d97706; color: #fde047; }
+        body.dark-mode .nc-drop { border-bottom-color: #64748b; color: #fde047;}
+
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s; }
+
+        /* HEADER & TOOLBAR */
+        header { background-color: var(--panel-bg); border-bottom: 1px solid var(--border-color); padding: 8px 15px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; z-index: 100; transition: 0.3s; }
+        .header-title h1 { margin: 0; font-size: 1.05rem; color: var(--primary); white-space: nowrap; margin-right: 15px;}
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px;}
+
+        button { padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85rem; background-color: var(--panel-bg); color: var(--text-color); transition: 0.2s; white-space: nowrap; touch-action: manipulation; }
+        button.action-btn { background-color: #eff6ff; border: 2px solid var(--primary); color: var(--primary); }
+        button.action-btn:hover:not(:disabled) { background-color: var(--primary); color: white; }
+        button.phase-btn { background-color: var(--warning); color: black; border-color: #d97706; }
+        button.phase-btn:hover:not(:disabled) { background-color: #d97706; color: white; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .input-group { display: flex; align-items: center; gap: 4px; background: #eff6ff; padding: 4px 6px; border-radius: 6px; border: 1px solid #bfdbfe; transition: 0.3s; }
+        .input-group input { width: 50px; padding: 3px; border: 1px solid #ccc; border-radius: 4px; text-align:center; font-weight: bold; font-size: 0.85rem;}
+        .speed-control { display: flex; align-items: center; font-size: 0.8rem; margin: 0 5px;} .speed-control input { cursor: pointer; width: 60px; }
+
+        /* TABS OVERALL */
+        .main-tabs { display: flex; background: var(--panel-bg); border-bottom: 2px solid var(--primary); padding-top: 5px; padding-left: 15px;}
+        .m-tab { padding: 8px 20px; cursor: pointer; font-weight: bold; font-size: 0.85rem; border-radius: 6px 6px 0 0; background: #e2e8f0; color: #64748b; margin-right: 5px; transition: 0.2s;}
+        .m-tab.active { background: var(--primary); color: white; }
+
+        /* MAIN LAYOUT */
+        .main-container { display: flex; flex: 1; padding: 10px 15px; gap: 15px; overflow: hidden; max-width: 100vw; box-sizing: border-box; }
+        .col { background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: 0.3s; }
+
+        /* LEFT: Problem */
+        .col-left { flex: 0 0 390px; min-width: 0; display: flex; flex-direction: column;}
+        .theory-title { font-size: 0.85rem; font-weight: bold; padding: 8px 10px; background: rgba(59, 130, 246, 0.1); border-bottom: 2px solid var(--primary); color: var(--primary); flex-shrink: 0;}
+        .theory-text { padding: 10px; font-size: 0.8rem; line-height: 1.4; border-bottom: 1px solid var(--border-color); flex-shrink: 0;}
+        
+        .code-area { flex: 1; overflow-y: auto; padding: 8px; font-family: 'Consolas', monospace; font-size: 0.75rem; line-height: 1.4; background: var(--bg-color); transition: 0.3s; }
+        .code-line { padding: 1px 6px; border-radius: 4px; transition: 0.2s; border-left: 3px solid transparent; white-space: pre; }
+        .code-line.active { background-color: var(--highlight-line); font-weight: bold; border-left-color: var(--warning); color: black;}
+        .kw { color: var(--code-kw); font-weight: bold; } .var { color: var(--code-var); } .num { color: var(--code-num); font-weight: bold; } .str { color: var(--code-str); }
+
+        .method-box { margin: 10px; padding: 10px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 6px; font-size: 0.75rem; color: #92400e; line-height: 1.4; text-align: justify; flex-shrink: 0; }
+
+        /* CENTER: Visualizations */
+        .col-mid { flex: 1; display: flex; flex-direction: column; gap: 10px; background: transparent; border: none; box-shadow: none; min-width: 0; }
+        
+        /* Top Viz: Logic Stage */
+        .top-viz { flex: 0 0 160px; background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 8px 12px; position: relative;}
+        .viz-title { font-weight: bold; font-size: 0.85rem; color: var(--text-color); margin-bottom: 5px; display: flex; justify-content: space-between;}
+        
+        .logic-stage { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 8px; overflow-y: auto; padding: 5px;}
+        .logic-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; opacity: 0; transform: translateY(10px); transition: all 0.4s ease;}
+        .logic-row.show { opacity: 1; transform: translateY(0); }
+        
+        .logic-block { 
+            padding: 4px 8px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 0.8rem; font-weight: bold; 
+            border: 2px solid transparent; transition: transform 0.5s, background-color 0.5s, opacity 0.5s, width 0.5s, padding 0.5s, margin 0.5s; 
+            display: inline-block; white-space: nowrap; transform-style: preserve-3d; 
+        }
+        .block-normal { background: #dbeafe; border-color: #3b82f6; color: #1e3a8a; }
+        .block-negated { background: #fee2e2; border-color: #ef4444; color: #991b1b; }
+        .block-merged { background: #dcfce7; border-color: #10b981; color: #065f46; }
+        body.dark-mode .block-normal { background: #1e3a8a; border-color: #60a5fa; color: white; }
+        body.dark-mode .block-negated { background: #7f1d1d; border-color: #f87171; color: white; }
+        body.dark-mode .block-merged { background: #064e3b; border-color: #34d399; color: white; }
+        
+        .logic-op { font-weight: 900; color: var(--warning); transition: all 0.5s;}
+
+        /* Bottom Viz: New Code */
+        .bottom-viz { flex: 1; background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; position: relative;}
+        .bottom-viz .code-area { font-size: 1rem; line-height: 1.5; } /* Μειωμένο κατά 15% */
+        
+        .nc-line { padding: 1px 10px; transition: 0.2s; white-space: pre; opacity: 0; transform: translateX(-20px); font-family: 'Consolas', monospace;}
+        .nc-line.visible { opacity: 1; transform: translateX(0); }
+        .nc-line.active { background-color: var(--highlight-line); font-weight: bold; border-left: 3px solid var(--primary); color: black;}
+        
+        .nc-drop { display: inline-block; min-width: 50px; border-bottom: 2px dashed #94a3b8; color: #1e293b; text-align: center; padding: 0 4px; transition: 0.3s; font-weight: bold;}
+        .nc-drop.filled { border-bottom: 2px solid var(--success); color: var(--success); }
+        
+        /* FLYING GHOSTS */
+        .ghost-cmd { position: fixed; background: #fef08a; border: 2px solid #d97706; padding: 4px 8px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 1rem; font-weight: bold; color: black; z-index: 9999; box-shadow: 0 10px 15px rgba(0,0,0,0.3); pointer-events: none; transition: all 0.7s cubic-bezier(0.25, 1, 0.5, 1); }
+
+        /* RIGHT: Variables & Output */
+        .col-right { flex: 0 0 200px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+        .vars-box { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .var-item { display: flex; justify-content: space-between; align-items: center; font-family: monospace; font-size: 0.9rem; border-bottom: 1px dashed var(--border-color); padding: 4px 0;}
+        .var-val { font-weight: 900; color: var(--primary); }
+
+        .col-output { flex: 1; background: #ffffff; border-radius: 8px; border: 2px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; transition: 0.3s;}
+        .output-header { padding: 6px 10px; background: #f1f5f9; font-weight: bold; border-bottom: 1px solid var(--border-color); transition: 0.3s; font-size: 0.85rem;}
+        .output-log { flex: 1; padding: 8px; overflow-y: auto; font-family: monospace; font-size: 0.8rem; line-height: 1.4; color: var(--text-color);}
+        
+        .ex-container { display: none; height: 100%; flex-direction: column; }
+        .ex-container.active-ex { display: flex; }
+
+        @media (max-width: 1050px) {
+            .main-container { flex-direction: column; height: auto; overflow: visible; padding-bottom: 30px; }
+            .col { flex: none; width: 100%; height: auto; }
+            .col-left { height: 400px; }
+            .top-viz { height: 200px; }
+            .bottom-viz { height: 350px; }
+            .col-right { flex-direction: row; height: auto;}
+            .vars-box { flex: 0 0 150px; }
+            .col-output { min-height: 150px; }
+        }
+        @media (max-width: 600px) { .col-right { flex-direction: column; } }
+    </style>
+</head>
+<body>
+
+<div class="main-tabs">
+    <div class="m-tab active" id="tabEx1" onclick="switchEx(1)">Άσκηση 1 (Συμβολοσειρές)</div>
+    <div class="m-tab" id="tabEx2" onclick="switchEx(2)">Άσκηση 2 (Εύρη Τιμών)</div>
+</div>
+
+<header class="toolbar">
+    <div class="header-title"><h1>🔄 Πολλαπλή σε Απλές (Το Κρυφό ΟΧΙ)</h1></div>
+    
+    <div class="controls-area">
+        <button class="tool-btn" onclick="init()">🔄 Αρχή</button>
+        
+        <div class="input-group" id="inpEx1">
+            <input type="number" step="0.1" id="inX1" placeholder="X=" autocomplete="off">
+        </div>
+        <div class="input-group" id="inpEx2" style="display:none;">
+            <input type="number" id="inX2" placeholder="x=" autocomplete="off">
+        </div>
+
+        <button class="action-btn" onclick="runTest()" id="btnTest" disabled>▶ Δοκιμή</button>
+        <button class="phase-btn" onclick="runAnalysis()" id="btnAnalyze">1. Αποκάλυψη</button>
+        <button class="phase-btn" onclick="runSynthesis()" id="btnSynth" disabled>2. Μετατροπή</button>
+
+        <div class="speed-control"><input type="range" min="200" max="2500" value="1200" id="speedSlider" title="Ταχύτητα (Δεξιά = Γρήγορα)"></div>
+        <button class="tool-btn" onclick="document.body.classList.toggle('dark-mode')">🌙</button>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <div class="col col-left">
+        <div id="leftEx1" class="ex-container active-ex">
+            <div class="theory-title">Άσκηση 1</div>
+            <div class="theory-text">Να ξαναγράψετε το παρακάτω τμήμα χρησιμοποιώντας <b>αποκλειστικά</b> μη εμφωλευμένες απλές δομές επιλογής (Αν...Τότε...Τέλος_αν).</div>
+            <div class="code-area">
+<div class="code-line" id="e1-l1"><span class="kw">Αν</span> Χ &lt;&gt; Α_Μ(Χ) <span class="kw">Τότε</span></div>
+<div class="code-line" id="e1-l2">   <span class="kw">Γράψε</span> <span class="str">"Λάθος"</span></div>
+<div class="code-line" id="e1-l3"><span class="kw">Αλλιώς_αν</span> Χ &lt;= 0 <span class="kw">Τότε</span></div>
+<div class="code-line" id="e1-l4">   <span class="kw">Γράψε</span> <span class="str">"Μη Θετικός"</span></div>
+<div class="code-line" id="e1-l5"><span class="kw">Αλλιώς</span></div>
+<div class="code-line" id="e1-l6">   <span class="kw">Γράψε</span> <span class="str">"Θετικός"</span></div>
+<div class="code-line" id="e1-l7"><span class="kw">Τέλος_αν</span></div>
+            </div>
+        </div>
+        <div id="leftEx2" class="ex-container">
+            <div class="theory-title">Άσκηση 2</div>
+            <div class="theory-text">Να μετατρέψετε την παρακάτω δομή πολλαπλής επιλογής σε μη εμφωλευμένες δομές απλής επιλογής.</div>
+            <div class="code-area">
+<div class="code-line" id="e2-l1"><span class="kw">ΑΝ</span> x &lt;= 1 <span class="kw">ΤΟΤΕ</span></div>
+<div class="code-line" id="e2-l2">   <span class="var">α</span> &lt;- 1</div>
+<div class="code-line" id="e2-l3"><span class="kw">AΛΛΙΩΣ_ΑΝ</span> x &lt;= 10 <span class="kw">ΤΟΤΕ</span></div>
+<div class="code-line" id="e2-l4">   <span class="var">α</span> &lt;- 2</div>
+<div class="code-line" id="e2-l5"><span class="kw">AΛΛΙΩΣ_ΑΝ</span> x &lt;= 100 <span class="kw">ΤΟΤΕ</span></div>
+<div class="code-line" id="e2-l6">   <span class="var">α</span> &lt;- 3</div>
+<div class="code-line" id="e2-l7"><span class="kw">ΑΛΛΙΩΣ</span></div>
+<div class="code-line" id="e2-l8">   <span class="var">α</span> &lt;- 4</div>
+<div class="code-line" id="e2-l9"><span class="kw">ΤΕΛΟΣ_ΑΝ</span></div>
+            </div>
+        </div>
+
+        <div class="method-box">
+            <b>Μεθοδολογία:</b> Για την μετατροπή πολλαπλής δομής επιλογής σε απλές, λαμβάνουμε υπόψιν ότι το «Αλλιώς_Αν» και το «Αλλιώς» <b>κρύβουν την άρνηση</b> (ΟΧΙ) όλων των προηγούμενων συνθηκών, οι οποίες πρέπει να αποκαλυφθούν και έπειτα να απλοποιηθούν!
+        </div>
+    </div>
+
+    <div class="col-mid">
+        <div class="top-viz">
+            <div class="viz-title"><span>Ανάλυση & Απλοποίηση (Το κρυφό ΟΧΙ)</span> <span id="lblPhase" style="color:var(--warning);">Φάση 1: Αναμονή</span></div>
+            
+            <div class="logic-stage" id="logicStage">
+                </div>
+        </div>
+
+        <div class="bottom-viz">
+            <div class="theory-title" style="background:#f1f5f9; border-bottom:1px solid #cbd5e1; color:#0f172a; padding: 6px 10px;">Νέος Κώδικας (Απλές Δομές)</div>
+            
+            <div id="botEx1" class="ex-container active-ex code-area" style="padding: 15px;">
+                <div class="nc-line" id="n1-1" style="display:none;"><span class="kw">ΑΝ</span> <span class="nc-drop" id="d1-1">....</span> <span class="kw">ΤΟΤΕ</span></div>
+                <div class="nc-line" id="n1-2" style="display:none;">   <span class="kw">Γράψε</span> <span class="str">'Λάθος'</span></div>
+                <div class="nc-line" id="n1-3" style="display:none;"><span class="kw">ΤΕΛΟΣ_ΑΝ</span></div>
+                
+                <div class="nc-line" id="n1-4" style="display:none;"><span class="kw">ΑΝ</span> <span class="nc-drop" id="d1-2">....</span> <span class="kw">ΤΟΤΕ</span></div>
+                <div class="nc-line" id="n1-5" style="display:none;">   <span class="kw">Γράψε</span> <span class="str">'Μη Θετικός'</span></div>
+                <div class="nc-line" id="n1-6" style="display:none;"><span class="kw">ΤΕΛΟΣ_ΑΝ</span></div>
+                
+                <div class="nc-line" id="n1-7" style="display:none;"><span class="kw">ΑΝ</span> <span class="nc-drop" id="d1-3">....</span> <span class="kw">ΤΟΤΕ</span></div>
+                <div class="nc-line" id="n1-8" style="display:none;">   <span class="kw">Γράψε</span> <span class="str">'Θετικός'</span></div>
+                <div class="nc-line" id="n1-9" style="display:none;"><span class="kw">ΤΕΛΟΣ_ΑΝ</span></div>
+            </div>
+
+            <div id="botEx2" class="ex-container code-area" style="padding: 15px;">
+                <div class="nc-line" id="n2-1" style="display:none;"><span class="kw">ΑΝ</span> <span class="nc-drop" id="d2-1">....</span> <span class="kw">ΤΟΤΕ</span></div>
+                <div class="nc-line" id="n2-2" style="display:none;">   <span class="var">α</span> &lt;- 1</div>
+                <div class="nc-line" id="n2-3" style="display:none;"><span class="kw">ΤΕΛΟΣ_ΑΝ</span></div>
+                
+                <div class="nc-line" id="n2-4" style="display:none;"><span class="kw">ΑΝ</span> <span class="nc-drop" id="d2-2">....</span> <span class="kw">ΤΟΤΕ</span></div>
+                <div class="nc-line" id="n2-5" style="display:none;">   <span class="var">α</span> &lt;- 2</div>
+                <div class="nc-line" id="n2-6" style="display:none;"><span class="kw">ΤΕΛΟΣ_ΑΝ</span></div>
+                
+                <div class="nc-line" id="n2-7" style="display:none;"><span class="kw">ΑΝ</span> <span class="nc-drop" id="d2-3">....</span> <span class="kw">ΤΟΤΕ</span></div>
+                <div class="nc-line" id="n2-8" style="display:none;">   <span class="var">α</span> &lt;- 3</div>
+                <div class="nc-line" id="n2-9" style="display:none;"><span class="kw">ΤΕΛΟΣ_ΑΝ</span></div>
+                
+                <div class="nc-line" id="n2-10" style="display:none;"><span class="kw">ΑΝ</span> <span class="nc-drop" id="d2-4">....</span> <span class="kw">ΤΟΤΕ</span></div>
+                <div class="nc-line" id="n2-11" style="display:none;">   <span class="var">α</span> &lt;- 4</div>
+                <div class="nc-line" id="n2-12" style="display:none;"><span class="kw">ΤΕΛΟΣ_ΑΝ</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col col-right">
+        <div class="vars-box">
+            <div style="font-weight:bold; color:var(--primary); margin-bottom:10px;">Μνήμη (RAM)</div>
+            
+            <div id="ramEx1" class="ex-container active-ex">
+                <div class="var-item"><span>X</span> <span class="var-val" id="v_x1">-</span></div>
+            </div>
+            
+            <div id="ramEx2" class="ex-container">
+                <div class="var-item"><span>x</span> <span class="var-val" id="v_x2">-</span></div>
+                <div class="var-item" style="margin-top:10px;"><span>α</span> <span class="var-val" id="v_a" style="color:var(--warning);">-</span></div>
+            </div>
+        </div>
+
+        <div class="col-output">
+            <div class="output-header">📺 Οθόνη</div>
+            <div class="output-log" id="outputLog"></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    let activeTab = 1;
+    let phase = 0; 
+    let isBusy = false;
+    let speed = 1200;
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    function switchEx(num) {
+        if(isBusy) return;
+        activeTab = num;
+        
+        document.getElementById('tabEx1').classList.toggle('active', num === 1);
+        document.getElementById('tabEx2').classList.toggle('active', num === 2);
+        
+        document.getElementById('inpEx1').style.display = (num === 1) ? 'flex' : 'none';
+        document.getElementById('inpEx2').style.display = (num === 2) ? 'flex' : 'none';
+
+        document.querySelectorAll('.ex-container').forEach(el => el.classList.remove('active-ex'));
+        
+        document.getElementById(`leftEx${num}`).classList.add('active-ex');
+        document.getElementById(`botEx${num}`).classList.add('active-ex');
+        document.getElementById(`ramEx${num}`).classList.add('active-ex');
+
+        init();
+    }
+
+    function updateSpeed() { speed = 2700 - document.getElementById('speedSlider').value; }
+
+    function log(msg) {
+        const div = document.createElement('div');
+        div.innerHTML = msg;
+        const c = document.getElementById('outputLog');
+        c.appendChild(div);
+        c.scrollTop = c.scrollHeight;
+    }
+
+    function init() {
+        if(isBusy) return;
+        phase = 0;
+        document.getElementById('btnAnalyze').disabled = false;
+        document.getElementById('btnSynth').disabled = true;
+        document.getElementById('btnTest').disabled = true;
+        document.getElementById('lblPhase').innerText = "Αναμονή...";
+        document.getElementById('lblPhase').style.color = "var(--text-color)";
+        document.getElementById('outputLog').innerHTML = '';
+        document.getElementById('logicStage').innerHTML = ''; 
+        
+        // Clear Values
+        document.getElementById('v_x1').innerText = '-'; document.getElementById('v_x2').innerText = '-';
+        document.getElementById('v_a').innerText = '-';
+        
+        // Reset Visuals
+        document.querySelectorAll('.nc-drop').forEach(el => { el.innerHTML = '....'; el.classList.remove('filled'); });
+        
+        for(let i=1; i<=12; i++) {
+            let n1 = document.getElementById(`n1-${i}`); if(n1) { n1.style.display = 'none'; n1.classList.remove('active', 'visible'); }
+            let n2 = document.getElementById(`n2-${i}`); if(n2) { n2.style.display = 'none'; n2.classList.remove('active', 'visible'); }
+        }
+        document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+    }
+
+    // --- DOM BUILDERS FOR STAGE ---
+    function createRow(id) {
+        let row = document.createElement('div');
+        row.className = 'logic-row';
+        row.id = `l-row-${id}`;
+        document.getElementById('logicStage').appendChild(row);
+        return row;
+    }
+
+    function createBlock(row, text, type, id) {
+        let block = document.createElement('div');
+        block.className = `logic-block block-${type}`;
+        block.id = id;
+        block.innerText = text;
+        row.appendChild(block);
+        return block;
+    }
+
+    function createOp(row, text, id) {
+        let op = document.createElement('div');
+        op.className = 'logic-op';
+        op.innerText = text;
+        if(id) op.id = id;
+        row.appendChild(op);
+        return op;
+    }
+
+    // --- ANIMATIONS ---
+    async function flipBlock(blockId, newText, newType) {
+        let block = document.getElementById(blockId);
+        block.style.transform = 'rotateX(90deg)';
+        await sleep(speed * 0.3);
+        block.innerText = newText;
+        block.className = `logic-block block-${newType}`;
+        block.style.transform = 'rotateX(0deg)';
+        await sleep(speed * 0.3);
+    }
+
+    async function mergeBlocks(block1Id, opId, block2Id, newText) {
+        let b1 = document.getElementById(block1Id);
+        let op = document.getElementById(opId);
+        let b2 = document.getElementById(block2Id);
+
+        b1.style.opacity = '0'; b1.style.width = '0'; b1.style.padding = '0'; b1.style.margin = '0';
+        op.style.opacity = '0'; op.style.width = '0'; op.style.padding = '0'; op.style.margin = '0';
+        
+        await sleep(speed * 0.4);
+        
+        b2.className = 'logic-block block-merged';
+        b2.innerText = newText;
+        await sleep(speed * 0.4);
+        
+        b1.remove(); op.remove();
+    }
+
+    // Function to show and activate a line of code properly
+    function showLine(id, active=false) {
+        let el = document.getElementById(id);
+        if(el) {
+            el.style.display = 'block';
+            // Need slight delay for display:block to register before adding opacity class
+            setTimeout(() => {
+                el.classList.add('visible');
+                if(active) el.classList.add('active');
+            }, 10);
+        }
+    }
+    
+    function unhighlight(id) {
+        let el = document.getElementById(id);
+        if(el) el.classList.remove('active');
+    }
+
+    async function flyFinalCondition(rowId, dropId) {
+        let row = document.getElementById(rowId);
+        let drop = document.getElementById(dropId);
+        
+        let textArr = [];
+        row.childNodes.forEach(n => {
+            if(n.innerText && n.style.opacity !== '0') textArr.push(n.innerText);
+        });
+        let text = textArr.join(' ');
+
+        let rectS = row.getBoundingClientRect();
+        let rectD = drop.getBoundingClientRect();
+
+        let ghost = document.createElement('div');
+        ghost.className = 'ghost-cmd';
+        ghost.innerText = text;
+        ghost.style.left = (rectS.left + rectS.width/2 - 50) + 'px';
+        ghost.style.top = rectS.top + 'px';
+        document.body.appendChild(ghost);
+        
+        void ghost.offsetWidth; 
+        
+        ghost.style.left = rectD.left + 'px';
+        ghost.style.top = rectD.top + 'px';
+
+        await sleep(speed * 0.7);
+        ghost.remove();
+
+        drop.innerText = text;
+        drop.classList.add('filled');
+    }
+
+    function hlOrig(lineId) {
+        document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+        if(lineId) document.getElementById(lineId).classList.add('active');
+    }
+
+    // --- PHASE 1 & 2 ---
+    async function runAnalysis() {
+        if(isBusy) return;
+        isBusy = true; updateSpeed();
+        document.getElementById('btnAnalyze').disabled = true;
+        
+        document.getElementById('lblPhase').innerText = "Φάση 1 & 2: Συλλογή, Άρνηση & Απλοποίηση";
+        document.getElementById('lblPhase').style.color = "var(--danger)";
+        document.getElementById('logicStage').innerHTML = ''; 
+        log("> Αποκάλυψη των 'κρυμμένων' ΟΧΙ και Απλοποίηση...");
+
+        if(activeTab === 1) {
+            // -- ROW 1 --
+            hlOrig('e1-l1'); log("- Συνθήκη 1 (Απλή)");
+            let r1 = createRow(1);
+            createBlock(r1, 'Χ <> Α_Μ(Χ)', 'normal', 'b1-1');
+            r1.classList.add('show');
+            await sleep(speed);
+
+            // -- ROW 2 --
+            hlOrig('e1-l3'); log("- Συνθήκη 2 (Έχει ΟΧΙ από πάνω)");
+            let r2 = createRow(2);
+            createBlock(r2, 'ΟΧΙ(Χ <> Α_Μ(Χ))', 'negated', 'b1-2');
+            createOp(r2, 'ΚΑΙ', 'o1-1');
+            createBlock(r2, 'Χ <= 0', 'normal', 'b1-3');
+            r2.classList.add('show');
+            await sleep(speed * 1.2);
+            
+            // Flip row 2
+            log("  * <i>Απλοποίηση: Αντιστροφή τελεστών...</i>");
+            await flipBlock('b1-2', 'Χ = Α_Μ(Χ)', 'normal');
+            await sleep(speed * 0.8);
+
+            // -- ROW 3 --
+            hlOrig('e1-l5'); log("- Συνθήκη 3 (ΑΛΛΙΩΣ - Διπλό ΟΧΙ)");
+            let r3 = createRow(3);
+            createBlock(r3, 'ΟΧΙ(Χ <> Α_Μ(Χ))', 'negated', 'b1-4');
+            createOp(r3, 'ΚΑΙ', 'o1-2');
+            createBlock(r3, 'ΟΧΙ(Χ <= 0)', 'negated', 'b1-5');
+            r3.classList.add('show');
+            await sleep(speed * 1.2);
+
+            // Flip row 3
+            log("  * <i>Απλοποίηση: Αντιστροφή τελεστών...</i>");
+            await flipBlock('b1-4', 'Χ = Α_Μ(Χ)', 'normal');
+            await flipBlock('b1-5', 'Χ > 0', 'normal');
+            await sleep(speed * 0.8);
+
+        } else {
+            // EXERCISE 2
+            // -- ROW 1 --
+            hlOrig('e2-l1'); log("- Συνθήκη 1");
+            let r1 = createRow(1);
+            createBlock(r1, 'x <= 1', 'normal', 'b2-1');
+            r1.classList.add('show');
+            await sleep(speed);
+
+            // -- ROW 2 --
+            hlOrig('e2-l3'); log("- Συνθήκη 2");
+            let r2 = createRow(2);
+            createBlock(r2, 'ΟΧΙ(x <= 1)', 'negated', 'b2-2');
+            createOp(r2, 'ΚΑΙ', 'o2-1');
+            createBlock(r2, 'x <= 10', 'normal', 'b2-3');
+            r2.classList.add('show');
+            await sleep(speed);
+            log("  * <i>Απλοποίηση άρνησης...</i>");
+            await flipBlock('b2-2', 'x > 1', 'normal');
+            await sleep(speed);
+
+            // -- ROW 3 --
+            hlOrig('e2-l5'); log("- Συνθήκη 3");
+            let r3 = createRow(3);
+            createBlock(r3, 'ΟΧΙ(x <= 1)', 'negated', 'b2-4');
+            createOp(r3, 'ΚΑΙ', 'o2-2');
+            createBlock(r3, 'ΟΧΙ(x <= 10)', 'negated', 'b2-5');
+            createOp(r3, 'ΚΑΙ', 'o2-3');
+            createBlock(r3, 'x <= 100', 'normal', 'b2-6');
+            r3.classList.add('show');
+            await sleep(speed);
+            
+            log("  * <i>Απλοποίηση & Συγχώνευση (Merge)...</i>");
+            await flipBlock('b2-4', 'x > 1', 'normal');
+            await flipBlock('b2-5', 'x > 10', 'normal');
+            await sleep(speed * 0.5);
+            // Merge x>1 KAI x>10 -> x>10
+            await mergeBlocks('b2-4', 'o2-2', 'b2-5', 'x > 10');
+            await sleep(speed);
+
+            // -- ROW 4 --
+            hlOrig('e2-l7'); log("- Συνθήκη 4 (ΑΛΛΙΩΣ)");
+            let r4 = createRow(4);
+            createBlock(r4, 'ΟΧΙ(x <= 1)', 'negated', 'b2-7');
+            createOp(r4, 'ΚΑΙ', 'o2-4');
+            createBlock(r4, 'ΟΧΙ(x <= 10)', 'negated', 'b2-8');
+            createOp(r4, 'ΚΑΙ', 'o2-5');
+            createBlock(r4, 'ΟΧΙ(x <= 100)', 'negated', 'b2-9');
+            r4.classList.add('show');
+            await sleep(speed);
+
+            log("  * <i>Απλοποίηση & Συγχώνευση (Merge)...</i>");
+            await flipBlock('b2-7', 'x > 1', 'normal');
+            await flipBlock('b2-8', 'x > 10', 'normal');
+            await flipBlock('b2-9', 'x > 100', 'normal');
+            await sleep(speed * 0.5);
+            // Merge x>1 KAI x>10 KAI x>100 -> x>100
+            await mergeBlocks('b2-7', 'o2-4', 'b2-8', 'x > 10');
+            await mergeBlocks('b2-8', 'o2-5', 'b2-9', 'x > 100');
+            await sleep(speed);
+        }
+
+        hlOrig(null);
+        log("<span style='color:var(--success)'>✓ Η απλοποίηση ολοκληρώθηκε!</span>");
+        phase = 1; isBusy = false;
+        document.getElementById('btnSynth').disabled = false;
+    }
+
+    async function runSynthesis() {
+        if(isBusy || phase !== 1) return;
+        isBusy = true; updateSpeed();
+        document.getElementById('btnSynth').disabled = true;
+        document.getElementById('lblPhase').innerText = "Φάση 3: Σύνθεση Κώδικα";
+        document.getElementById('lblPhase').style.color = "var(--primary)";
+        log("> Χτίσιμο νέου κώδικα με απλές επιλογές...");
+
+        if(activeTab === 1) {
+            showLine('n1-1', true);
+            await flyFinalCondition('l-row-1', 'd1-1');
+            showLine('n1-2'); showLine('n1-3');
+            unhighlight('n1-1'); await sleep(speed*0.5);
+
+            showLine('n1-4', true);
+            await flyFinalCondition('l-row-2', 'd1-2');
+            showLine('n1-5'); showLine('n1-6');
+            unhighlight('n1-4'); await sleep(speed*0.5);
+
+            showLine('n1-7', true);
+            await flyFinalCondition('l-row-3', 'd1-3');
+            showLine('n1-8'); showLine('n1-9');
+            unhighlight('n1-7'); await sleep(speed*0.5);
+            
+        } else {
+            showLine('n2-1', true);
+            await flyFinalCondition('l-row-1', 'd2-1');
+            showLine('n2-2'); showLine('n2-3');
+            unhighlight('n2-1'); await sleep(speed*0.5);
+
+            showLine('n2-4', true);
+            await flyFinalCondition('l-row-2', 'd2-2');
+            showLine('n2-5'); showLine('n2-6');
+            unhighlight('n2-4'); await sleep(speed*0.5);
+
+            showLine('n2-7', true);
+            await flyFinalCondition('l-row-3', 'd2-3');
+            showLine('n2-8'); showLine('n2-9');
+            unhighlight('n2-7'); await sleep(speed*0.5);
+
+            showLine('n2-10', true);
+            await flyFinalCondition('l-row-4', 'd2-4');
+            showLine('n2-11'); showLine('n2-12');
+            unhighlight('n2-10'); await sleep(speed*0.5);
+        }
+
+        log("<span style='color:var(--success)'>✓ Ο νέος κώδικας είναι έτοιμος!</span>");
+        phase = 2; isBusy = false;
+        document.getElementById('lblPhase').innerText = "Φάση 4: Δοκιμή (Έτοιμο)";
+        document.getElementById('lblPhase').style.color = "var(--success)";
+        document.getElementById('btnTest').disabled = false;
+    }
+
+    async function runTest() {
+        if(isBusy || phase !== 2) return;
+        isBusy = true; updateSpeed();
+        document.getElementById('btnTest').disabled = true;
+
+        if(activeTab === 1) {
+            let x = parseFloat(document.getElementById('inX1').value);
+            if(isNaN(x)) { alert("Παρακαλώ δώσε τιμή στο X"); isBusy=false; document.getElementById('btnTest').disabled=false; return;}
+            
+            document.getElementById('v_x1').innerText = x;
+            log(`> <b>Εκτέλεση για X = ${x}</b>`);
+            let isInt = (x === Math.floor(x));
+
+            unhighlight(null);
+            document.getElementById('n1-1').classList.add('active'); await sleep(speed*0.8);
+            if(!isInt) {
+                log(`  [X <> Α_Μ(Χ)] Αληθής.`); document.getElementById('n1-2').classList.add('active'); await sleep(speed*0.6);
+                log(`  <span style="color:var(--primary); font-weight:bold;">"Λάθος"</span>`);
+            } else { log(`  [X <> Α_Μ(Χ)] Ψευδής.`); }
+            document.getElementById('n1-3').classList.add('active'); await sleep(speed*0.4); unhighlight(null);
+
+            document.getElementById('n1-4').classList.add('active'); await sleep(speed*0.8);
+            if(x <= 0 && isInt) {
+                log(`  [X <= 0 ΚΑΙ X = Α_Μ(Χ)] Αληθής.`); document.getElementById('n1-5').classList.add('active'); await sleep(speed*0.6);
+                log(`  <span style="color:var(--primary); font-weight:bold;">"Μη Θετικός"</span>`);
+            } else { log(`  [X <= 0 ΚΑΙ X = Α_Μ(Χ)] Ψευδής.`); }
+            document.getElementById('n1-6').classList.add('active'); await sleep(speed*0.4); unhighlight(null);
+
+            document.getElementById('n1-7').classList.add('active'); await sleep(speed*0.8);
+            if(isInt && x > 0) {
+                log(`  [X = Α_Μ(Χ) ΚΑΙ X > 0] Αληθής.`); document.getElementById('n1-8').classList.add('active'); await sleep(speed*0.6);
+                log(`  <span style="color:var(--primary); font-weight:bold;">"Θετικός"</span>`);
+            } else { log(`  [X = Α_Μ(Χ) ΚΑΙ X > 0] Ψευδής.`); }
+            document.getElementById('n1-9').classList.add('active'); await sleep(speed*0.5); unhighlight(null);
+            
+        } else {
+            let x = parseFloat(document.getElementById('inX2').value);
+            if(isNaN(x)) { alert("Παρακαλώ δώσε τιμή στο x"); isBusy=false; document.getElementById('btnTest').disabled=false; return;}
+            
+            document.getElementById('v_x2').innerText = x;
+            document.getElementById('v_a').innerText = '-';
+            log(`> <b>Εκτέλεση για x = ${x}</b>`);
+
+            unhighlight(null);
+            document.getElementById('n2-1').classList.add('active'); await sleep(speed*0.8);
+            if(x <= 1) {
+                log(`  [x <= 1] Αληθής.`); document.getElementById('n2-2').classList.add('active'); await sleep(speed*0.6);
+                document.getElementById('v_a').innerText = 1; log(`  <span style="color:var(--warning); font-weight:bold;">α <- 1</span>`);
+            } else { log(`  [x <= 1] Ψευδής.`); }
+            document.getElementById('n2-3').classList.add('active'); await sleep(speed*0.4); unhighlight(null);
+
+            document.getElementById('n2-4').classList.add('active'); await sleep(speed*0.8);
+            if(x > 1 && x <= 10) {
+                log(`  [x > 1 ΚΑΙ x <= 10] Αληθής.`); document.getElementById('n2-5').classList.add('active'); await sleep(speed*0.6);
+                document.getElementById('v_a').innerText = 2; log(`  <span style="color:var(--warning); font-weight:bold;">α <- 2</span>`);
+            } else { log(`  [x > 1 ΚΑΙ x <= 10] Ψευδής.`); }
+            document.getElementById('n2-6').classList.add('active'); await sleep(speed*0.4); unhighlight(null);
+
+            document.getElementById('n2-7').classList.add('active'); await sleep(speed*0.8);
+            if(x > 10 && x <= 100) {
+                log(`  [x > 10 ΚΑΙ x <= 100] Αληθής.`); document.getElementById('n2-8').classList.add('active'); await sleep(speed*0.6);
+                document.getElementById('v_a').innerText = 3; log(`  <span style="color:var(--warning); font-weight:bold;">α <- 3</span>`);
+            } else { log(`  [x > 10 ΚΑΙ x <= 100] Ψευδής.`); }
+            document.getElementById('n2-9').classList.add('active'); await sleep(speed*0.4); unhighlight(null);
+
+            document.getElementById('n2-10').classList.add('active'); await sleep(speed*0.8);
+            if(x > 100) {
+                log(`  [x > 100] Αληθής.`); document.getElementById('n2-11').classList.add('active'); await sleep(speed*0.6);
+                document.getElementById('v_a').innerText = 4; log(`  <span style="color:var(--warning); font-weight:bold;">α <- 4</span>`);
+            } else { log(`  [x > 100] Ψευδής.`); }
+            document.getElementById('n2-12').classList.add('active'); await sleep(speed*0.5); unhighlight(null);
+        }
+
+        log("<span style='color:var(--success)'>✓ Ολοκληρώθηκε.</span>");
+        isBusy = false;
+        document.getElementById('btnTest').disabled = false;
+    }
+
+    // Submit on Enter
+    document.getElementById('inX1').addEventListener('keypress', function(e) { if (e.key === 'Enter') document.getElementById('btnTest').click(); });
+    document.getElementById('inX2').addEventListener('keypress', function(e) { if (e.key === 'Enter') document.getElementById('btnTest').click(); });
+
+</script>
+</body>
+</html>
