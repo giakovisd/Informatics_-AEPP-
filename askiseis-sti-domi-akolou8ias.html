@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Δομή Ακολουθίας — Διαδραστικό Βοήθημα</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EEF3F7;
+    --grid-line: rgba(43,58,103,0.07);
+    --surface:#FFFFFF;
+    --ink:#1B2438;
+    --ink-soft:#5A6580;
+    --indigo:#2B3A67;
+    --indigo-deep:#182544;
+    --indigo-soft:#DCE4F2;
+    --coral:#E4572E;
+    --coral-soft:#FBE0D6;
+    --teal:#2E8B84;
+    --teal-soft:#DCEFED;
+    --amber:#F4B93D;
+    --amber-soft:#FFF4D6;
+    --code-bg:#111A2E;
+    --code-ink:#DDE6F5;
+    --code-kw:#7FB5FF;
+    --code-kw2:#FFD166;
+    --code-arrow:#FF8C69;
+    --radius:16px;
+    --shadow: 0 6px 18px rgba(27,36,56,0.08);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    font-family:'Inter',sans-serif;
+    color:var(--ink);
+    background:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+      var(--bg);
+    background-size: 28px 28px, 28px 28px, 100% 100%;
+    padding-bottom:80px;
+  }
+  h1,h2,h3,.display{font-family:'Baloo 2',sans-serif;}
+  a{color:inherit;}
+
+  /* ---------- HERO ---------- */
+  header.hero{
+    position:relative;
+    padding:52px 24px 34px;
+    text-align:center;
+    overflow:hidden;
+  }
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px; letter-spacing:.06em;
+    color:var(--indigo);
+    background:var(--indigo-soft);
+    padding:6px 14px;
+    border-radius:999px;
+    margin-bottom:18px;
+  }
+  .eyebrow .dot{width:8px;height:8px;border-radius:50%;background:var(--coral);}
+  h1.title{
+    font-size:clamp(34px,6vw,56px);
+    font-weight:800;
+    color:var(--indigo-deep);
+    margin:0 0 10px;
+    letter-spacing:-0.01em;
+  }
+  h1.title span{color:var(--coral);}
+  .subtitle{
+    max-width:620px;
+    margin:0 auto 30px;
+    color:var(--ink-soft);
+    font-size:17px;
+    line-height:1.6;
+  }
+
+  /* flowchart progress trail */
+  .trail-wrap{
+    max-width:720px;
+    margin:0 auto 6px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .trail-node{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    font-weight:700;
+    color:var(--indigo);
+    background:var(--surface);
+    border:2px solid var(--indigo);
+    border-radius:999px;
+    padding:6px 14px;
+    white-space:nowrap;
+    box-shadow:var(--shadow);
+  }
+  .trail-track{
+    flex:1;
+    height:10px;
+    background:var(--indigo-soft);
+    border-radius:999px;
+    position:relative;
+    overflow:hidden;
+  }
+  .trail-fill{
+    position:absolute; left:0; top:0; bottom:0;
+    width:0%;
+    background:linear-gradient(90deg, var(--teal), var(--coral));
+    border-radius:999px;
+    transition:width .5s cubic-bezier(.2,.9,.3,1);
+  }
+  .trail-caption{
+    text-align:center;
+    font-size:13px;
+    color:var(--ink-soft);
+    margin-top:8px;
+    font-family:'JetBrains Mono',monospace;
+  }
+
+  /* filter chips */
+  .filters{
+    display:flex; flex-wrap:wrap; gap:10px; justify-content:center;
+    max-width:820px; margin:28px auto 0;
+  }
+  .chip{
+    border:2px solid var(--indigo-soft);
+    background:var(--surface);
+    color:var(--indigo);
+    font-weight:600;
+    font-size:14px;
+    padding:8px 16px;
+    border-radius:999px;
+    cursor:pointer;
+    transition:.2s;
+  }
+  .chip:hover{border-color:var(--indigo);}
+  .chip.active{background:var(--indigo); color:#fff; border-color:var(--indigo);}
+
+  /* ---------- MAIN LAYOUT ---------- */
+  main{
+    max-width:980px;
+    margin:0 auto;
+    padding:10px 20px;
+    display:flex;
+    flex-direction:column;
+    gap:26px;
+  }
+
+  .ex-card{
+    background:var(--surface);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    border:1px solid rgba(43,58,103,0.06);
+    padding:26px 26px 22px;
+    scroll-margin-top:20px;
+    transition: box-shadow .2s, transform .2s;
+  }
+  .ex-card.done{ border-left:5px solid var(--teal); }
+  .ex-head{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px;}
+  .ex-badge{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    font-weight:700;
+    color:#fff;
+    background:var(--indigo);
+    padding:4px 10px;
+    border-radius:8px;
+    letter-spacing:.03em;
+  }
+  .ex-cat{
+    font-size:12px;
+    color:var(--coral);
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .ex-head h3{
+    margin:0; font-size:20px; color:var(--indigo-deep); font-weight:700;
+    flex-basis:100%;
+    order:3;
+  }
+  .ex-statement{
+    color:var(--ink);
+    font-size:15.5px;
+    line-height:1.65;
+    background:var(--amber-soft);
+    border-left:4px solid var(--amber);
+    padding:14px 16px;
+    border-radius:10px;
+    margin:12px 0 18px;
+  }
+  .ex-statement b{color:var(--indigo-deep);}
+
+  .ex-actions{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:4px;}
+  .btn{
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:14px;
+    border:none;
+    border-radius:10px;
+    padding:10px 18px;
+    cursor:pointer;
+    display:inline-flex; align-items:center; gap:8px;
+    transition:.15s;
+  }
+  .btn:active{ transform:scale(.97); }
+  .btn-solution{ background:var(--indigo-soft); color:var(--indigo-deep); }
+  .btn-solution:hover{ background:var(--indigo); color:#fff; }
+  .btn-solution.open{ background:var(--indigo); color:#fff; }
+  .btn-try{ background:var(--teal-soft); color:var(--teal); }
+  .btn-try:hover{ background:var(--teal); color:#fff; }
+  .btn-try.open{ background:var(--teal); color:#fff; }
+  .btn-run{ background:var(--coral); color:#fff;}
+  .btn-run:hover{ background:#c8451f; }
+  .btn-next{ background:var(--amber); color:var(--indigo-deep); width:100%; justify-content:center; font-size:15px; margin-top:10px;}
+  .btn-next:hover{ background:#e3a932; }
+
+  .collapse{
+    max-height:0;
+    overflow:hidden;
+    transition:max-height .35s ease;
+  }
+  .collapse.open{ max-height:2500px; }
+  .collapse-inner{ padding-top:14px; }
+
+  /* ---------- CODE HIGHLIGHT & TRACE TABLE ---------- */
+  pre.code{
+    background:var(--code-bg);
+    color:var(--code-ink);
+    font-family:'JetBrains Mono',monospace;
+    font-size:13.5px;
+    line-height:1.9;
+    border-radius:12px;
+    padding:18px 20px;
+    margin:0;
+    overflow-x:auto;
+  }
+  .code-line{ white-space:pre; padding:0 8px; border-left:3px solid transparent; transition: background .2s, border-color .2s; border-radius:4px;}
+  .code-line.active { background: rgba(228,87,46,0.25); border-left-color: var(--coral); color: #fff;}
+  .tk-kw{ color:var(--code-kw); font-weight:700; }
+  .tk-kw2{ color:var(--code-kw2); font-weight:700; }
+  .tk-arrow{ color:var(--code-arrow); font-weight:700; }
+
+  .try-panel{
+    background:var(--bg);
+    border:1px dashed var(--indigo-soft);
+    border-radius:12px;
+    padding:18px;
+  }
+  .inputs-grid{ display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end;}
+  .field{ display:flex; flex-direction:column; gap:6px; min-width:130px;}
+  .field label{
+    font-size:12.5px; font-weight:700; color:var(--indigo);
+    font-family:'JetBrains Mono',monospace;
+  }
+  .field input{
+    border:2px solid var(--indigo-soft);
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:14px;
+    font-family:'JetBrains Mono',monospace;
+    width:130px;
+    background:#fff;
+  }
+  .field input:focus{ outline:none; border-color:var(--teal); }
+  .field input.err{ border-color:var(--coral); background:var(--coral-soft); }
+
+  .exec-layout{ display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start; margin-top:20px; border-top:2px dashed var(--indigo-soft); padding-top:20px;}
+  .exec-code{ flex:1; min-width:320px; }
+  .exec-trace{ flex:1.5; min-width:320px; display:flex; flex-direction:column; gap:15px;}
+  
+  .table-responsive{ width:100%; overflow-x:auto; border-radius:10px; box-shadow:var(--shadow); max-height:350px; overflow-y:auto; background:#fff;}
+  .trace-table{ width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:13px; text-align:center;}
+  .trace-table th{ background:var(--indigo-deep); color:#fff; padding:10px 8px; font-weight:600; position:sticky; top:0; z-index:2;}
+  .trace-table td{ padding:8px 6px; border:1px solid var(--indigo-soft); color:var(--ink); transition: background .3s;}
+  .trace-table tr:nth-child(even) td { background: var(--bg); }
+  .trace-table td.changed { font-weight:800; color:var(--coral); background:var(--coral-soft) !important; }
+
+  .console-out{
+    background:#111A2E; color:#4AF626; font-family:'JetBrains Mono',monospace;
+    padding:16px; border-radius:10px; min-height:80px; font-size:14px; 
+    box-shadow:inset 0 2px 10px rgba(0,0,0,0.6); overflow-y:auto; max-height:150px;
+  }
+  .console-out-title{ font-size:11px; color:#8A9AB8; margin-bottom:8px; text-transform:uppercase; font-weight:bold; letter-spacing:0.05em;}
+
+  .hint{ font-size:12.5px; color:var(--ink-soft); margin-top:10px; font-style:italic;}
+
+  /* reference card */
+  .ref-card{
+    background:var(--indigo-deep);
+    color:#fff;
+    border-radius:var(--radius);
+    padding:28px;
+    box-shadow:var(--shadow);
+  }
+  .ref-card h2{ margin:0 0 6px; font-size:22px; color:#fff;}
+  .ref-card p.sub{ margin:0 0 18px; color:#B7C3E0; font-size:14px;}
+  .ref-grid{ display:flex; flex-direction:column; gap:10px;}
+  .ref-row{
+    display:flex; gap:14px; align-items:flex-start;
+    background:rgba(255,255,255,0.06);
+    padding:12px 14px; border-radius:10px;
+  }
+  .ref-num{
+    background:var(--coral); color:#fff; font-weight:800;
+    width:26px; height:26px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; flex-shrink:0; font-family:'JetBrains Mono',monospace;
+  }
+  .ref-row p{ margin:0; font-size:14px; line-height:1.55; color:#EAEFFB;}
+  .ref-row code{ background:rgba(0,0,0,0.25); padding:1px 6px; border-radius:4px; font-family:'JetBrains Mono',monospace; color:var(--code-kw2);}
+
+  footer.page-footer{
+    text-align:center; color:var(--ink-soft); font-size:13px;
+    margin-top:40px; padding:0 20px;
+  }
+
+  @media (max-width:560px){
+    .ex-card{ padding:20px 16px;}
+    .field, .field input{ width:100%;}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="eyebrow"><span class="dot"></span> ΓΛΩΣΣΑ &nbsp;·&nbsp; Δομές Δεδομένων &amp; Αλγόριθμοι</div>
+  <h1 class="title">Δομή <span>Ακολουθίας</span></h1>
+  <p class="subtitle">Εισήγαγε τα δικά σου δεδομένα και δες τον υπολογιστή να εκτελεί τον αλγόριθμο βήμα-βήμα, γεμίζοντας ζωντανά τον <b>Πίνακα Τιμών</b>.</p>
+
+  <div class="trail-wrap">
+    <div class="trail-node">Αρχή</div>
+    <div class="trail-track"><div class="trail-fill" id="trailFill"></div></div>
+    <div class="trail-node">Τέλος</div>
+  </div>
+  <div class="trail-caption" id="trailCaption">0 από 22 ασκήσεις διερευνήθηκαν</div>
+
+  <div class="filters" id="filters"></div>
+</header>
+
+<main id="exList"></main>
+
+<div style="max-width:980px;margin:36px auto 0;padding:0 20px;">
+  <div class="ref-card">
+    <h2>Χρήσιμοι έλεγχοι &amp; συγκρίσεις</h2>
+    <p class="sub">Θεωρώντας Α, Β ακέραιους θετικούς αριθμούς και Γ αριθμό:</p>
+    <div class="ref-grid" id="refGrid"></div>
+  </div>
+</div>
+
+<footer class="page-footer">Φτιαγμένο για εξάσκηση στη Δομή Ακολουθίας &nbsp;·&nbsp; Πάτα «Λύση» ή «Δοκίμασέ το» σε κάθε άσκηση</footer>
+
+<script>
+/* ---------------- ENGINE & UTILS ---------------- */
+
+const CATS = {
+  basic:  "Βασικές Πράξεις",
+  pct:    "Ποσοστά",
+  divmod: "Ακέραια Διαίρεση (DIV / MOD)",
+  misc:   "Διάφορα"
+};
+
+function esc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function fmt(n){
+  if(n===undefined || n===null || !isFinite(n)) return '—';
+  let r = Math.round(n*100)/100;
+  let s = r.toString();
+  return s.replace('.', ',');
+}
+
+const KW_START = ['Αλγόριθμος','Πρόγραμμα','Διάβασε','Γράψε','Αρχη','Αρχή','Μεταβλητές','Πραγματικές','Ακέραιες','Σταθερές','τελος_προγράμματος','Τέλος_προγράμματος','Τέλος'];
+
+function highlightLine(raw){
+  let line = esc(raw);
+  line = line.replace(/←/g, '<span class="tk-arrow">←</span>');
+  line = line.replace(/\b(DIV|MOD)\b/g, '<span class="tk-kw2">$1</span>');
+  for(const kw of KW_START){
+    if(line.startsWith(kw)){
+      line = `<span class="tk-kw">${kw}</span>` + line.slice(kw.length);
+      break;
+    }
+  }
+  return line;
+}
+
+function renderCodeForHighlight(lines, id){
+  return `<pre class="code" id="code-${id}">${lines.map((l, i)=>`<div class="code-line" id="line-${id}-${i}">${highlightLine(l)}</div>`).join('')}</pre>`;
+}
+
+/* Helper for Trace Generation */
+function createRunner(varNames, logic) {
+   return function(v) {
+      let state = {};
+      let trace = [];
+      function step(line, updates, prints) {
+         if(updates) state = { ...state, ...updates };
+         trace.push({ line, vars: { ...state }, prints });
+      }
+      logic(v, step);
+      return { varNames, trace };
+   };
+}
+
+/* ---------------- EXERCISES DATA WITH STEP RUNNERS ---------------- */
+
+const EXERCISES = [
+{
+  id:'avg3', cat:'basic', title:'Μέσος όρος 3 βαθμών',
+  statement:'Ένας μαθητής έγραψε διαγώνισμα σε 3 μαθήματα. Να γραφεί αλγόριθμος που θα ζητάει τους 3 βαθμούς του και θα εμφανίζει τον <b>μέσο όρο</b> βαθμολογίας του.',
+  code:['Αλγόριθμος μαθητής','Διάβασε β1,β2,β3','αθρ←β1+β2+β3','μο←αθρ/3','Γράψε μο','Τέλος μαθητής'],
+  inputs:[{id:'b1',label:'β1'},{id:'b2',label:'β2'},{id:'b3',label:'β3'}],
+  run: createRunner(['β1','β2','β3','αθρ','μο'], (v, step) => {
+      step(0);
+      step(1, {'β1': v.b1, 'β2': v.b2, 'β3': v.b3});
+      let athr = v.b1 + v.b2 + v.b3; step(2, {'αθρ': athr});
+      let mo = athr / 3; step(3, {'μο': mo});
+      step(4, null, [fmt(mo)]);
+      step(5);
+  })
+},
+{
+  id:'sumprod', cat:'basic', title:'Άθροισμα &amp; γινόμενο τριών αριθμών',
+  statement:'Να γραφεί αλγόριθμος ο οποίος θα διαβάζει 3 αριθμούς και θα εκτυπώνει το <b>άθροισμα</b> των 2 πρώτων αριθμών και το <b>γινόμενο</b> των 2 τελευταίων.',
+  code:['Αλγόριθμος αριθμοι','Διάβασε α,β,γ','αθρ←α+β','γιν←β*γ','Γράψε αθρ,γιν','Τέλος αριθμοι'],
+  inputs:[{id:'a',label:'α'},{id:'b',label:'β'},{id:'g',label:'γ'}],
+  run: createRunner(['α','β','γ','αθρ','γιν'], (v, step) => {
+      step(0);
+      step(1, {'α': v.a, 'β': v.b, 'γ': v.g});
+      let athr = v.a + v.b; step(2, {'αθρ': athr});
+      let gin = v.b * v.g; step(3, {'γιν': gin});
+      step(4, null, [`Άθροισμα: ${fmt(athr)}, Γινόμενο: ${fmt(gin)}`]);
+      step(5);
+  })
+},
+{
+  id:'prevnext', cat:'basic', title:'Προηγούμενος &amp; επόμενος ακέραιος',
+  statement:'Να γραφεί αλγόριθμος που θα ζητάει έναν ακέραιο αριθμό και θα εμφανίζει τον <b>προηγούμενό</b> του και τον <b>επόμενό</b> του.',
+  code:['Αλγόριθμος αριθμοι','Διάβασε α','προηγ←α-1','επομ←α+1','Γράψε προηγ,επομ','Τέλος αριθμοι'],
+  inputs:[{id:'a',label:'α'}],
+  run: createRunner(['α','προηγ','επομ'], (v, step) => {
+      step(0);
+      step(1, {'α': v.a});
+      step(2, {'προηγ': v.a - 1});
+      step(3, {'επομ': v.a + 1});
+      step(4, null, [`Προηγ.: ${fmt(v.a-1)}, Επόμ.: ${fmt(v.a+1)}`]);
+      step(5);
+  })
+},
+{
+  id:'sumformat', cat:'basic', title:'Εμφάνιση αθροίσματος σε μορφή',
+  statement:'Να γραφεί αλγόριθμος που θα ζητάει δύο αριθμούς και θα εμφανίζει το άθροισμά τους στη μορφή π.χ. <b>3+5=8</b>.',
+  code:["Αλγόριθμος αριθμοι","Διάβασε α,β","αθρ←α+β","Γράψε α, '+', β, '=', αθρ","Τέλος αριθμοι"],
+  inputs:[{id:'a',label:'α'},{id:'b',label:'β'}],
+  run: createRunner(['α','β','αθρ'], (v, step) => {
+      step(0);
+      step(1, {'α': v.a, 'β': v.b});
+      let athr = v.a + v.b; step(2, {'αθρ': athr});
+      step(3, null, [`${fmt(v.a)} + ${fmt(v.b)} = ${fmt(athr)}`]);
+      step(4);
+  })
+},
+{
+  id:'bmi', cat:'basic', title:'Δείκτης Μάζας Σώματος (ΔΜΣ)',
+  statement:'Ο ΔΜΣ υπολογίζεται από το βάρος (Β) σε kg και το ύψος (Υ) σε m με τον τύπο <b>ΔΜΣ = Β / Υ²</b>. Να αναπτύξετε αλγόριθμο που θα διαβάζει τα δεδομένα και θα εκτυπώνει το ΔΜΣ.',
+  code:['Αλγόριθμος ατομο','Διάβασε Β,Υ','ΔΜΣ←Β/Υ^2','Γράψε ΔΜΣ','Τέλος ατομο'],
+  inputs:[{id:'B',label:'Βάρος (kg)'},{id:'Y',label:'Ύψος (m)'}],
+  run: createRunner(['Β','Υ','ΔΜΣ'], (v, step) => {
+      step(0);
+      step(1, {'Β': v.B, 'Υ': v.Y});
+      let dms = v.B / (v.Y * v.Y); step(2, {'ΔΜΣ': dms});
+      step(3, null, [fmt(dms)]);
+      step(4);
+  })
+},
+{
+  id:'fahrenheit', cat:'basic', title:'Φαρενάιτ σε Κελσίου',
+  statement:'Η μετατροπή θερμοκρασίας από Φαρενάιτ (F) σε Κελσίου γίνεται με τον τύπο <b>C = 5(F-32)/9</b>. Αναπτύξτε αλγόριθμο που κάνει τη μετατροπή.',
+  code:['Αλγόριθμος θερμοκρασία','Διάβασε F','C←5*(F-32)/9','Γράψε C','Τέλος θερμοκρασία'],
+  inputs:[{id:'F',label:'F (°F)'}],
+  run: createRunner(['F','C'], (v, step) => {
+      step(0);
+      step(1, {'F': v.F});
+      let c = 5 * (v.F - 32) / 9; step(2, {'C': c});
+      step(3, null, [fmt(c) + ' °C']);
+      step(4);
+  })
+},
+{
+  id:'circle', cat:'basic', title:'Μήκος &amp; εμβαδόν κύκλου',
+  statement:'Διαβάζει την ακτίνα (ρ) κύκλου και εμφανίζει το <b>μήκος περιφέρειας</b> (2πρ) και το <b>εμβαδόν</b> του (πρ²). Θεωρήστε π = 3,14.',
+  code:['Αλγόριθμος κυκλος','Διάβασε ρ','π←3.14','μηκος←2*π*ρ','εμβ←π*ρ^2','Γράψε μηκος,εμβ','Τέλος κυκλος'],
+  inputs:[{id:'r',label:'ρ (ακτίνα)'}],
+  run: createRunner(['ρ','π','μηκος','εμβ'], (v, step) => {
+      step(0);
+      step(1, {'ρ': v.r});
+      step(2, {'π': 3.14});
+      let mikos = 2 * 3.14 * v.r; step(3, {'μηκος': mikos});
+      let emv = 3.14 * v.r * v.r; step(4, {'εμβ': emv});
+      step(5, null, [`Μήκος: ${fmt(mikos)}, Εμβαδόν: ${fmt(emv)}`]);
+      step(6);
+  })
+},
+{
+  id:'theater', cat:'pct', title:'Εισπράξεις παιδικού θεάτρου',
+  statement:'Εισιτήρια: 8€ για ενήλικες, 6€ για παιδιά. Δέχεται το πλήθος ενηλίκων και παιδιών και εμφανίζει τις <b>συνολικές εισπράξεις</b>.',
+  code:['Αλγόριθμος θέατρο','Διάβασε πλεν,πλπ','ποσο1←πλεν*8','ποσο2←πλπ*6','εισπ←ποσο1+ποσο2','Γράψε εισπ','Τέλος θέατρο'],
+  inputs:[{id:'plen',label:'Ενήλικες'},{id:'plp',label:'Παιδιά'}],
+  run: createRunner(['πλεν','πλπ','ποσο1','ποσο2','εισπ'], (v, step) => {
+      step(0);
+      step(1, {'πλεν': v.plen, 'πλπ': v.plp});
+      let p1 = v.plen * 8; step(2, {'ποσο1': p1});
+      let p2 = v.plp * 6; step(3, {'ποσο2': p2});
+      let eisp = p1 + p2; step(4, {'εισπ': eisp});
+      step(5, null, [`Σύνολο: ${fmt(eisp)} €`]);
+      step(6);
+  })
+},
+{
+  id:'discount', cat:'pct', title:'Έκπτωση 20% σε προϊόν',
+  statement:'Έμπορος κάνει έκπτωση 20%. Διαβάζει την αρχική τιμή και εμφανίζει τη <b>νέα τιμή</b>.',
+  code:['Αλγόριθμος εμπορος','Διάβασε τιμη','εκπ←20/100*τιμη','νεατιμη←τιμη-εκπ','Γράψε νεατιμη','Τέλος εμπορος'],
+  inputs:[{id:'price',label:'Αρχική τιμή'}],
+  run: createRunner(['τιμη','εκπ','νεατιμη'], (v, step) => {
+      step(0);
+      step(1, {'τιμη': v.price});
+      let ekp = 20 / 100 * v.price; step(2, {'εκπ': ekp});
+      let neatimi = v.price - ekp; step(3, {'νεατιμη': neatimi});
+      step(4, null, [`Νέα τιμή: ${fmt(neatimi)} €`]);
+      step(5);
+  })
+},
+{
+  id:'training', cat:'pct', title:'Επιδότηση εκπαίδευσης προσωπικού',
+  statement:'Κόστος 25€ ανά εκπαιδευόμενο. Το Υπουργείο επιδοτεί το 40%. Διαβάζει το πλήθος ατόμων και εκτυπώνει το <b>κόστος εταιρείας</b> και το <b>μερίδιο του Υπουργείου</b>.',
+  code:['Αλγόριθμος εταιρεια','Διάβασε πλεργ','ποσο←πλεργ*25','ποσουπ←ποσο*40/100','ποσοετ←ποσο-ποσουπ','Γράψε ποσοετ,ποσουπ','Τέλος εταιρεια'],
+  inputs:[{id:'people',label:'Άτομα'}],
+  run: createRunner(['πλεργ','ποσο','ποσουπ','ποσοετ'], (v, step) => {
+      step(0);
+      step(1, {'πλεργ': v.people});
+      let poso = v.people * 25; step(2, {'ποσο': poso});
+      let posoup = poso * 40 / 100; step(3, {'ποσουπ': posoup});
+      let posoet = poso - posoup; step(4, {'ποσοετ': posoet});
+      step(5, null, [`Εταιρεία: ${fmt(posoet)} €, Υπ.: ${fmt(posoup)} €`]);
+      step(6);
+  })
+},
+{
+  id:'football', cat:'pct', title:'Εισπράξεις ποδοσφαιρικού αγώνα',
+  statement:'Εισιτήριο 15€. Το 20% κρατά η εφορία. Από ό,τι απομένει, 75% κρατά η γηπεδούχος και 25% η φιλοξενούμενη.',
+  code:['Αλγόριθμος αγωνας','Διάβασε πλεισ','ποσο←πλεισ*15','ποσοεφ←ποσο*20/100','ποσουπ←ποσο-ποσοεφ','ποσογηπ←ποσουπ*75/100','ποσοφιλ←ποσουπ*25/100','Γράψε ποσο,ποσοεφ,ποσογηπ,ποσοφιλ','Τέλος αγωνας'],
+  inputs:[{id:'tickets',label:'Εισιτήρια'}],
+  run: createRunner(['πλεισ','ποσο','ποσοεφ','ποσουπ','ποσογηπ','ποσοφιλ'], (v, step) => {
+      step(0);
+      step(1, {'πλεισ': v.tickets});
+      let poso = v.tickets * 15; step(2, {'ποσο': poso});
+      let posoef = poso * 20 / 100; step(3, {'ποσοεφ': posoef});
+      let posoup = poso - posoef; step(4, {'ποσουπ': posoup});
+      let posogip = posoup * 75 / 100; step(5, {'ποσογηπ': posogip});
+      let posofil = posoup * 25 / 100; step(6, {'ποσοφιλ': posofil});
+      step(7, null, [`Σύν: ${fmt(poso)}€, Εφ: ${fmt(posoef)}€, Γηπ: ${fmt(posogip)}€, Φιλ: ${fmt(posofil)}€`]);
+      step(8);
+  })
+},
+{
+  id:'phone', cat:'pct', title:'Λογαριασμός κινητής τηλεφωνίας',
+  statement:'Πάγιο 20€, δευτερόλεπτο 0,06€ και SMS 0,80€. Υπολογίζει το <b>τελικό ποσό</b> με ΦΠΑ 24%.',
+  code:['Αλγόριθμος τηλεφωνο','Διάβασε χρομ,πλSMS','ποσο1←χρομ*0.06','ποσο2←πλSMS*0.80','ποσο3←ποσο1+ποσο2+20','ΦΠΑ←ποσο3*24/100','τελποσο←ποσο3+ΦΠΑ','Γράψε τελποσο','Τέλος τηλεφωνο'],
+  inputs:[{id:'secs',label:'Δευτ. ομιλίας'},{id:'sms',label:'Πλήθος SMS'}],
+  run: createRunner(['χρομ','πλSMS','ποσο1','ποσο2','ποσο3','ΦΠΑ','τελποσο'], (v, step) => {
+      step(0);
+      step(1, {'χρομ': v.secs, 'πλSMS': v.sms});
+      let p1 = v.secs * 0.06; step(2, {'ποσο1': p1});
+      let p2 = v.sms * 0.80; step(3, {'ποσο2': p2});
+      let p3 = p1 + p2 + 20; step(4, {'ποσο3': p3});
+      let fpa = p3 * 24 / 100; step(5, {'ΦΠΑ': fpa});
+      let tel = p3 + fpa; step(6, {'τελποσο': tel});
+      step(7, null, [`Τελικό Ποσό: ${fmt(tel)} €`]);
+      step(8);
+  })
+},
+{
+  id:'school', cat:'pct', title:'Ποσοστά αγοριών &amp; κοριτσιών',
+  statement:'Διαβάζει το πλήθος αγοριών &amp; κοριτσιών και εμφανίζει το <b>ποσοστό (%)</b> τους.',
+  code:['Αλγόριθμος σχολειο','Διάβασε πλαγ,πλκ','πλμαθ←πλαγ+πλκ','ποσαγ←πλαγ/πλμαθ*100','ποσκορ←πλκ/πλμαθ*100','Γράψε ποσαγ,ποσκορ','Τέλος σχολειο'],
+  inputs:[{id:'boys',label:'Αγόρια'},{id:'girls',label:'Κορίτσια'}],
+  run: createRunner(['πλαγ','πλκ','πλμαθ','ποσαγ','ποσκορ'], (v, step) => {
+      step(0);
+      step(1, {'πλαγ': v.boys, 'πλκ': v.girls});
+      let tot = v.boys + v.girls; step(2, {'πλμαθ': tot});
+      let pbag = v.boys / tot * 100; step(3, {'ποσαγ': pbag});
+      let pkor = v.girls / tot * 100; step(4, {'ποσκορ': pkor});
+      step(5, null, [`Αγόρια: ${fmt(pbag)}%, Κορίτσια: ${fmt(pkor)}%`]);
+      step(6);
+  })
+},
+{
+  id:'tolls', cat:'pct', title:'Διόδια — ποσοστά &amp; κέρδος',
+  statement:'Κόστος διέλευσης: ΙΧ(2€), μηχανές(0,9€), φορτηγά(5€). Εμφανίζει το <b>ποσοστό</b> κάθε οχήματος και το <b>συνολικό κέρδος</b>.',
+  code:['Αλγόριθμος διοδια','Διάβασε πλΙΧ,πλμηχ,πλφ','πλοχ←πλΙΧ+πλμηχ+πλφ','ποσΙΧ←πλΙΧ/πλοχ*100','ποσμηχ←πλμηχ/πλοχ*100','ποσφ←πλφ/πλοχ*100','κερδος←2*πλΙΧ+0.9*πλμηχ+5*πλφ','Γράψε ποσΙΧ,ποσμηχ,ποσφ,κερδος','Τέλος διοδια'],
+  inputs:[{id:'ix',label:'ΙΧ'},{id:'moto',label:'Μηχανές'},{id:'trucks',label:'Φορτηγά'}],
+  run: createRunner(['πλΙΧ','πλμηχ','πλφ','πλοχ','ποσΙΧ','ποσμηχ','ποσφ','κερδος'], (v, step) => {
+      step(0);
+      step(1, {'πλΙΧ': v.ix, 'πλμηχ': v.moto, 'πλφ': v.trucks});
+      let tot = v.ix + v.moto + v.trucks; step(2, {'πλοχ': tot});
+      let pix = v.ix / tot * 100; step(3, {'ποσΙΧ': pix});
+      let pmoto = v.moto / tot * 100; step(4, {'ποσμηχ': pmoto});
+      let ptr = v.trucks / tot * 100; step(5, {'ποσφ': ptr});
+      let kerdos = 2*v.ix + 0.9*v.moto + 5*v.trucks; step(6, {'κερδος': kerdos});
+      step(7, null, [`ΙΧ:${fmt(pix)}% Μηχ:${fmt(pmoto)}% Φορτ:${fmt(ptr)}% Κέρδος:${fmt(kerdos)}€`]);
+      step(8);
+  })
+},
+{
+  id:'threedigit', cat:'divmod', title:'Ψηφία τριψήφιου αριθμού',
+  statement:'Διαβάζει έναν τριψήφιο ακέραιο και εμφανίζει το <b>άθροισμα των ψηφίων</b> του και τον <b>κατοπτρικό</b> του αριθμό.',
+  code:['Αλγόριθμος αριθμος','Διάβασε α','ψ1←α DIV 100','υπ←α MOD 100','ψ2←υπ DIV 10','ψ3←υπ MOD 10','αθρ←ψ1+ψ2+ψ3','β←ψ3*100+ψ2*10+ψ1','Γράψε αθρ,β','Τέλος αριθμος'],
+  inputs:[{id:'a',label:'α (π.χ. 375)'}],
+  run: createRunner(['α','ψ1','υπ','ψ2','ψ3','αθρ','β'], (v, step) => {
+      step(0);
+      step(1, {'α': v.a});
+      let psi1 = Math.floor(v.a / 100); step(2, {'ψ1': psi1});
+      let yp = v.a % 100; step(3, {'υπ': yp});
+      let psi2 = Math.floor(yp / 10); step(4, {'ψ2': psi2});
+      let psi3 = yp % 10; step(5, {'ψ3': psi3});
+      let athr = psi1 + psi2 + psi3; step(6, {'αθρ': athr});
+      let b = psi3 * 100 + psi2 * 10 + psi1; step(7, {'β': b});
+      step(8, null, [`Άθροισμα: ${fmt(athr)}, Κατοπτρικός: ${fmt(b)}`]);
+      step(9);
+  })
+},
+{
+  id:'fivedigit', cat:'divmod', title:'Μέσος όρος 2ου &amp; 4ου ψηφίου',
+  statement:'Διαβάζει έναν πενταψήφιο αριθμό και υπολογίζει τον <b>μέσο όρο</b> του 2ου και του 4ου ψηφίου του.',
+  code:['Αλγόριθμος αριθμος','Διάβασε α','ψ1←α DIV 10000','υπ1←α MOD 10000','ψ2←υπ1 DIV 1000','υπ2←υπ1 MOD 1000','ψ3←υπ2 DIV 100','υπ3←υπ2 MOD 100','ψ4←υπ3 DIV 10','ψ5←υπ3 MOD 10','μο←(ψ2+ψ4)/2','Γράψε μο','Τέλος αριθμος'],
+  inputs:[{id:'a',label:'α (10000-99999)'}],
+  run: createRunner(['α','ψ1','υπ1','ψ2','υπ2','ψ3','υπ3','ψ4','ψ5','μο'], (v, step) => {
+      step(0); step(1, {'α': v.a});
+      let p1 = Math.floor(v.a / 10000); step(2, {'ψ1': p1});
+      let y1 = v.a % 10000; step(3, {'υπ1': y1});
+      let p2 = Math.floor(y1 / 1000); step(4, {'ψ2': p2});
+      let y2 = y1 % 1000; step(5, {'υπ2': y2});
+      let p3 = Math.floor(y2 / 100); step(6, {'ψ3': p3});
+      let y3 = y2 % 100; step(7, {'υπ3': y3});
+      let p4 = Math.floor(y3 / 10); step(8, {'ψ4': p4});
+      let p5 = y3 % 10; step(9, {'ψ5': p5});
+      let mo = (p2 + p4) / 2; step(10, {'μο': mo});
+      step(11, null, [`Μέσος όρος: ${fmt(mo)}`]);
+      step(12);
+  })
+},
+{
+  id:'payroll', cat:'divmod', title:'Χαρτονομίσματα μισθοδοσίας',
+  statement:'Μισθοδοσία με 50€, 20€, 5€ και κέρματα 1€. Πόσα χαρτονομίσματα & κέρματα κάθε κατηγορίας χρειάζονται;',
+  code:['Αλγόριθμος εταιρεια','Διάβασε μ','χ50←μ DIV 50','υπ←μ MOD 50','χ20←υπ DIV 20','υπ1←υπ MOD 20','χ5←υπ1 DIV 5','κ1←υπ1 MOD 5','Γράψε χ50,χ20,χ5,κ1','Τέλος εταιρεια'],
+  inputs:[{id:'m',label:'Ποσό (€)'}],
+  run: createRunner(['μ','χ50','υπ','χ20','υπ1','χ5','κ1'], (v, step) => {
+      step(0); step(1, {'μ': v.m});
+      let x50 = Math.floor(v.m / 50); step(2, {'χ50': x50});
+      let yp = v.m % 50; step(3, {'υπ': yp});
+      let x20 = Math.floor(yp / 20); step(4, {'χ20': x20});
+      let yp1 = yp % 20; step(5, {'υπ1': yp1});
+      let x5 = Math.floor(yp1 / 5); step(6, {'χ5': x5});
+      let k1 = yp1 % 5; step(7, {'κ1': k1});
+      step(8, null, [`50€:${fmt(x50)}, 20€:${fmt(x20)}, 5€:${fmt(x5)}, 1€:${fmt(k1)}`]);
+      step(9);
+  })
+},
+{
+  id:'waitmin', cat:'divmod', title:'Χρόνος αναμονής σε λεπτά:δευτερόλεπτα',
+  statement:'Διαβάζει χρόνο αναμονής σε δευτερόλεπτα και εμφανίζει πόσα <b>λεπτά</b> και <b>δευτερόλεπτα</b> είναι.',
+  code:['Αλγόριθμος χρονος','Διάβασε δευτ','λ←δευτ DIV 60','δ←δευτ MOD 60','Γράψε λ,\':\',δ','Τέλος χρονος'],
+  inputs:[{id:'s',label:'Δευτερόλεπτα'}],
+  run: createRunner(['δευτ','λ','δ'], (v, step) => {
+      step(0); step(1, {'δευτ': v.s});
+      let l = Math.floor(v.s / 60); step(2, {'λ': l});
+      let d = v.s % 60; step(3, {'δ': d});
+      step(4, null, [`${fmt(l)}:${fmt(d)}`]);
+      step(5);
+  })
+},
+{
+  id:'hourint', cat:'divmod', title:'Ώρα από τετραψήφιο αριθμό',
+  statement:'Διαβάζει τετραψήφιο ακέραιο (π.χ. 1530 → 15:30) και εμφανίζει <b>ΩΡΑ: .. ΛΕΠΤΑ: ..</b>',
+  code:['Αλγόριθμος χρονος','Διάβασε α','ω←α DIV 100','λ←α MOD 100','Γράψε \'ΩΡΑ:\',ω,\'ΛΕΠΤΑ:\',λ','Τέλος χρονος'],
+  inputs:[{id:'a',label:'α (π.χ. 1530)'}],
+  run: createRunner(['α','ω','λ'], (v, step) => {
+      step(0); step(1, {'α': v.a});
+      let w = Math.floor(v.a / 100); step(2, {'ω': w});
+      let l = v.a % 100; step(3, {'λ': l});
+      step(4, null, [`ΩΡΑ: ${fmt(w)}  ΛΕΠΤΑ: ${fmt(l)}`]);
+      step(5);
+  })
+},
+{
+  id:'waithms', cat:'divmod', title:'Χρόνος αναμονής σε ώρες:λεπτά:δευτ.',
+  statement:'Ίδιο σενάριο με την τράπεζα, αλλά μετατρέπει σε <b>ώρες</b>, <b>λεπτά</b> και <b>δευτερόλεπτα</b>.',
+  code:['Αλγόριθμος χρονος','Διάβασε δευτ','ω←δευτ DIV 3600','υπ←δευτ MOD 3600','λ←υπ DIV 60','δ←υπ MOD 60','Γράψε ω,\':\',λ,\':\',δ','Τέλος χρονος'],
+  inputs:[{id:'s',label:'Δευτερόλεπτα'}],
+  run: createRunner(['δευτ','ω','υπ','λ','δ'], (v, step) => {
+      step(0); step(1, {'δευτ': v.s});
+      let w = Math.floor(v.s / 3600); step(2, {'ω': w});
+      let yp = v.s % 3600; step(3, {'υπ': yp});
+      let l = Math.floor(yp / 60); step(4, {'λ': l});
+      let d = yp % 60; step(5, {'δ': d});
+      step(6, null, [`${fmt(w)}:${fmt(l)}:${fmt(d)}`]);
+      step(7);
+  })
+},
+{
+  id:'mars', cat:'divmod', title:'Ρομπότ στον πλανήτη Άρη',
+  statement:'Ρομπότ με βήμα 80cm διανύει Ν βήματα. Υπολογίζει απόσταση και μετατρέπει σε <b>km, m και cm</b>.',
+  code:['Αλγόριθμος Αρης','Διάβασε Ν','ΑΒ←Ν*80','km←ΑΒ DIV 100000','υπ←ΑΒ MOD 100000','m←υπ DIV 100','cm←υπ MOD 100','Γράψε ΑΒ,km,m,cm','Τέλος Αρης'],
+  inputs:[{id:'n',label:'Βήματα (Ν)'}],
+  run: createRunner(['Ν','ΑΒ','km','υπ','m','cm'], (v, step) => {
+      step(0); step(1, {'Ν': v.n});
+      let ab = v.n * 80; step(2, {'ΑΒ': ab});
+      let km = Math.floor(ab / 100000); step(3, {'km': km});
+      let yp = ab % 100000; step(4, {'υπ': yp});
+      let m = Math.floor(yp / 100); step(5, {'m': m});
+      let cm = yp % 100; step(6, {'cm': cm});
+      step(7, null, [`Συνολικά ${fmt(ab)}cm -> ${fmt(km)}km, ${fmt(m)}m, ${fmt(cm)}cm`]);
+      step(8);
+  })
+},
+{
+  id:'swap', cat:'misc', title:'Αντιμετάθεση δύο μεταβλητών',
+  statement:'Αλγόριθμος που ανταλλάσσει τα περιεχόμενα δύο μεταβλητών, με χρήση βοηθητικής μεταβλητής.',
+  code:['Αλγόριθμος swap','Διάβασε α,β','γ←α','α←β','β←γ','Γράψε α,β','Τέλος swap'],
+  inputs:[{id:'a',label:'α'},{id:'b',label:'β'}],
+  run: createRunner(['α','β','γ'], (v, step) => {
+      step(0); step(1, {'α': v.a, 'β': v.b});
+      step(2, {'γ': v.a});
+      step(3, {'α': v.b});
+      step(4, {'β': v.a});
+      step(5, null, [`Τελικό: α=${fmt(v.b)}, β=${fmt(v.a)}`]);
+      step(6);
+  })
+}
+];
+
+/* ---------------- RENDER UI ---------------- */
+
+const exList = document.getElementById('exList');
+const doneSet = new Set();
+const ExecStates = {}; // Execution Context Storage
+
+EXERCISES.forEach((ex, i)=>{
+  const num = String(i+1).padStart(2,'0');
+  const card = document.createElement('article');
+  card.className = 'ex-card';
+  card.dataset.cat = ex.cat;
+  card.id = 'ex-'+ex.id;
+
+  const inputsHtml = ex.inputs.map(f=>`
+    <div class="field">
+      <label for="in-${ex.id}-${f.id}">${f.label}</label>
+      <input type="number" step="any" id="in-${ex.id}-${f.id}" data-key="${f.id}" placeholder="0">
+    </div>`).join('');
+
+  card.innerHTML = `
+    <div class="ex-head">
+      <span class="ex-badge">Άσκηση ${num}</span>
+      <span class="ex-cat">${CATS[ex.cat]}</span>
+      <h3>${ex.title}</h3>
+    </div>
+    <p class="ex-statement">${ex.statement}</p>
+    
+    <div class="ex-actions">
+      <button class="btn btn-solution" data-target="sol-${ex.id}">👁 Αλγόριθμος</button>
+      <button class="btn btn-try" data-target="try-${ex.id}">▶ Δοκίμασέ το</button>
+    </div>
+    
+    <div class="collapse" id="wrap-sol-${ex.id}">
+      <div class="collapse-inner">${renderCodeForHighlight(ex.code, ex.id+'_sol')}</div>
+    </div>
+    
+    <div class="collapse" id="wrap-try-${ex.id}">
+      <div class="collapse-inner">
+        <div class="try-panel">
+          
+          <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:15px;">
+            <div class="inputs-grid">${inputsHtml}</div>
+            <div style="display:flex; gap:10px; align-items:flex-end;">
+               <button class="btn btn-run" id="btn-auto-${ex.id}">Αυτόματα ▶</button>
+               <button class="btn btn-solution" id="btn-step-${ex.id}" style="border:1px solid var(--indigo);">Βήμα-Βήμα ⏯</button>
+            </div>
+          </div>
+
+          <!-- ΠΕΡΙΟΧΗ ΒΗΜΑΤΙΚΗΣ ΕΚΤΕΛΕΣΗΣ -->
+          <div class="execution-area" id="exec-area-${ex.id}" style="display:none;">
+             <div class="exec-layout">
+                 <div class="exec-code">
+                     ${renderCodeForHighlight(ex.code, ex.id)}
+                 </div>
+                 <div class="exec-trace">
+                     <div class="table-responsive">
+                         <table class="trace-table" id="table-${ex.id}">
+                            <thead><tr id="thead-${ex.id}"></tr></thead>
+                            <tbody id="tbody-${ex.id}"></tbody>
+                         </table>
+                     </div>
+                     <div class="console-out" id="console-${ex.id}">
+                         <div class="console-out-title">Οθονη (Γραψε)</div>
+                         <div id="console-lines-${ex.id}"></div>
+                     </div>
+                     <button class="btn btn-next" id="btn-next-${ex.id}" style="display:none;">Επόμενο Βήμα ⏭</button>
+                 </div>
+             </div>
+          </div>
+
+        </div>
+        <p class="hint">Συμπλήρωσε τα πεδία και πάτα «Αυτόματα» ή «Βήμα-Βήμα» για να δεις τον αλγόριθμο και τον Πίνακα Τιμών.</p>
+      </div>
+    </div>
+  `;
+  exList.appendChild(card);
+
+  // Attach execution events
+  card.querySelector(`#btn-auto-${ex.id}`).addEventListener('click', () => startExec(ex.id, true));
+  card.querySelector(`#btn-step-${ex.id}`).addEventListener('click', () => startExec(ex.id, false));
+  card.querySelector(`#btn-next-${ex.id}`).addEventListener('click', () => doStep(ex.id));
+});
+
+/* toggle collapse buttons */
+document.querySelectorAll('.btn-solution, .btn-try').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const target = btn.dataset.target;
+    const wrap = document.getElementById('wrap-'+target);
+    const isOpen = wrap.classList.toggle('open');
+    btn.classList.toggle('open', isOpen);
+  });
+});
+
+/* ---------------- EXECUTION LOGIC ---------------- */
+
+function startExec(id, auto) {
+    const ex = EXERCISES.find(e=>e.id===id);
+    const inputEls = document.querySelectorAll(`#ex-${id} .try-panel input`);
+    let ok = true;
+    const vals = {};
+    
+    inputEls.forEach(el=>{
+      const val = parseFloat(el.value.replace(',','.'));
+      if(isNaN(val)){ ok=false; el.classList.add('err'); }
+      else { el.classList.remove('err'); vals[el.dataset.key] = val; }
+    });
+    if(!ok) return;
+
+    // Clear old timer if any
+    if(ExecStates[id] && ExecStates[id].timer) clearInterval(ExecStates[id].timer);
+
+    // Get step-by-step trace
+    const { varNames, trace } = ex.run(vals);
+
+    // Reset UI
+    document.getElementById(`exec-area-${id}`).style.display = 'block';
+    document.getElementById(`console-lines-${id}`).innerHTML = '';
+    document.getElementById(`tbody-${id}`).innerHTML = '';
+    
+    // Create Table Header based on Variables
+    document.getElementById(`thead-${id}`).innerHTML = 
+        `<th>Γραμμή</th>` + varNames.map(v => `<th>${v}</th>`).join('');
+
+    // Remove old highlights
+    document.querySelectorAll(`#code-${id} .code-line`).forEach(l => l.classList.remove('active'));
+
+    ExecStates[id] = { trace, stepIdx: 0, auto, varNames, lastVars: {} };
+
+    if(auto) {
+        document.getElementById(`btn-next-${id}`).style.display = 'none';
+        ExecStates[id].timer = setInterval(() => doStep(id), 1200); // 1.2s per step
+        doStep(id); 
+    } else {
+        document.getElementById(`btn-next-${id}`).style.display = 'flex';
+        doStep(id);
+    }
+    markDone(id);
+}
+
+function doStep(id) {
+    const state = ExecStates[id];
+    if(!state) return;
+    
+    if(state.stepIdx >= state.trace.length) {
+        // Finished
+        if(state.timer) clearInterval(state.timer);
+        document.getElementById(`btn-next-${id}`).style.display = 'none';
+        document.querySelectorAll(`#code-${id} .code-line`).forEach(l => l.classList.remove('active'));
+        return;
+    }
+
+    const stepData = state.trace[state.stepIdx];
+
+    // 1. Highlight code line
+    document.querySelectorAll(`#code-${id} .code-line`).forEach(l => l.classList.remove('active'));
+    const lineEl = document.getElementById(`line-${id}-${stepData.line}`);
+    if(lineEl) {
+        lineEl.classList.add('active');
+    }
+
+    // 2. Add row to trace table
+    const tbody = document.getElementById(`tbody-${id}`);
+    const tr = document.createElement('tr');
+    
+    // Add line number cell
+    const tdLine = document.createElement('td');
+    tdLine.textContent = stepData.line + 1;
+    tdLine.style.color = "var(--ink-soft)";
+    tr.appendChild(tdLine);
+
+    // Add variables cells
+    state.varNames.forEach(vName => {
+        const td = document.createElement('td');
+        const val = stepData.vars[vName];
+        if(val !== undefined) {
+            td.textContent = fmt(val);
+            if(state.lastVars[vName] !== val) {
+                td.classList.add('changed'); // highlight cell if value changed
+            }
+        } else {
+            td.textContent = '';
+        }
+        tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+    state.lastVars = { ...stepData.vars };
+
+    // 3. Print to Console
+    if(stepData.prints) {
+        const consoleOut = document.getElementById(`console-lines-${id}`);
+        stepData.prints.forEach(p => {
+            const div = document.createElement('div');
+            div.textContent = '> ' + p;
+            consoleOut.appendChild(div);
+        });
+        consoleOut.parentElement.scrollTop = consoleOut.parentElement.scrollHeight;
+    }
+
+    // Auto-scroll table to bottom
+    const tblContainer = tbody.parentElement.parentElement;
+    tblContainer.scrollTop = tblContainer.scrollHeight;
+
+    state.stepIdx++;
+}
+
+/* ---------------- PROGRESS ---------------- */
+
+function markDone(id){
+  if(doneSet.has(id)) return;
+  doneSet.add(id);
+  document.getElementById('ex-'+id).classList.add('done');
+  updateProgress();
+}
+
+function updateProgress(){
+  const pct = Math.round((doneSet.size / EXERCISES.length) * 100);
+  document.getElementById('trailFill').style.width = pct + '%';
+  document.getElementById('trailCaption').textContent = `${doneSet.size} από ${EXERCISES.length} ασκήσεις διερευνήθηκαν`;
+}
+
+/* ---------------- FILTERS & REFERENCE ---------------- */
+const filtersEl = document.getElementById('filters');
+const allCats = [['all','Όλες'], ...Object.entries(CATS)];
+allCats.forEach(([key,label], idx)=>{
+  const chip = document.createElement('button');
+  chip.className = 'chip' + (idx===0 ? ' active' : '');
+  chip.textContent = label;
+  chip.dataset.key = key;
+  chip.addEventListener('click', ()=>{
+    document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    document.querySelectorAll('.ex-card').forEach(card=>{
+      card.style.display = (key==='all' || card.dataset.cat===key) ? '' : 'none';
+    });
+  });
+  filtersEl.appendChild(chip);
+});
+
+const REF = [
+  ["Έλεγχος αν ο Α είναι άρτιος", "Α MOD 2 = 0"],
+  ["Έλεγχος αν ο Α είναι περιττός", "Α MOD 2 = 1"],
+  ["Έλεγχος αν ο Α είναι πολλαπλάσιο του Β", "Α MOD Β = 0"],
+  ["Εύρεση τελευταίου ψηφίου του Α", "Α MOD 10"],
+  ["Έλεγχος αν ο Α είναι τριψήφιος", "Α>=100 ΚΑΙ Α<=999"],
+  ["Απόσταση του Α από το Β", "Α_Τ(Α-Β)"],
+  ["Δεκαδικό μέρος του Γ", "Γ - Α_Μ(Γ)"],
+];
+const refGrid = document.getElementById('refGrid');
+REF.forEach((r,i)=>{
+  const row = document.createElement('div');
+  row.className='ref-row';
+  row.innerHTML = `<div class="ref-num">${i+1}</div><p>${r[0]}: <code>${r[1]}</code></p>`;
+  refGrid.appendChild(row);
+});
+
+updateProgress();
+</script>
+</body>
+</html>
