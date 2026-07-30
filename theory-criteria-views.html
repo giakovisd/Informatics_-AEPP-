@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>Tutor Lab - Θεωρία Αλγορίθμων</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc; --panel-bg: #ffffff; --text-color: #1e293b;
+            --primary: #4f46e5; --primary-light: #e0e7ff; --success: #16a34a; 
+            --warning: #d97706; --danger: #dc2626; --border-color: #cbd5e1;
+            --tutor-bg: #f1f5f9;
+        }
+
+        body.dark-mode { 
+            --bg-color: #0f172a; --panel-bg: #1e293b; --text-color: #f8fafc;
+            --border-color: #334155; --tutor-bg: #0f172a; --primary-light: #3730a3;
+        }
+
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: background-color 0.3s;}
+
+        /* TABS */
+        .main-tabs-wrapper { display: flex; align-items: flex-end; background: var(--panel-bg); border-bottom: 2px solid var(--primary); padding-top: 8px; z-index: 10;}
+        .main-tabs { display: flex; padding-left: 15px; overflow-x: auto; gap: 5px; flex: 1;}
+        .m-tab { padding: 10px 20px; cursor: pointer; font-weight: bold; font-size: 0.95rem; border-radius: 8px 8px 0 0; background: var(--tutor-bg); color: #64748b; transition: 0.3s; border: 1px solid var(--border-color); border-bottom: none;}
+        .m-tab.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 -4px 10px rgba(79, 70, 229, 0.3);}
+
+        /* HEADER */
+        header { background-color: var(--panel-bg); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); z-index: 100;}
+        header h1 { margin: 0; font-size: 1.3rem; color: var(--primary); display: flex; align-items: center; gap: 10px;}
+        .controls-area { display: flex; gap: 10px;}
+        .theme-btn { background: var(--tutor-bg); border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 1rem; color: var(--text-color); transition: 0.2s;}
+        .theme-btn:hover { background: var(--primary-light); }
+
+        /* MAIN CONTAINER */
+        .main-container { display: flex; flex: 1; padding: 15px; gap: 15px; overflow: hidden; position: relative; }
+
+        /* FLYING BACKGROUND */
+        .logic-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; opacity: 0.7; }
+        .fly-token { 
+            position: absolute; font-weight: 900; 
+            color: rgba(79, 70, 229, 0.15); font-size: 2.5rem;
+            animation: floatUp linear infinite; 
+        }
+        body.dark-mode .fly-token { color: rgba(255, 255, 255, 0.05); }
+        @keyframes floatUp { 
+            0% { transform: translateY(110vh) scale(0.6) rotate(-20deg); opacity: 0; } 
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { transform: translateY(-20vh) scale(1.2) rotate(20deg); opacity: 0; } 
+        }
+
+        /* COLUMNS */
+        .col { display: flex; flex-direction: column; gap: 15px; z-index: 10; }
+        
+        /* TUTOR PANEL (LEFT) */
+        .col-tutor { flex: 0 0 350px; background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 10px 25px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden;}
+        .tutor-header { padding: 15px; background: var(--primary-light); display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border-color);}
+        .tutor-avatar { font-size: 2.5rem; background: white; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);}
+        .tutor-title { font-weight: bold; color: var(--primary); font-size: 1.1rem; margin: 0;}
+        .tutor-sub { font-size: 0.8rem; color: #64748b; margin: 0;}
+        .tutor-chat { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: var(--tutor-bg);}
+        
+        .chat-bubble { background: var(--panel-bg); padding: 12px 15px; border-radius: 12px 12px 12px 0; border: 1px solid var(--border-color); font-size: 0.95rem; line-height: 1.5; box-shadow: 0 2px 5px rgba(0,0,0,0.02); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative;}
+        .chat-bubble b { color: var(--primary); }
+        .chat-btn { background: var(--primary); color: white; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; align-self: flex-start; transition: 0.2s; box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2); margin-top: 5px;}
+        .chat-btn:hover { transform: translateY(-2px); background: #4338ca;}
+        
+        @keyframes popIn { from { transform: scale(0.9) translateY(10px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+
+        /* INTERACTIVE PANEL (MID) */
+        .col-interactive { flex: 1; background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 10px 25px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; position: relative;}
+        .int-header { padding: 12px 20px; font-weight: bold; background: var(--tutor-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;}
+        
+        /* WIDGET 1: THE RECIPE (CRITERIA) */
+        .recipe-board { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;}
+        .recipe-step { display: flex; align-items: center; justify-content: space-between; background: var(--tutor-bg); border: 2px solid var(--danger); padding: 12px 20px; border-radius: 8px; transition: 0.3s; position: relative; overflow: hidden;}
+        .recipe-step.fixed { border-color: var(--success); background: rgba(22, 163, 74, 0.05); }
+        .step-info { flex: 1; display: flex; flex-direction: column; gap: 4px; z-index: 2;}
+        .step-badge { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; color: var(--primary); background: var(--primary-light); align-self: flex-start; padding: 2px 8px; border-radius: 12px;}
+        .step-text { font-size: 1.1rem; font-weight: bold; transition: 0.3s;}
+        .fix-btn { background: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; z-index: 2;}
+        .recipe-step.fixed .fix-btn { display: none; }
+        .fixed-mark { display: none; font-size: 1.5rem; color: var(--success); z-index: 2;}
+        .recipe-step.fixed .fixed-mark { display: block; animation: popIn 0.3s;}
+        
+        /* WIDGET 2: THE JOURNEY (PERSPECTIVES) */
+        .journey-board { flex: 1; padding: 20px; display: none; flex-direction: column; gap: 20px; background: radial-gradient(circle at center, var(--tutor-bg) 0%, var(--panel-bg) 100%);}
+        .perspectives-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;}
+        .perspective-card { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 15px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.02);}
+        .p-icon { font-size: 2.5rem; margin-bottom: 10px; transition: 0.3s;}
+        .p-title { font-weight: bold; color: var(--primary); font-size: 0.9rem; margin-bottom: 10px; text-transform: uppercase;}
+        .p-select { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--tutor-bg); color: var(--text-color); font-weight: bold; cursor: pointer;}
+        
+        .analytics-dashboard { background: #0f172a; border-radius: 12px; padding: 20px; color: white; display: flex; flex-direction: column; gap: 15px; position: relative; overflow: hidden; box-shadow: inset 0 0 20px rgba(0,0,0,0.5); border: 2px solid #334155;}
+        .dash-title { color: #94a3b8; font-size: 0.85rem; font-weight: bold; text-transform: uppercase;}
+        
+        .meter-row { display: flex; align-items: center; gap: 15px;}
+        .meter-label { width: 120px; font-weight: bold; font-family: Consolas;}
+        .meter-track { flex: 1; height: 16px; background: #1e293b; border-radius: 8px; overflow: hidden; border: 1px solid #334155;}
+        .meter-fill { height: 100%; width: 50%; transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);}
+        #timeFill { background: var(--success); }
+        #fuelFill { background: var(--warning); }
+
+        /* GLOSSARY PANEL (RIGHT) */
+        .col-glossary { flex: 0 0 280px; background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 10px 25px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden;}
+        .glossary-header { padding: 15px; font-weight: bold; background: var(--tutor-bg); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px;}
+        .glossary-body { flex: 1; padding: 15px; overflow-y: auto; font-size: 0.85rem; line-height: 1.5; color: #475569;}
+        body.dark-mode .glossary-body { color: #cbd5e1; }
+        .g-term { font-weight: bold; color: var(--text-color); display: block; margin-top: 10px; padding-bottom: 2px; border-bottom: 1px dashed var(--border-color);}
+    </style>
+</head>
+<body>
+
+<div class="main-tabs-wrapper">
+    <div class="main-tabs">
+        <div class="m-tab active" onclick="switchTab(1)" id="tab-1">🍰 Μέρος 1: Τα 5 Κριτήρια</div>
+        <div class="m-tab" onclick="switchTab(2)" id="tab-2">🚗 Μέρος 2: Οι 4 Σκοπιές</div>
+    </div>
+</div>
+
+<header>
+    <h1>🎓 Masterclass: Η Θεωρία των Αλγορίθμων</h1>
+    <div class="controls-area">
+        <button class="theme-btn" onclick="document.body.classList.toggle('dark-mode')">🌙 Αλλαγή Θέματος</button>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <!-- FLYING BACKGROUND -->
+    <div class="logic-bg" id="logicBg"></div>
+
+    <!-- TUTOR CHAT (LEFT) -->
+    <div class="col col-tutor">
+        <div class="tutor-header">
+            <div class="tutor-avatar">🧑‍🏫</div>
+            <div>
+                <h3 class="tutor-title">Καθηγητής Ξερόλας</h3>
+                <p class="tutor-sub">Ο Προσωπικός σου Tutor</p>
+            </div>
+        </div>
+        <div class="tutor-chat" id="chatArea">
+            <!-- Chat bubbles inserted via JS -->
+        </div>
+    </div>
+
+    <!-- INTERACTIVE AREA (MID) -->
+    <div class="col col-interactive">
+        <div class="int-header" id="intHeader">
+            <span>Διαδραστικός Πίνακας</span>
+        </div>
+        
+        <!-- WIDGET 1: THE RECIPE -->
+        <div class="recipe-board" id="recipeBoard">
+            <div style="background: var(--primary-light); padding: 10px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 10px;">
+                <b>Οδηγία:</b> Βρες τα λάθη σε αυτή τη συνταγή για Κέικ. Ένας αλγόριθμος λειτουργεί ακριβώς όπως μια μαγειρική συνταγή! Πάτα "Διόρθωση" για να ικανοποιήσεις το κάθε κριτήριο.
+            </div>
+
+            <div class="recipe-step" id="step-in">
+                <div class="step-info">
+                    <span class="step-badge">1. Είσοδος</span>
+                    <span class="step-text" id="txt-in">Υλικά: Δεν ξέρω τι χρειάζεται!</span>
+                </div>
+                <button class="fix-btn" onclick="fixStep('in')">Διόρθωση</button>
+                <div class="fixed-mark">✅</div>
+            </div>
+
+            <div class="recipe-step" id="step-eff">
+                <div class="step-info">
+                    <span class="step-badge">2. Αποτελεσματικότητα</span>
+                    <span class="step-text" id="txt-eff">Βήμα 1: Φτιάξε το κέικ με τη δύναμη της σκέψης.</span>
+                </div>
+                <button class="fix-btn" onclick="fixStep('eff')">Διόρθωση</button>
+                <div class="fixed-mark">✅</div>
+            </div>
+
+            <div class="recipe-step" id="step-def">
+                <div class="step-info">
+                    <span class="step-badge">3. Καθοριστικότητα</span>
+                    <span class="step-text" id="txt-def">Βήμα 2: Ψήσε το "μέχρι να γίνει".</span>
+                </div>
+                <button class="fix-btn" onclick="fixStep('def')">Διόρθωση</button>
+                <div class="fixed-mark">✅</div>
+            </div>
+
+            <div class="recipe-step" id="step-fin">
+                <div class="step-info">
+                    <span class="step-badge">4. Περατότητα</span>
+                    <span class="step-text" id="txt-fin">Βήμα 3: Ανακάτευε το γλάσο για πάντα.</span>
+                </div>
+                <button class="fix-btn" onclick="fixStep('fin')">Διόρθωση</button>
+                <div class="fixed-mark">✅</div>
+            </div>
+
+            <div class="recipe-step" id="step-out">
+                <div class="step-info">
+                    <span class="step-badge">5. Έξοδος</span>
+                    <span class="step-text" id="txt-out">Τέλος: Πέτα το κέικ στα σκουπίδια.</span>
+                </div>
+                <button class="fix-btn" onclick="fixStep('out')">Διόρθωση</button>
+                <div class="fixed-mark">✅</div>
+            </div>
+        </div>
+
+        <!-- WIDGET 2: THE JOURNEY -->
+        <div class="journey-board" id="journeyBoard">
+            <div style="background: var(--primary-light); padding: 10px; border-radius: 8px; font-size: 0.9rem;">
+                <b>Οδηγία:</b> Προετοίμασε το ταξίδι. Επίλεξε το <b>Υλικό</b> (Όχημα), τη <b>Γλώσσα</b> (Οδηγό) και τη <b>Θεωρία</b> (Διαδρομή) για να δεις πώς επηρεάζεται η <b>Αναλυτική Σκοπιά</b> (Χρόνος & Κατανάλωση) στο κάτω πάνελ!
+            </div>
+
+            <div class="perspectives-grid">
+                <div class="perspective-card">
+                    <div class="p-icon" id="ic-hw">🚙</div>
+                    <div class="p-title">1. Σκοπια Υλικου</div>
+                    <select class="p-select" id="sel-hw" onchange="updateJourney()">
+                        <option value="slow">Παλιό Αμάξι (Αργό)</option>
+                        <option value="fast">Σπορ Αμάξι (Γρήγορο)</option>
+                    </select>
+                </div>
+                <div class="perspective-card">
+                    <div class="p-icon" id="ic-lang">👨‍🎓</div>
+                    <div class="p-title">2. Σκοπια Γλωσσων</div>
+                    <select class="p-select" id="sel-lang" onchange="updateJourney()">
+                        <option value="high">Νέος Οδηγός (Εύκολο/Αργό)</option>
+                        <option value="low">Έμπειρος Οδηγός (Δύσκολο/Γρήγορο)</option>
+                    </select>
+                </div>
+                <div class="perspective-card">
+                    <div class="p-icon" id="ic-theo">⛰️</div>
+                    <div class="p-title">3. Θεωρητικη Σκοπια</div>
+                    <select class="p-select" id="sel-theo" onchange="updateJourney()">
+                        <option value="bad">Μέσα από βουνά (Κακή Ιδέα)</option>
+                        <option value="good">Από Εθνική (Καλή Ιδέα)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="analytics-dashboard">
+                <div class="dash-title">📊 4. Αναλυτικη Σκοπια (Το Αποτέλεσμα)</div>
+                
+                <div class="meter-row">
+                    <div class="meter-label">⏱️ Χρόνος:</div>
+                    <div class="meter-track"><div class="meter-fill" id="timeFill"></div></div>
+                </div>
+                <div class="meter-row">
+                    <div class="meter-label">⛽ Κατανάλωση:</div>
+                    <div class="meter-track"><div class="meter-fill" id="fuelFill"></div></div>
+                </div>
+                <div id="journeyMsg" style="font-family:Consolas; font-size:0.85rem; color:#94a3b8; margin-top:10px;">
+                    Ρύθμισε τις παραμέτρους για να δεις την απόδοση.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- GLOSSARY (RIGHT) -->
+    <div class="col col-glossary">
+        <div class="glossary-header">
+            📚 Βιβλίο Γνώσεων
+        </div>
+        <div class="glossary-body" id="glossaryArea">
+            <!-- Injected via JS -->
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- CHAT CONTENT & LOGIC ---
+    const chatContent = {
+        1: [
+            { text: "Γεια σου! Είμαι ο ψηφιακός σου καθηγητής. Σήμερα δεν θα γράψουμε κώδικα. Σήμερα θα καταλάβουμε <b>τη φιλοσοφία</b> των αλγορίθμων." },
+            { text: "Οι μαθητές συχνά παπαγαλίζουν τα 5 κριτήρια ενός αλγορίθμου, χωρίς να τα νιώθουν. Πάμε να το αλλάξουμε." },
+            { text: "Σκέψου έναν αλγόριθμο σαν μια <b>Συνταγή για Κέικ</b>. Στον πίνακα δίπλα, κάποιος έγραψε μια απαίσια συνταγή που παραβιάζει και τα 5 κριτήρια!" },
+            { text: "Πάτα το κουμπί <b>Διόρθωση</b> σε κάθε βήμα για να δεις τι σημαίνει το κάθε κριτήριο στην πράξη." }
+        ],
+        2: [
+            { text: "Υπέροχα! Τώρα που ξέρουμε πότε ένας αλγόριθμος είναι <i>σωστός</i>, πώς ξέρουμε αν είναι <b>καλύτερος</b> από έναν άλλον;" },
+            { text: "Η Πληροφορική μελετά τους αλγορίθμους από <b>4 διαφορετικές Σκοπιές</b>. Σκέψου το σαν την οργάνωση ενός Ταξιδιού." },
+            { text: "Η <b>Σκοπιά Υλικού</b> είναι το Όχημα. Η <b>Σκοπιά Γλωσσών</b> είναι ο Οδηγός. Η <b>Σκοπιά Θεωρίας</b> είναι η Διαδρομή." },
+            { text: "Όλα αυτά μαζί, καθορίζουν το 4ο πρίσμα: Την <b>Αναλυτική Σκοπιά</b> (Χρόνος & Καύσιμα). Άλλαξε τις παραμέτρους δίπλα για να το δεις ζωντανά!" }
+        ]
+    };
+
+    const glossaryContent = {
+        1: `
+            <span class="g-term">1. Είσοδος (Input)</span>
+            Καμία, μία ή περισσότερες τιμές δεδομένων που δίνονται στον αλγόριθμο πριν ή κατά την εκτέλεση. <i>(Τα υλικά της συνταγής).</i>
+            
+            <span class="g-term">2. Έξοδος (Output)</span>
+            Τουλάχιστον μία τιμή (αποτέλεσμα). Αν δεν δίνει αποτέλεσμα, δεν έχει νόημα. <i>(Το έτοιμο κέικ).</i>
+            
+            <span class="g-term">3. Καθοριστικότητα (Definiteness)</span>
+            Κάθε εντολή πρέπει να είναι αυστηρά καθορισμένη και χωρίς καμία ασάφεια. <i>(Όχι "ψήσε λίγο", αλλά "στους 180C").</i>
+            
+            <span class="g-term">4. Περατότητα (Finiteness)</span>
+            Πρέπει να τελειώνει μετά από πεπερασμένα βήματα. Όχι ατέρμονοι βρόχοι. <i>(Ανακάτεψε 3 λεπτά, όχι για πάντα).</i>
+            
+            <span class="g-term">5. Αποτελεσματικότητα (Effectiveness)</span>
+            Οι εντολές πρέπει να είναι απλές και εκτελέσιμες (ακόμα και με χαρτί και μολύβι). <i>(Μην ζητάς αδύνατα πράγματα).</i>
+        `,
+        2: `
+            <span class="g-term">1. Σκοπιά Υλικού (Hardware)</span>
+            Πώς η ταχύτητα εκτέλεσης επηρεάζεται από την αρχιτεκτονική του υπολογιστή (πιο γρήγορος CPU = λιγότερος χρόνος).
+            
+            <span class="g-term">2. Σκοπιά Γλωσσών (Languages)</span>
+            Πώς η γλώσσα προγραμματισμού (π.χ. C vs Python) επηρεάζει τον χρόνο εκτέλεσης και το πλήθος των εντολών.
+            
+            <span class="g-term">3. Θεωρητική Σκοπιά (Theory)</span>
+            Αν η "ιδέα" του αλγορίθμου είναι η καλύτερη δυνατή για το πρόβλημα, ανεξάρτητα από τον υπολογιστή.
+            
+            <span class="g-term">4. Αναλυτική Σκοπιά (Analysis)</span>
+            Μελετά τους <b>Υπολογιστικούς Πόρους</b>. Κυρίως τον Χρόνο Εκτέλεσης και την Απαίτηση σε Μνήμη. Επηρεάζεται από τις 3 προηγούμενες.
+        `
+    };
+
+    let chatIndex = 0;
+    let currentTab = 1;
+
+    function switchTab(num) {
+        currentTab = num;
+        document.querySelectorAll('.m-tab').forEach((el, idx) => el.classList.toggle('active', idx + 1 === num));
+        
+        // Switch Widgets
+        document.getElementById('recipeBoard').style.display = num === 1 ? 'flex' : 'none';
+        document.getElementById('journeyBoard').style.display = num === 2 ? 'flex' : 'none';
+        
+        // Update Glossary & Background
+        document.getElementById('glossaryArea').innerHTML = glossaryContent[num];
+        updateFlyingTokens(num);
+
+        // Reset Chat
+        chatIndex = 0;
+        document.getElementById('chatArea').innerHTML = '';
+        pushNextChat();
+    }
+
+    function pushNextChat() {
+        if(chatIndex >= chatContent[currentTab].length) return;
+        
+        const chatArea = document.getElementById('chatArea');
+        const msg = chatContent[currentTab][chatIndex].text;
+        
+        const bubble = document.createElement('div');
+        bubble.className = 'chat-bubble';
+        bubble.innerHTML = msg;
+        
+        chatArea.appendChild(bubble);
+        chatIndex++;
+
+        // Add Next button if more messages exist
+        if(chatIndex < chatContent[currentTab].length) {
+            const btn = document.createElement('button');
+            btn.className = 'chat-btn';
+            btn.innerText = 'Συνέχισε 💬';
+            btn.onclick = function() {
+                this.remove();
+                pushNextChat();
+            };
+            chatArea.appendChild(btn);
+        }
+        
+        chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
+    // --- WIDGET 1: FIX THE RECIPE ---
+    const fixes = {
+        'in': 'Υλικά: 500γρ αλεύρι, 4 αυγά, ζάχαρη.',
+        'eff': 'Βήμα 1: Ανακάτεψε τα υλικά με ένα σύρμα στο μπολ.',
+        'def': 'Βήμα 2: Ψήσε ακριβώς στους 180°C για 40 λεπτά.',
+        'fin': 'Βήμα 3: Χτύπα το γλάσο για 3 λεπτά (όχι για πάντα).',
+        'out': 'Τέλος: Σέρβιρε το έτοιμο Κέικ (παράγει αποτέλεσμα).'
+    };
+
+    function fixStep(stepId) {
+        const stepEl = document.getElementById('step-' + stepId);
+        stepEl.classList.add('fixed');
+        const textEl = document.getElementById('txt-' + stepId);
+        textEl.innerText = fixes[stepId];
+        textEl.style.color = 'var(--success)';
+        
+        // Add a small bounce animation
+        stepEl.style.transform = 'scale(1.02)';
+        setTimeout(() => stepEl.style.transform = 'scale(1)', 200);
+    }
+
+    // --- WIDGET 2: THE JOURNEY ---
+    function updateJourney() {
+        const hw = document.getElementById('sel-hw').value;
+        const lang = document.getElementById('sel-lang').value;
+        const theo = document.getElementById('sel-theo').value;
+
+        // Change icons dynamically
+        document.getElementById('ic-hw').innerText = hw === 'fast' ? '🏎️' : '🚙';
+        document.getElementById('ic-lang').innerText = lang === 'low' ? '🧑‍✈️' : '👨‍🎓';
+        document.getElementById('ic-theo').innerText = theo === 'good' ? '🛣️' : '⛰️';
+
+        let time = 90; // high is bad (slow)
+        let fuel = 50; // high is bad (memory/fuel consumption)
+        let msg = "";
+
+        if(hw === 'fast') { time -= 30; fuel += 10; msg += "Το σπορ αμάξι μείωσε το χρόνο, αλλά καίει παραπάνω. "; }
+        if(lang === 'low') { time -= 20; fuel -= 10; msg += "Ο έμπειρος οδηγός κάνει λιγότερα λάθη (λιγότερος χρόνος/καύσιμο). "; }
+        if(theo === 'good') { time -= 30; fuel -= 20; msg += "Η Εθνική οδός είναι η καλύτερη διαδρομή (βέλτιστη ιδέα)!"; }
+
+        // Boundaries
+        time = Math.max(10, Math.min(time, 100));
+        fuel = Math.max(10, Math.min(fuel, 100));
+
+        // UI Update
+        const tFill = document.getElementById('timeFill');
+        const fFill = document.getElementById('fuelFill');
+        
+        tFill.style.width = time + '%';
+        fFill.style.width = fuel + '%';
+
+        tFill.style.backgroundColor = time < 35 ? 'var(--success)' : (time > 75 ? 'var(--danger)' : 'var(--warning)');
+        fFill.style.backgroundColor = fuel < 35 ? 'var(--success)' : (fuel > 75 ? 'var(--danger)' : 'var(--warning)');
+
+        document.getElementById('journeyMsg').innerText = msg || "Ρύθμισε τις παραμέτρους για να δεις την απόδοση.";
+    }
+
+    // --- VISUAL EFFECTS ---
+    function updateFlyingTokens(tabNum) {
+        const bg = document.getElementById('logicBg');
+        bg.innerHTML = '';
+        
+        let tokens = [];
+        if(tabNum === 1) tokens = ['🎂', '📝', '✔️', '🥚', '🔥', '⏲️'];
+        else tokens = ['🚗', '⚙️', '🛣️', '⛽', '⏱️', '👨‍💻'];
+
+        for(let i=0; i<15; i++) {
+            let el = document.createElement('div');
+            el.className = 'fly-token';
+            el.textContent = tokens[Math.floor(Math.random() * tokens.length)];
+            el.style.left = (Math.random() * 90) + '%';
+            el.style.animationDuration = (10 + Math.random() * 15) + 's';
+            el.style.animationDelay = (Math.random() * -10) + 's';
+            el.style.fontSize = (2 + Math.random() * 2) + 'rem';
+            bg.appendChild(el);
+        }
+    }
+
+    // Init
+    switchTab(1);
+
+</script>
+</body>
+</html>
