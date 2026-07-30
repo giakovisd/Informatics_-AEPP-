@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Οι 4 Σκοπιές των Δεδομένων (No Scroll App)</title>
+    <style>
+        :root {
+            --bg-page: #f8fafc;
+            --bg-panel: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --highlight: #f1f5f9;
+            
+            --accent-1: #ef4444; /* Υλικό */
+            --accent-2: #3b82f6; /* Γλώσσες */
+            --accent-3: #10b981; /* Δομές */
+            --accent-4: #f59e0b; /* Ανάλυση */
+        }
+
+        * { box-sizing: border-box; }
+
+        /* ΑΠΟΛΥΤΟ ΚΛΕΙΔΩΜΑ SCROLL (100vh) */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-page); color: var(--text-main); margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+        /* HEADER: Πιο μαζεμένο (Compact) */
+        header { background: var(--bg-panel); padding: 12px 20px; border-bottom: 2px solid var(--border); text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.03); z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0;}
+        header h1 { margin: 0; font-size: 1.4rem; color: #0f172a; }
+        header p { margin: 2px 0 0 0; color: var(--text-muted); font-size: 0.95rem; max-width: 900px;}
+
+        .main-container { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+
+        /* SIDEBAR / TABS */
+        .sidebar { width: 300px; background: var(--bg-panel); border-right: 2px solid var(--border); display: flex; flex-direction: column; padding: 15px; z-index: 5; gap: 8px; flex-shrink: 0;}
+        
+        .tab-btn { background: var(--highlight); color: var(--text-main); border: 2px solid transparent; padding: 12px 15px; border-radius: 10px; text-align: left; font-size: 1.05rem; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 12px;}
+        .tab-btn:hover { background: #e2e8f0; }
+        
+        .tab-btn.active[data-tab="1"] { border-color: var(--accent-1); background: #fef2f2; color: #991b1b; }
+        .tab-btn.active[data-tab="2"] { border-color: var(--accent-2); background: #eff6ff; color: #1e3a8a; }
+        .tab-btn.active[data-tab="3"] { border-color: var(--accent-3); background: #f0fdf4; color: #14532d; }
+        .tab-btn.active[data-tab="4"] { border-color: var(--accent-4); background: #fffbeb; color: #78350f; }
+
+        .tab-icon { font-size: 1.3rem; width: 25px; text-align: center; }
+
+        /* CONTENT AREA */
+        .content-area { flex: 1; background: var(--bg-page); padding: 15px 25px; position: relative; display: flex; flex-direction: column; align-items: center; min-width: 0;}
+        
+        /* FLEXIBLE TAB PANE */
+        .tab-pane { display: none; width: 100%; max-width: 1100px; flex-direction: column; height: 100%; animation: fadeIn 0.3s ease-out; }
+        .tab-pane.active { display: flex; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Εσωτερικά Στοιχεία */
+        .pane-header { font-size: 1.5rem; font-weight: bold; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; flex-shrink: 0;}
+        .pane-header span { font-size: 1.8rem; }
+
+        .callout { background: var(--bg-panel); border-left: 5px solid; padding: 12px 15px; border-radius: 0 8px 8px 0; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); font-size: 0.95rem; line-height: 1.5; color: var(--text-main); flex-shrink: 0;}
+        .callout strong { color: #0f172a; }
+
+        /* INTERACTIVE MODULES */
+        .interactive-box { background: var(--bg-panel); border: 2px solid var(--border); border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); flex: 1; display: flex; flex-direction: column; min-height: 0;}
+        
+        .split-layout { display: flex; gap: 20px; flex: 1; min-height: 0;}
+        .split-col { flex: 1; display: flex; flex-direction: column; min-height: 0;}
+
+        /* ΚΟΙΝΑ ΣΤΟΙΧΕΙΑ / ΚΟΥΜΠΙΑ */
+        .btn { border: none; padding: 12px; border-radius: 8px; font-size: 1.05rem; font-weight: bold; cursor: pointer; transition: 0.2s; width: 100%; box-shadow: 0 2px 5px rgba(0,0,0,0.1); color: white;}
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15);}
+        .btn:active { transform: translateY(0); }
+        .section-title { color: var(--text-muted); font-weight: bold; margin: 0 0 10px 0; text-transform: uppercase; font-size: 0.9rem;}
+
+        /* --- 1. Hardware Decoder --- */
+        .byte-display { font-family: Consolas, monospace; font-size: 3rem; font-weight: bold; color: var(--accent-1); letter-spacing: 6px; text-align: center; margin-bottom: 15px; background: #fef2f2; padding: 15px; border-radius: 10px; border: 2px dashed #fca5a5;}
+        .select-format { width: 100%; padding: 12px; font-size: 1.1rem; font-weight: bold; background: var(--bg-page); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: 0.3s;}
+        .select-format:focus { border-color: var(--accent-1); box-shadow: 0 0 0 3px rgba(239,68,68,0.2);}
+        
+        .result-container { flex: 1; display: flex; flex-direction: column; justify-content: center; background: var(--highlight); border: 2px solid var(--border); border-radius: 10px; padding: 20px;}
+        .result-display { font-size: 2.2rem; font-weight: bold; text-align: center; color: var(--text-muted); transition: 0.3s; margin-bottom: 10px;}
+        .result-note { font-size: 1.05rem; color: var(--text-muted); text-align: center; line-height: 1.5;}
+
+        /* --- 2. Languages Compiler --- */
+        .box-panel { background: var(--highlight); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; flex: 1;}
+        .box-title { background: #e2e8f0; padding: 10px 15px; font-weight: bold; color: var(--text-main); font-size: 0.9rem; text-transform: uppercase; border-bottom: 1px solid var(--border);}
+        .box-content { padding: 15px; font-family: Consolas, monospace; font-size: 1rem; display: flex; flex-direction: column; justify-content: space-evenly; flex: 1; gap: 10px;}
+        
+        .var-row { display: flex; align-items: center; justify-content: space-between; background: var(--bg-panel); padding: 10px; border-radius: 6px; border: 1px solid var(--border);}
+        .var-type { color: #8b5cf6; font-weight: bold;}
+        .var-name { color: #1e293b; font-weight: bold;}
+        
+        .mem-slot { background: var(--bg-panel); border: 2px dashed var(--border); padding: 10px; border-radius: 6px; display: flex; flex-direction: column; gap: 5px; opacity: 0.4; transition: 0.5s; text-align: center;}
+        .mem-slot.active { opacity: 1; border-color: var(--accent-2); border-style: solid; background: #eff6ff;}
+
+        /* --- 3. Structures Record --- */
+        .record-card { background: var(--bg-panel); border: 2px solid var(--border); border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.03); flex: 1; display: flex; flex-direction: column;}
+        .record-header { background: var(--highlight); padding: 12px 15px; font-weight: bold; font-size: 1rem; border-bottom: 2px solid var(--border); display: flex; justify-content: space-between;}
+        
+        .fields-grid { display: grid; grid-template-rows: 1fr 1fr 1fr; gap: 1px; background: var(--border); flex: 1;}
+        .field-box { background: var(--bg-panel); padding: 10px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px;}
+        .field-label { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; font-weight: bold;}
+        .field-value { font-family: Consolas; font-size: 1.1rem; font-weight: bold; color: var(--accent-3);}
+        
+        .file-container { background: var(--highlight); border-radius: 8px; padding: 15px; border: 1px solid var(--border); position: relative; flex: 1; overflow: hidden; display: flex; flex-direction: column;}
+        .file-row { display: grid; grid-template-columns: 1fr 2fr 1fr; padding: 8px; border-bottom: 1px solid var(--border); font-family: Consolas; font-size: 0.95rem; align-items: center;}
+        .file-row.header { font-family: 'Segoe UI'; font-weight: bold; color: var(--text-muted); border-bottom: 2px solid var(--border);}
+        
+        .scanner { position: absolute; left: 0; right: 0; height: 35px; background: rgba(16, 185, 129, 0.2); border-left: 4px solid var(--accent-3); display: none; pointer-events: none; z-index: 10;}
+        @keyframes scanDown { 0% {top: 40px;} 100% {top: calc(100% - 35px);} }
+
+        /* --- 4. Analysis DB --- */
+        .table-wrap { flex: 1; background: var(--bg-panel); border-radius: 8px; border: 1px solid var(--border); overflow: hidden;}
+        .table-title { background: #fffbeb; color: #b45309; padding: 10px; font-weight: bold; text-align: center; border-bottom: 2px solid var(--accent-4); font-size: 0.95rem;}
+        .t-row { display: flex; border-bottom: 1px solid var(--border); }
+        .t-row.t-head { background: var(--highlight); font-weight: bold; color: var(--text-muted); font-size: 0.85rem;}
+        .t-cell { flex: 1; padding: 10px; text-align: center; font-family: Consolas; border-right: 1px solid var(--border); font-size: 0.95rem;}
+        .t-cell:last-child { border-right: none;}
+        
+        /* ΔΙΟΡΘΩΣΗ: Flex Layout για Αναπαράσταση Γνώσης */
+        .db-action-row { display: flex; align-items: stretch; gap: 20px; margin-top: 15px;}
+        .knowledge-result { flex: 1; background: #fffbeb; border: 2px dashed var(--accent-4); padding: 15px 20px; border-radius: 8px; display: flex; flex-direction: column; justify-content: center; opacity: 0; transition: 0.4s; font-size: 1.05rem; line-height: 1.4;}
+        .knowledge-result.visible { opacity: 1; }
+        
+        .highlight-key { background: #fef3c7; font-weight: bold; color: #b45309;}
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Η Επιστήμη της Πληροφορικής: 4 Σκοπιές Δεδομένων</h1>
+        <p><i>"Η Πληροφορική θεωρείται η επιστήμη που μελετά τα δεδομένα από τις ακόλουθες σκοπιές..."</i> Εξερεύνησε πώς το ίδιο "κομμάτι" πληροφορίας αλλάζει μορφή και νόημα ανάλογα με τον φακό που το κοιτάμε.</p>
+    </header>
+
+    <div class="main-container">
+        
+        <!-- TABS SIDEBAR -->
+        <div class="sidebar">
+            <button class="tab-btn active" data-tab="1" onclick="switchTab(1)">
+                <span class="tab-icon">⚙️</span> 1. Σκοπιά Υλικού
+            </button>
+            <button class="tab-btn" data-tab="2" onclick="switchTab(2)">
+                <span class="tab-icon">💻</span> 2. Γλώσσες Προγρ/σμού
+            </button>
+            <button class="tab-btn" data-tab="3" onclick="switchTab(3)">
+                <span class="tab-icon">🗂️</span> 3. Δομές Δεδομένων
+            </button>
+            <button class="tab-btn" data-tab="4" onclick="switchTab(4)">
+                <span class="tab-icon">📊</span> 4. Ανάλυση Δεδομένων
+            </button>
+        </div>
+
+        <!-- CONTENT AREA -->
+        <div class="content-area">
+            
+            <!-- TAB 1: HARDWARE -->
+            <div class="tab-pane active" id="pane-1">
+                <div class="pane-header" style="color: var(--accent-1);">
+                    <span>⚙️</span> 1. Σκοπιά του Υλικού (Hardware)
+                </div>
+                
+                <div class="callout" style="border-color: var(--accent-1);">
+                    <strong>Θεωρία:</strong> Το υλικό (hardware), δηλαδή η μηχανή, επιτρέπει στα δεδομένα ενός προγράμματος να αποθηκεύονται στην κύρια μνήμη με διάφορες <b>αναπαραστάσεις (representations)</b> (Δυαδική, ASCII, EBCDIC, Συμπλήρωμα 1 ή 2 κλπ).
+                </div>
+                
+                <div class="interactive-box">
+                    <p class="section-title" style="text-align: center;">Μια θεση μνημης (byte) εχει το παρακατω περιεχομενο. Τι παριστανει;</p>
+                    
+                    <div class="split-layout" style="align-items: center; margin-top: 10px;">
+                        <div class="split-col" style="flex: 1.2;">
+                            <div class="byte-display">11110001</div>
+                            <select class="select-format" id="formatSelect" onchange="decodeByte()">
+                                <option value="" disabled selected>Επίλεξε Τρόπο Αναπαράστασης...</option>
+                                <option value="ascii">▶ Χαρακτήρας (ASCII 437)</option>
+                                <option value="elot">▶ Χαρακτήρας (ΕΛΟΤ 928)</option>
+                                <option value="ebcdic">▶ Χαρακτήρας (EBCDIC)</option>
+                                <option value="unsigned">▶ Δυαδικό (Μη προσημασμένος)</option>
+                                <option value="comp1">▶ Δυαδικό (Συμπλήρωμα ως προς 1)</option>
+                                <option value="comp2">▶ Δυαδικό (Συμπλήρωμα ως προς 2)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="result-container">
+                            <div class="result-display" id="hwResult">;</div>
+                            <div class="result-note" id="hwNote">Επίλεξε μια αναπαράσταση από τη λίστα για να αποκωδικοποιήσεις τη φυσική του σημασία.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: LANGUAGES -->
+            <div class="tab-pane" id="pane-2">
+                <div class="pane-header" style="color: var(--accent-2);">
+                    <span>💻</span> 2. Σκοπιά Γλωσσών Προγραμματισμού
+                </div>
+                
+                <div class="callout" style="border-color: var(--accent-2);">
+                    <strong>Θεωρία:</strong> Οι γλώσσες υψηλού επιπέδου επιτρέπουν τη χρήση <b>τύπων (types)</b> μεταβλητών. Ο <b>μεταφραστής (compiler)</b> φροντίζει για την αποδοτικότερη μορφή αποθήκευσης στο υλικό, ανάλογα με τον τύπο της μεταβλητής.
+                </div>
+                
+                <div class="interactive-box">
+                    <div class="split-layout">
+                        <!-- Πηγαίος Κώδικας -->
+                        <div class="split-col">
+                            <div class="box-panel">
+                                <div class="box-title">Πρόγραμμα (Υψηλό Επίπεδο)</div>
+                                <div class="box-content">
+                                    <div class="var-row">
+                                        <span class="var-type">ΑΚΕΡΑΙΕΣ:</span>
+                                        <span class="var-name">Ηλικία</span>
+                                    </div>
+                                    <div class="var-row">
+                                        <span class="var-type">ΧΑΡΑΚΤΗΡΕΣ:</span>
+                                        <span class="var-name">Φύλο</span>
+                                    </div>
+                                    <div class="var-row">
+                                        <span class="var-type">ΠΡΑΓΜΑΤΙΚΕΣ:</span>
+                                        <span class="var-name">Μισθός</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="btn" style="background: var(--accent-2); margin-top: 15px; flex-shrink: 0;" onclick="simulateCompile()">
+                                ⚙️ Εκτέλεση Μεταφραστή (Compile)
+                            </button>
+                        </div>
+
+                        <!-- Μνήμη -->
+                        <div class="split-col">
+                            <div class="box-panel">
+                                <div class="box-title">Κύρια Μνήμη (Κατανομή Υλικού)</div>
+                                <div class="box-content" id="ramSlots">
+                                    <div class="mem-slot" id="slot-1">
+                                        <span style="font-size: 0.8rem; color:var(--text-muted);">Διεύθυνση Μνήμης (Άδεια)</span>
+                                        <span>[ ΚΕΝΟ ]</span>
+                                    </div>
+                                    <div class="mem-slot" id="slot-2">
+                                        <span style="font-size: 0.8rem; color:var(--text-muted);">Διεύθυνση Μνήμης (Άδεια)</span>
+                                        <span>[ ΚΕΝΟ ]</span>
+                                    </div>
+                                    <div class="mem-slot" id="slot-3">
+                                        <span style="font-size: 0.8rem; color:var(--text-muted);">Διεύθυνση Μνήμης (Άδεια)</span>
+                                        <span>[ ΚΕΝΟ ]</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: DATA STRUCTURES -->
+            <div class="tab-pane" id="pane-3">
+                <div class="pane-header" style="color: var(--accent-3);">
+                    <span>🗂️</span> 3. Σκοπιά Δομών Δεδομένων
+                </div>
+                
+                <div class="callout" style="border-color: var(--accent-3);">
+                    <strong>Θεωρία:</strong> <b>Δομή δεδομένων (data structure)</b> είναι ένα σύνολο δεδομένων με επιτρεπτές λειτουργίες. Π.χ. η <b>εγγραφή (record)</b> αποτελείται από <b>πεδία (fields)</b>. Ένα <b>αρχείο</b> αποτελείται από σύνολο εγγραφών.
+                </div>
+                
+                <div class="interactive-box">
+                    <div class="split-layout">
+                        <!-- Οπτικοποίηση Εγγραφής -->
+                        <div class="split-col">
+                            <p class="section-title">Παραδειγμα Δομης: "Εγγραφη"</p>
+                            <div class="record-card">
+                                <div class="record-header">
+                                    <span>Οντότητα: Πρόσωπο</span>
+                                    <span style="color: var(--accent-3);">1 Εγγραφή</span>
+                                </div>
+                                <div class="fields-grid">
+                                    <div class="field-box">
+                                        <span class="field-label">Πεδίο 1</span>
+                                        <span class="field-value">Κωδικός</span>
+                                    </div>
+                                    <div class="field-box">
+                                        <span class="field-label">Πεδίο 2</span>
+                                        <span class="field-value">Όνομα</span>
+                                    </div>
+                                    <div class="field-box">
+                                        <span class="field-label">Πεδίο 3</span>
+                                        <span class="field-value">Μισθός</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Οπτικοποίηση Αρχείου -->
+                        <div class="split-col">
+                            <p class="section-title">Παραδειγμα Δομης: "Αρχειο"</p>
+                            <div class="file-container">
+                                <div class="scanner" id="scanLine"></div>
+                                <div class="file-row header">
+                                    <div>Κωδικός</div><div>Όνομα</div><div>Μισθός</div>
+                                </div>
+                                <div class="file-row"><div>ID_1</div><div>Νίκος Γ.</div><div>1200</div></div>
+                                <div class="file-row"><div>ID_2</div><div>Μαρία Π.</div><div>1450</div></div>
+                                <div class="file-row" id="targetRow"><div>ID_3</div><div>Κώστας Δ.</div><div>980</div></div>
+                                <div class="file-row"><div>ID_4</div><div>Άννα Λ.</div><div>1100</div></div>
+                            </div>
+                            <button class="btn" style="background: var(--accent-3); margin-top: 15px; flex-shrink: 0;" onclick="startSequentialAccess()">
+                                🔍 Σειριακή Προσπέλαση
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: DATA ANALYSIS -->
+            <div class="tab-pane" id="pane-4">
+                <div class="pane-header" style="color: var(--accent-4);">
+                    <span>📊</span> 4. Σκοπιά Ανάλυσης Δεδομένων
+                </div>
+                
+                <div class="callout" style="border-color: var(--accent-4);">
+                    <strong>Θεωρία:</strong> Μελετώνται τρόποι καταγραφής και αλληλοσυσχέτισης δεδομένων για την αναπαράσταση γνώσης. Σε αυτή τη σκοπιά ανήκουν οι <b>Βάσεις Δεδομένων</b> και η <b>Αναπαράσταση Γνώσης</b>.
+                </div>
+                
+                <div class="interactive-box">
+                    <p class="section-title" style="text-align: center;">Αλληλοσυσχετιση Πραγματικων Γεγονοτων</p>
+                    
+                    <div class="split-layout" style="flex: unset;">
+                        <!-- Table 1 -->
+                        <div class="table-wrap">
+                            <div class="table-title">Πίνακας 1: ΠΡΟΣΩΠΙΚΟ</div>
+                            <div class="t-row t-head">
+                                <div class="t-cell">ΚΩΔΙΚΟΣ</div><div class="t-cell">ΟΝΟΜΑ</div>
+                            </div>
+                            <div class="t-row">
+                                <div class="t-cell" id="k1">ID_003</div><div class="t-cell">Κώστας Δ.</div>
+                            </div>
+                        </div>
+
+                        <!-- Table 2 -->
+                        <div class="table-wrap">
+                            <div class="table-title">Πίνακας 2: ΠΑΡΟΥΣΙΕΣ</div>
+                            <div class="t-row t-head">
+                                <div class="t-cell">ΚΩΔ_ΥΠΑΛ.</div><div class="t-cell">ΑΠΟΥΣΙΕΣ</div>
+                            </div>
+                            <div class="t-row">
+                                <div class="t-cell" id="k2">ID_003</div><div class="t-cell">12 Ώρες</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="db-action-row">
+                        <div style="flex: 0 0 250px; display: flex; align-items: center;">
+                            <button class="btn" style="background: var(--accent-4); color: #fff;" onclick="correlateData()">
+                                🔗 Αλληλοσυσχέτιση (Join)
+                            </button>
+                        </div>
+                        
+                        <!-- ΔΙΟΡΘΩΜΕΝΟ ΟΠΤΙΚΟ ΣΦΑΛΜΑ: Η πρόταση τώρα ρέει φυσιολογικά επειδή είναι "τυλιγμένη" σε ένα <div> -->
+                        <div class="knowledge-result" id="knowBox">
+                            <div style="font-size: 0.9rem; color: #b45309; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">🧠 Αναπαρασταση Γνωσης:</div>
+                            <div>Μέσω του κοινού κωδικού (<b>ID_003</b>), γνωρίζουμε πλέον ότι ο <b>Κώστας Δ.</b> έχει πραγματοποιήσει <b>12 Ώρες Απουσία</b>.</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- Tab Switching Logic ---
+        function switchTab(tabNum) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+            
+            document.querySelector(`.tab-btn[data-tab="${tabNum}"]`).classList.add('active');
+            document.getElementById(`pane-${tabNum}`).classList.add('active');
+        }
+
+        // --- Tab 1: Hardware Decoder ---
+        const decodeData = {
+            'ascii': { result: '_', note: 'Ο χαρακτήρας "κάτω παύλα" στον πίνακα ASCII 437.' },
+            'elot': { result: 'ρ', note: 'Το πεζό γράμμα "Ρο" στον κώδικα ΕΛΟΤ 928.' },
+            'ebcdic': { result: '1', note: 'Ο αριθμός "1" στον κώδικα EBCDIC.' },
+            'unsigned': { result: '241', note: 'Τιμή 241 στο δυαδικό σύστημα (ως μη προσημασμένος ακέραιος).' },
+            'comp1': { result: '-14', note: 'Τιμή -14 (ως προσημασμένος ακέραιος στο συμπλήρωμα ως προς 1).' },
+            'comp2': { result: '-15', note: 'Τιμή -15 (ως προσημασμένος ακέραιος στο συμπλήρωμα ως προς 2).' }
+        };
+
+        function decodeByte() {
+            const select = document.getElementById('formatSelect').value;
+            const resDisplay = document.getElementById('hwResult');
+            const noteDisplay = document.getElementById('hwNote');
+            
+            if(decodeData[select]) {
+                resDisplay.innerText = decodeData[select].result;
+                resDisplay.style.color = 'var(--accent-1)';
+                noteDisplay.innerText = decodeData[select].note;
+                
+                // Animation effect
+                resDisplay.style.transform = 'scale(1.05)';
+                setTimeout(() => resDisplay.style.transform = 'scale(1)', 200);
+            }
+        }
+
+        // --- Tab 2: Languages Compiler ---
+        function simulateCompile() {
+            const slot1 = document.getElementById('slot-1');
+            const slot2 = document.getElementById('slot-2');
+            const slot3 = document.getElementById('slot-3');
+            
+            slot1.classList.remove('active'); slot2.classList.remove('active'); slot3.classList.remove('active');
+            slot1.innerHTML = `<span style="font-size: 0.8rem; color:var(--text-muted);">Διεύθυνση Μνήμης (Άδεια)</span><span>[ ΚΕΝΟ ]</span>`;
+            slot2.innerHTML = `<span style="font-size: 0.8rem; color:var(--text-muted);">Διεύθυνση Μνήμης (Άδεια)</span><span>[ ΚΕΝΟ ]</span>`;
+            slot3.innerHTML = `<span style="font-size: 0.8rem; color:var(--text-muted);">Διεύθυνση Μνήμης (Άδεια)</span><span>[ ΚΕΝΟ ]</span>`;
+
+            setTimeout(() => {
+                slot1.classList.add('active');
+                slot1.innerHTML = `<span style="font-size: 0.8rem; font-weight:bold; color:var(--accent-2);">Ηλικία (ΑΚΕΡΑΙΑ)</span><span style="font-family:Consolas; font-weight:bold;">Δέσμευση 2 Bytes</span>`;
+            }, 400);
+
+            setTimeout(() => {
+                slot2.classList.add('active');
+                slot2.innerHTML = `<span style="font-size: 0.8rem; font-weight:bold; color:var(--accent-2);">Φύλο (ΧΑΡΑΚΤΗΡΕΣ)</span><span style="font-family:Consolas; font-weight:bold;">Δέσμευση 1 Byte</span>`;
+            }, 1200);
+
+            setTimeout(() => {
+                slot3.classList.add('active');
+                slot3.innerHTML = `<span style="font-size: 0.8rem; font-weight:bold; color:var(--accent-2);">Μισθός (ΠΡΑΓΜΑΤΙΚΕΣ)</span><span style="font-family:Consolas; font-weight:bold;">Δέσμευση 4 Bytes</span>`;
+            }, 2000);
+        }
+
+        // --- Tab 3: Data Structures ---
+        function startSequentialAccess() {
+            const scanLine = document.getElementById('scanLine');
+            const target = document.getElementById('targetRow');
+            
+            target.style.background = 'transparent';
+            target.style.fontWeight = 'normal';
+            target.style.color = 'inherit';
+            
+            scanLine.style.display = 'block';
+            scanLine.style.animation = 'none';
+            void scanLine.offsetWidth;
+            scanLine.style.animation = 'scanDown 2s linear forwards';
+            
+            setTimeout(() => {
+                target.style.background = '#dcfce7'; 
+                target.style.fontWeight = 'bold';
+                target.style.color = 'var(--accent-3)';
+            }, 1500);
+            
+            setTimeout(() => { scanLine.style.display = 'none'; }, 2000);
+        }
+
+        // --- Tab 4: Data Analysis ---
+        function correlateData() {
+            const box = document.getElementById('knowBox');
+            const k1 = document.getElementById('k1');
+            const k2 = document.getElementById('k2');
+
+            k1.classList.add('highlight-key');
+            k2.classList.add('highlight-key');
+            
+            setTimeout(() => {
+                box.classList.add('visible');
+            }, 400);
+        }
+
+    </script>
+</body>
+</html>
