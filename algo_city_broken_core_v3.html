@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALGO CITY — The Broken Core</title>
+<style>
+:root{
+  --bg:#071b33; --bg2:#174b78; --ink:#f4fbff; --panel:rgba(17,53,91,.94);
+  --cyan:#38e8ff; --blue:#3b82f6; --violet:#9b6cff; --pink:#ff63b8;
+  --green:#35e68a; --gold:#ffbd3f; --red:#ff5d6c; --muted:#c4dcf0;
+  --line:#4e8fbd; --glass:rgba(17,55,94,.78); --shadow:0 26px 85px rgba(0,20,48,.38);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; min-height:100vh; overflow-x:hidden; color:var(--ink);
+  font-family:"Segoe UI",Tahoma,Arial,sans-serif;
+  background:
+    radial-gradient(circle at 16% 7%,rgba(56,232,255,.28),transparent 30%),
+    radial-gradient(circle at 84% 14%,rgba(155,108,255,.30),transparent 32%),
+    radial-gradient(circle at 52% 54%,rgba(59,130,246,.16),transparent 42%),
+    linear-gradient(180deg,#1b5d91 0%,var(--bg2) 42%,var(--bg) 100%);
+}
+
+/* ============ CYBER CITY BACKGROUND ============ */
+.world{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.stars{position:absolute;inset:0;background-image:
+  radial-gradient(circle,#fff 1px,transparent 1px),
+  radial-gradient(circle,#60a5fa 1px,transparent 1px);
+  background-size:70px 70px,110px 110px;background-position:0 0,30px 40px;opacity:.18}
+.city{position:absolute;left:0;right:0;bottom:0;height:28vh;display:flex;align-items:flex-end;gap:8px;padding:0 1vw}
+.tower{
+  flex:1;min-width:28px;border:1px solid rgba(33,212,253,.22);
+  background:linear-gradient(180deg,rgba(48,110,165,.92),rgba(10,38,70,.96));
+  box-shadow:inset 0 0 24px rgba(56,232,255,.18),0 0 18px rgba(56,232,255,.10);
+  position:relative;overflow:hidden
+}
+.tower:before{
+  content:"";position:absolute;inset:8px;
+  background:repeating-linear-gradient(180deg,rgba(123,233,255,.90) 0 3px,transparent 3px 13px);
+  opacity:.68;animation:windows 2.8s ease-in-out infinite alternate
+}
+@keyframes windows{to{opacity:.85;filter:hue-rotate(70deg)}}
+.grid-floor{
+  position:absolute;left:-25%;right:-25%;bottom:-12vh;height:32vh;
+  background:
+    linear-gradient(rgba(33,212,253,.22) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(33,212,253,.22) 1px,transparent 1px);
+  background-size:48px 36px;transform:perspective(400px) rotateX(64deg);
+  transform-origin:center bottom;opacity:.35
+}
+.packet{
+  position:absolute;left:-12vw;white-space:nowrap;font-family:Consolas,monospace;
+  font-weight:900;color:rgba(255,255,255,.25);text-shadow:0 0 16px var(--cyan);
+  animation:packetFly linear infinite
+}
+@keyframes packetFly{
+  0%{transform:translate3d(-10vw,8vh,0) rotate(-7deg) scale(.82);opacity:0}
+  10%,88%{opacity:1}
+  100%{transform:translate3d(132vw,-18vh,0) rotate(7deg) scale(1.15);opacity:0}
+}
+.data-orb{
+  position:absolute;width:8px;height:8px;border-radius:50%;background:var(--cyan);
+  box-shadow:0 0 10px var(--cyan),0 0 26px var(--blue);
+  animation:orbPulse 1.8s ease-in-out infinite
+}
+@keyframes orbPulse{0%,100%{transform:scale(.5);opacity:.25}50%{transform:scale(1.8);opacity:1}}
+.scanline{
+  position:fixed;left:0;right:0;top:-4px;height:2px;z-index:1;pointer-events:none;
+  background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+  box-shadow:0 0 18px var(--cyan);opacity:.5;animation:scanDown 7s linear infinite
+}
+@keyframes scanDown{to{transform:translateY(110vh)}}
+
+/* ============ INTRO ============ */
+.intro{
+  position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:24px;
+  background:rgba(2,8,23,.90);backdrop-filter:blur(14px);transition:.6s
+}
+.intro.hide{opacity:0;visibility:hidden}
+.intro-card{
+  max-width:850px;width:100%;padding:34px;border-radius:28px;
+  border:1px solid rgba(96,165,250,.32);
+  background:linear-gradient(145deg,rgba(14,35,66,.96),rgba(6,17,34,.96));
+  box-shadow:0 0 0 8px rgba(33,212,253,.04),0 30px 100px rgba(0,0,0,.55);
+  text-align:center;position:relative;overflow:hidden
+}
+.intro-card:before{
+  content:"";position:absolute;inset:-30%;
+  background:conic-gradient(from 0deg,transparent,rgba(33,212,253,.14),transparent 35%);
+  animation:rotateBg 7s linear infinite
+}
+@keyframes rotateBg{to{transform:rotate(360deg)}}
+.intro-content{position:relative;z-index:1}
+.intro h1{font-size:clamp(2rem,5vw,4.4rem);margin:.1em 0;text-shadow:0 0 28px rgba(33,212,253,.55)}
+.intro p{color:#c4d7ea;line-height:1.65;font-size:1.06rem}
+.story-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0}
+.story-box{padding:14px;border-radius:15px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.10)}
+.story-box b{display:block;color:#8be9fd;margin-bottom:6px}
+button{
+  border:0;border-radius:13px;padding:12px 17px;font-weight:1000;cursor:pointer;
+  font-size:.94rem;transition:.2s
+}
+button:hover:not(:disabled){transform:translateY(-2px)}
+button:disabled{opacity:.42;cursor:not-allowed}
+.primary{background:linear-gradient(135deg,var(--cyan),var(--blue),var(--violet));color:white;box-shadow:0 10px 26px rgba(37,99,235,.28)}
+.ghost{background:#173f68;color:#dbeafe;border:1px solid #28476c}
+.gold{background:linear-gradient(135deg,#f59e0b,#ea580c);color:white}
+
+/* ============ APP ============ */
+.app{position:relative;z-index:2;max-width:1500px;margin:auto;padding:18px}
+header{
+  display:grid;grid-template-columns:minmax(0,1fr) 230px auto;gap:18px;align-items:center;
+  padding:15px 18px;border-radius:23px;border:1px solid rgba(96,165,250,.22);
+  background:var(--glass);backdrop-filter:blur(15px);box-shadow:var(--shadow)
+}
+.brand h1{margin:0;font-size:clamp(1.45rem,2.5vw,2.35rem)}
+.brand p{margin:5px 0 0;color:#a9c2db}
+.core-wrap{position:relative;width:190px;height:96px;margin:auto;display:grid;place-items:center}
+.ring{position:absolute;border-radius:50%;border:2px solid;animation:spin linear infinite}
+.r1{width:176px;height:70px;border-color:rgba(33,212,253,.75);animation-duration:5s}
+.r2{width:122px;height:92px;border-color:rgba(167,139,250,.78);animation-duration:7s;animation-direction:reverse}
+.r3{width:76px;height:76px;border-color:rgba(236,72,153,.80);animation-duration:4s}
+@keyframes spin{to{transform:rotate(360deg)}}
+.core{
+  width:68px;height:68px;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle at 35% 28%,#fff,#67e8f9 20%,#2563eb 58%,#312e81);
+  box-shadow:0 0 20px #22d3ee,0 0 55px rgba(37,99,235,.85);
+  font-family:Consolas,monospace;font-weight:1000;animation:coreBeat 1.55s ease-in-out infinite
+}
+@keyframes coreBeat{0%,100%{transform:scale(.92)}50%{transform:scale(1.08);filter:brightness(1.25)}}
+.status{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.stat{min-width:86px;padding:8px 10px;border-radius:13px;text-align:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10)}
+.stat b{display:block;font-size:1.12rem}.stat span{font-size:.7rem;color:#b9cbe0}
+
+/* ============ MAP ============ */
+.map{
+  margin-top:16px;padding:18px;border-radius:24px;background:linear-gradient(145deg,rgba(24,72,118,.91),rgba(12,39,73,.92));
+  border:1px solid rgba(96,165,250,.20);box-shadow:var(--shadow);position:relative;overflow:hidden
+}
+.map:after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(110deg,transparent,rgba(33,212,253,.05),transparent);
+  transform:translateX(-110%);animation:mapShine 5s linear infinite
+}
+@keyframes mapShine{70%,100%{transform:translateX(110%)}}
+.map-head{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:15px}
+.map-head h2{margin:0}
+.progress-shell{height:12px;flex:1;min-width:220px;max-width:560px;border-radius:999px;background:#173f68;overflow:hidden;border:1px solid #28476c}
+.progress-bar{height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--violet),var(--gold));transition:.45s}
+.chapter-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.chapter{
+  min-height:160px;padding:17px;border-radius:19px;border:1px solid #274a70;
+  background:linear-gradient(145deg,rgba(16,36,63,.96),rgba(8,24,45,.96));
+  cursor:pointer;transition:.23s;position:relative;overflow:hidden
+}
+.chapter:hover{transform:translateY(-5px);border-color:#60a5fa;box-shadow:0 18px 38px rgba(0,0,0,.26)}
+.chapter.locked{opacity:.48;filter:grayscale(.45);cursor:not-allowed}
+.chapter.complete{border-color:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.08)}
+.chapter .icon{font-size:2.4rem}.chapter h3{margin:8px 0 5px}.chapter p{margin:0;color:#a9bfd5;font-size:.88rem;line-height:1.4}
+.chapter .state{position:absolute;right:12px;top:12px;font-size:.76rem;font-weight:900;color:#8be9fd}
+
+/* ============ MISSION WORKSPACE ============ */
+.workspace{display:none;margin-top:16px;padding:20px;border-radius:24px;background:linear-gradient(145deg,rgba(22,67,111,.96),rgba(10,38,72,.97));border:1px solid rgba(96,165,250,.22);box-shadow:var(--shadow)}
+.workspace.show{display:block;animation:workspaceIn .35s ease}
+@keyframes workspaceIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.workspace-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.workspace-head h2{margin:0}.workspace-head p{color:#a9bfd5;margin:5px 0 0}
+.close-btn{background:#173f68;color:#dbeafe;border:1px solid #28476c}
+.mission-layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.65fr);gap:17px;margin-top:16px}
+.case-card,.side-card{border-radius:20px;padding:19px;background:linear-gradient(145deg,rgba(31,82,130,.94),rgba(17,52,91,.96));border:1px solid #274a70}
+.case-card h3,.side-card h3{margin-top:0}
+.case{
+  padding:16px;border-radius:15px;background:linear-gradient(135deg,rgba(37,99,235,.18),rgba(124,58,237,.14));
+  border:1px solid #365a88;line-height:1.55;font-weight:800;min-height:92px
+}
+.answers{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:13px}
+.answer{
+  padding:12px;border-radius:13px;background:linear-gradient(135deg,#1a4d7c,#203d70);color:#e7f1ff;border:1px solid #2d527c;
+  font-weight:900;text-align:left;cursor:pointer;transition:.18s
+}
+.answer:hover{transform:translateY(-2px);border-color:#60a5fa;background:#17365f}
+.feedback{display:none;margin-top:13px;padding:13px 14px;border-radius:13px;border-left:6px solid;line-height:1.45}
+.feedback.show{display:block;animation:pop .25s ease}
+.feedback.ok{background:rgba(34,197,94,.12);border-color:var(--green);color:#bbf7d0}
+.feedback.bad{background:rgba(239,68,68,.12);border-color:var(--red);color:#fecaca}
+.feedback.hint{background:rgba(245,158,11,.12);border-color:var(--gold);color:#fde68a}
+@keyframes pop{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
+.meter{height:12px;border-radius:999px;background:#173f68;border:1px solid #28476c;overflow:hidden;margin:10px 0}
+.meter > div{height:100%;width:0;background:linear-gradient(90deg,#22c55e,#21d4fd);transition:.4s}
+.log{display:grid;gap:8px;max-height:350px;overflow:auto}
+.log-item{padding:10px 11px;border-radius:12px;background:#183f69;border:1px solid #28476c;font-size:.86rem}
+.log-item b{color:#8be9fd}
+.badges{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.badge{padding:11px;border-radius:12px;border:2px dashed #365a88;text-align:center;color:#7189a5;font-weight:900}
+.badge.earned{border-color:#22c55e;color:#bbf7d0;background:rgba(34,197,94,.08);transform:rotate(-1deg)}
+
+/* ============ PORTAL CHAPTER ============ */
+.portals{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}
+.portal{
+  min-height:145px;border-radius:50% 50% 18px 18px;padding:15px;text-align:center;
+  border:3px solid var(--pc);background:radial-gradient(circle,rgba(255,255,255,.08),rgba(8,24,45,.9));
+  cursor:pointer;transition:.22s;position:relative;overflow:hidden
+}
+.portal:before{
+  content:"";position:absolute;inset:8px;border-radius:50%;border:2px dashed var(--pc);
+  animation:portalSpin 5s linear infinite
+}
+@keyframes portalSpin{to{transform:rotate(360deg)}}
+.portal:hover{transform:translateY(-5px) scale(1.03);box-shadow:0 0 28px color-mix(in srgb,var(--pc) 45%,transparent)}
+.portal .picon,.portal h4{position:relative;z-index:1}.portal .picon{font-size:2rem}.portal h4{margin:8px 0 0}
+.p-blue{--pc:#60a5fa}.p-green{--pc:#4ade80}.p-orange{--pc:#fb923c}.p-violet{--pc:#a78bfa}
+
+/* ============ FINAL ============ */
+.boss{
+  display:flex;gap:15px;align-items:center;padding:15px;border-radius:16px;
+  background:linear-gradient(135deg,rgba(239,68,68,.12),rgba(124,58,237,.13));
+  border:1px solid #6b3b67;margin-bottom:13px
+}
+.boss-avatar{
+  width:90px;height:90px;border-radius:24px;display:grid;place-items:center;font-size:3rem;
+  background:linear-gradient(135deg,#1f0f2f,#3b165f);box-shadow:0 0 28px rgba(236,72,153,.32);
+  animation:bossGlitch 1.8s steps(2) infinite
+}
+@keyframes bossGlitch{0%,88%,100%{transform:none}90%{transform:translateX(3px)}94%{transform:translateX(-3px)}}
+.health{height:14px;border-radius:999px;background:#331c34;overflow:hidden;border:1px solid #6b3b67;flex:1}
+.health > div{height:100%;width:100%;background:linear-gradient(90deg,#ef4444,#ec4899);transition:.45s}
+
+/* ============ FX ============ */
+.flying-card{
+  position:fixed;z-index:30;padding:12px 16px;border-radius:14px;background:#102a4a;
+  border:1px solid #60a5fa;color:#fff;font-weight:1000;pointer-events:none;
+  box-shadow:0 16px 38px rgba(0,0,0,.4)
+}
+.spark{position:absolute;width:10px;height:10px;border-radius:50%;pointer-events:none;animation:burst .85s ease-out forwards}
+@keyframes burst{to{transform:translate(var(--x),var(--y)) scale(0);opacity:0}}
+.toast{
+  position:fixed;right:18px;bottom:18px;z-index:40;max-width:420px;
+  padding:14px 16px;border-radius:14px;background:#183f69;border:1px solid #3b6597;
+  box-shadow:0 18px 45px rgba(0,0,0,.4);display:none
+}
+.toast.show{display:block;animation:toastIn .3s ease}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+
+/* ============ FUTURISTIC HUD / THEORY ARCHIVE ============ */
+.hud-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:8px}
+.hud-btn{
+  padding:8px 11px;border-radius:12px;background:rgba(56,232,255,.12);
+  border:1px solid rgba(123,233,255,.42);color:#effcff;font-weight:1000;
+  box-shadow:inset 0 0 18px rgba(56,232,255,.08),0 0 16px rgba(56,232,255,.10)
+}
+.hud-btn:hover{background:rgba(56,232,255,.22);box-shadow:0 0 22px rgba(56,232,255,.24)}
+.neon-ribbon{
+  position:fixed;left:0;right:0;bottom:26vh;height:3px;z-index:1;pointer-events:none;
+  background:linear-gradient(90deg,transparent,#38e8ff,#9b6cff,#ff63b8,transparent);
+  box-shadow:0 0 16px #38e8ff,0 0 36px rgba(155,108,255,.65);
+  opacity:.72;animation:ribbonPulse 2.4s ease-in-out infinite
+}
+@keyframes ribbonPulse{50%{opacity:1;filter:brightness(1.4)}}
+.theory-modal{
+  position:fixed;inset:0;z-index:60;display:none;place-items:center;padding:22px;
+  background:rgba(2,13,29,.75);backdrop-filter:blur(16px)
+}
+.theory-modal.show{display:grid;animation:theoryIn .28s ease}
+@keyframes theoryIn{from{opacity:0}to{opacity:1}}
+.theory-shell{
+  width:min(1180px,96vw);max-height:90vh;overflow:auto;border-radius:26px;padding:22px;
+  background:linear-gradient(145deg,rgba(29,92,145,.98),rgba(14,48,88,.99));
+  border:1px solid rgba(123,233,255,.48);
+  box-shadow:0 0 0 7px rgba(56,232,255,.06),0 35px 110px rgba(0,0,0,.48),0 0 50px rgba(56,232,255,.14)
+}
+.theory-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;position:sticky;top:-22px;z-index:2;padding:18px 0;background:linear-gradient(180deg,rgba(29,92,145,.98),rgba(29,92,145,.90),transparent)}
+.theory-head h2{margin:0}.theory-head p{margin:5px 0;color:#d8eeff}
+.theory-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.theory-card{
+  padding:15px;border-radius:16px;background:rgba(240,250,255,.10);
+  border:1px solid rgba(207,238,255,.23);box-shadow:inset 0 0 20px rgba(56,232,255,.04)
+}
+.theory-card h3{margin:0 0 7px;color:#dffaff}.theory-card p{margin:5px 0;color:#e3f1ff;line-height:1.5;font-size:.92rem}
+.theory-card .memory{margin-top:9px;padding:9px;border-radius:11px;background:rgba(5,25,50,.30);border-left:4px solid #38e8ff;color:#fff}
+.question-kicker{
+  display:inline-flex;margin-bottom:9px;padding:5px 9px;border-radius:999px;
+  background:rgba(56,232,255,.12);border:1px solid rgba(56,232,255,.34);
+  color:#c8f8ff;font-size:.75rem;font-weight:1000;letter-spacing:.05em
+}
+.case{font-size:1rem;line-height:1.7}
+.case strong{color:#bff7ff}
+
+@media(max-width:1050px){
+  header{grid-template-columns:1fr auto}.core-wrap{display:none}
+  .chapter-grid{grid-template-columns:1fr}.mission-layout{grid-template-columns:1fr}
+  .portals{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:720px){
+  .story-grid,.answers,.portals{grid-template-columns:1fr}
+  header{grid-template-columns:1fr}.status{justify-content:flex-start}
+}
+</style>
+</head>
+<body>
+<div class="world" id="world">
+  <div class="stars"></div><div class="grid-floor"></div><div class="city" id="city"></div>
+</div>
+<div class="scanline"></div>
+<div class="neon-ribbon"></div>
+
+<div class="intro" id="intro">
+  <div class="intro-card">
+    <div class="intro-content">
+      <div style="font-size:3.4rem">🧠⚡</div>
+      <h1>ALGO CITY</h1>
+      <h2 style="margin-top:0;color:#8be9fd">The Broken Core</h2>
+      <p>
+        Η κεντρική μηχανή της πόλης έχασε τους κανόνες που ξεχωρίζουν έναν σωστό αλγόριθμο.
+        Πέντε συστήματα έχουν τεθεί εκτός λειτουργίας και τέσσερις αναλυτικοί φακοί παραμένουν κλειδωμένοι.
+        Ο μαθητής δεν απαντά απλώς σε ερωτήσεις: <b>επισκευάζει την πόλη</b>.
+      </p>
+      <div class="story-grid">
+        <div class="story-box"><b>Κεφάλαιο 1</b>Επανεκκίνηση των 5 συστημάτων</div>
+        <div class="story-box"><b>Κεφάλαιο 2</b>Άνοιγμα των 4 αναλυτικών πυλών</div>
+        <div class="story-box"><b>Κεφάλαιο 3</b>Τελική μάχη με το Broken Core</div>
+      </div>
+      <button class="primary" onclick="startGame()">Είσοδος στην πόλη</button>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+<header>
+  <div class="brand">
+    <h1>ALGO CITY — The Broken Core</h1>
+    <p>Μάθε τα κριτήρια και τις σκοπιές μέσα από αποστολές διάγνωσης.</p>
+  </div>
+  <div class="core-wrap">
+    <div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div>
+    <div class="core" id="core">CORE</div>
+  </div>
+  <div>
+    <div class="status">
+      <div class="stat"><b id="score">0</b><span>ΒΑΘΜΟΙ</span></div>
+      <div class="stat"><b id="energy">3</b><span>ΕΝΕΡΓΕΙΑ</span></div>
+      <div class="stat"><b id="badgesCount">0</b><span>ΣΦΡΑΓΙΔΕΣ</span></div>
+    </div>
+    <div class="hud-actions">
+      <button class="hud-btn" onclick="openTheory()">📚 Αρχείο Θεωρίας</button>
+      <button class="hud-btn" id="soundBtn" onclick="toggleSound()">🔊 Ήχος: ΝΑΙ</button>
+    </div>
+  </div>
+</header>
+
+<section class="map">
+  <div class="map-head">
+    <div><h2>Χάρτης αποστολών</h2><div style="color:#a9bfd5;font-size:.88rem">Η πόλη αποκαθίσταται καθώς ολοκληρώνονται οι αποστολές.</div></div>
+    <div class="progress-shell"><div class="progress-bar" id="globalProgress"></div></div>
+  </div>
+
+  <div class="chapter-grid">
+    <article class="chapter" id="chapter1" onclick="openChapter(1)">
+      <span class="state" id="state1">ΔΙΑΘΕΣΙΜΟ</span>
+      <div class="icon">🏙️</div>
+      <h3>Κεφάλαιο 1 — Τα 5 συστήματα</h3>
+      <p>Είσοδος, Έξοδος, Καθοριστικότητα, Περατότητα και Αποτελεσματικότητα ως πραγματικές βλάβες της πόλης.</p>
+    </article>
+
+    <article class="chapter locked" id="chapter2" onclick="openChapter(2)">
+      <span class="state" id="state2">ΚΛΕΙΔΩΜΕΝΟ</span>
+      <div class="icon">🌀</div>
+      <h3>Κεφάλαιο 2 — Οι 4 πύλες</h3>
+      <p>Υλικό, Γλώσσες Προγραμματισμού, Θεωρητική και Αναλυτική σκοπιά ως διαφορετικά εργαλεία παρατήρησης.</p>
+    </article>
+
+    <article class="chapter locked" id="chapter3" onclick="openChapter(3)">
+      <span class="state" id="state3">ΚΛΕΙΔΩΜΕΝΟ</span>
+      <div class="icon">👾</div>
+      <h3>Κεφάλαιο 3 — Broken Core</h3>
+      <p>Μικτές διαγνώσεις, αντιπαραδείγματα και τελική αποκατάσταση του κεντρικού αλγορίθμου.</p>
+    </article>
+  </div>
+</section>
+
+<section class="workspace" id="workspace">
+  <div class="workspace-head">
+    <div><h2 id="workspaceTitle"></h2><p id="workspaceSubtitle"></p></div>
+    <button class="close-btn" onclick="closeWorkspace()">Κλείσιμο</button>
+  </div>
+  <div id="workspaceContent"></div>
+</section>
+</div>
+
+
+<div class="theory-modal" id="theoryModal" onclick="theoryBackdrop(event)">
+  <div class="theory-shell">
+    <div class="theory-head">
+      <div>
+        <h2>📚 Κεντρικό Αρχείο Θεωρίας</h2>
+        <p>Η θεωρία λειτουργεί ως βοήθεια. Ο μαθητής μπορεί να επιστρέφει εδώ πριν ή μετά από κάθε προσπάθεια.</p>
+      </div>
+      <button class="hud-btn" onclick="closeTheory()">Κλείσιμο ✕</button>
+    </div>
+
+    <h3 style="color:#bff7ff">Τα 5 κριτήρια ενός σωστού αλγορίθμου</h3>
+    <div class="theory-grid">
+      <article class="theory-card">
+        <h3>🚪 Είσοδος</h3>
+        <p>Ο αλγόριθμος δέχεται καμία, μία ή περισσότερες τιμές δεδομένων. Τα δεδομένα μπορεί να προέρχονται από τον χρήστη, ένα αρχείο, έναν αισθητήρα ή να είναι ήδη γνωστές σταθερές.</p>
+        <div class="memory"><b>Να θυμάμαι:</b> είσοδος είναι ό,τι χρειάζεται ο αλγόριθμος πριν αρχίσει την επεξεργασία.</div>
+      </article>
+      <article class="theory-card">
+        <h3>📡 Έξοδος</h3>
+        <p>Ο αλγόριθμος πρέπει να παράγει τουλάχιστον ένα αποτέλεσμα. Η έξοδος μπορεί να είναι αριθμός, μήνυμα, απόφαση, αρχείο ή ενημέρωση μιας δομής δεδομένων.</p>
+        <div class="memory"><b>Να θυμάμαι:</b> χωρίς αποτέλεσμα, η επεξεργασία δεν είναι χρήσιμη.</div>
+      </article>
+      <article class="theory-card">
+        <h3>🧭 Καθοριστικότητα</h3>
+        <p>Κάθε εντολή πρέπει να είναι σαφής, ακριβής και να επιδέχεται μία μόνο ερμηνεία. Διατυπώσεις όπως «αρκετά μεγάλο» ή «κάνε το σωστό» δεν είναι αλγοριθμικές.</p>
+        <div class="memory"><b>Να θυμάμαι:</b> ο ίδιος εκτελεστής πρέπει κάθε φορά να καταλαβαίνει ακριβώς το ίδιο.</div>
+      </article>
+      <article class="theory-card">
+        <h3>⏱️ Περατότητα</h3>
+        <p>Η εκτέλεση πρέπει να ολοκληρώνεται μετά από πεπερασμένο αριθμό βημάτων. Ένας ατέρμονος βρόχος παραβιάζει την περατότητα ακόμη κι αν όλες οι εντολές του είναι σαφείς.</p>
+        <div class="memory"><b>Να θυμάμαι:</b> ο σωστός αλγόριθμος σταματά.</div>
+      </article>
+      <article class="theory-card">
+        <h3>⚙️ Αποτελεσματικότητα</h3>
+        <p>Κάθε εντολή πρέπει να είναι απλή, εκτελέσιμη και να μπορεί να πραγματοποιηθεί με ακρίβεια σε πεπερασμένο χρόνο, είτε από άνθρωπο είτε από υπολογιστή.</p>
+        <div class="memory"><b>Να θυμάμαι:</b> δεν αρκεί να είναι σαφής· πρέπει και να μπορεί να εκτελεστεί.</div>
+      </article>
+    </div>
+
+    <h3 style="color:#bff7ff;margin-top:22px">Οι 4 σκοπιές μελέτης των αλγορίθμων</h3>
+    <div class="theory-grid">
+      <article class="theory-card">
+        <h3>🖥️ Σκοπιά Υλικού</h3>
+        <p>Μελετά πώς η ταχύτητα του επεξεργαστή, η μνήμη, η cache και η αρχιτεκτονική επηρεάζουν την εκτέλεση του ίδιου αλγορίθμου.</p>
+      </article>
+      <article class="theory-card">
+        <h3>💻 Σκοπιά Γλωσσών Προγραμματισμού</h3>
+        <p>Μελετά πώς η επιλεγμένη γλώσσα επηρεάζει τη δομή, το πλήθος εντολών, τη μεταγλώττιση ή διερμηνεία και τελικά την ταχύτητα.</p>
+      </article>
+      <article class="theory-card">
+        <h3>🎯 Θεωρητική Σκοπιά</h3>
+        <p>Συγκρίνει διαφορετικές ιδέες επίλυσης και εξετάζει ποια είναι καταλληλότερη ή αποδοτικότερη για ένα συγκεκριμένο πρόβλημα.</p>
+      </article>
+      <article class="theory-card">
+        <h3>📊 Αναλυτική Σκοπιά</h3>
+        <p>Μελετά τους υπολογιστικούς πόρους που απαιτεί ο αλγόριθμος, κυρίως χρόνο εκτέλεσης και μνήμη, καθώς αυξάνεται το μέγεθος των δεδομένων.</p>
+      </article>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+
+let audioCtx=null;
+let soundEnabled=true;
+
+function initAudio(){
+  if(!audioCtx){
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  }
+  if(audioCtx.state==="suspended") audioCtx.resume();
+}
+function tone(freq,duration=0.12,type="sine",volume=0.06,delay=0){
+  if(!soundEnabled)return;
+  initAudio();
+  const start=audioCtx.currentTime+delay;
+  const osc=audioCtx.createOscillator();
+  const gain=audioCtx.createGain();
+  osc.type=type;osc.frequency.setValueAtTime(freq,start);
+  gain.gain.setValueAtTime(0,start);
+  gain.gain.linearRampToValueAtTime(volume,start+0.015);
+  gain.gain.exponentialRampToValueAtTime(0.001,start+duration);
+  osc.connect(gain);gain.connect(audioCtx.destination);
+  osc.start(start);osc.stop(start+duration+.02);
+}
+function playStart(){tone(392,.12,"sine",.05,0);tone(523,.16,"sine",.06,.10);tone(784,.24,"triangle",.05,.22)}
+function playSuccess(){tone(523,.10,"sine",.055,0);tone(659,.12,"sine",.06,.09);tone(784,.18,"triangle",.055,.19)}
+function playError(){tone(180,.13,"sawtooth",.025,0);tone(135,.18,"sawtooth",.02,.10)}
+function playChapter(){tone(392,.12,"triangle",.055,0);tone(523,.12,"triangle",.055,.10);tone(659,.14,"triangle",.06,.20);tone(988,.32,"sine",.05,.32)}
+function playVictory(){
+  [523,659,784,1046].forEach((f,i)=>tone(f,.26,i===3?"triangle":"sine",.055,i*.13));
+  tone(1318,.45,"triangle",.045,.58);
+}
+function toggleSound(){
+  soundEnabled=!soundEnabled;
+  document.getElementById("soundBtn").textContent=soundEnabled?"🔊 Ήχος: ΝΑΙ":"🔇 Ήχος: ΟΧΙ";
+  if(soundEnabled){initAudio();tone(660,.12,"sine",.045)}
+}
+function openTheory(){theoryModal.classList.add("show");playSuccess()}
+function closeTheory(){theoryModal.classList.remove("show")}
+function theoryBackdrop(e){if(e.target===theoryModal)closeTheory()}
+
+const criteria = [
+  {
+    name:"Είσοδος", icon:"🚪",
+    mission:"Το σύστημα διανομής δεν γνωρίζει ποια δεδομένα πρέπει να παραλάβει πριν ξεκινήσει.",
+    questions:[
+      {q:"Στο κέντρο σχεδιασμού της πόλης, ένας αλγόριθμος πρέπει να υπολογίσει το εμβαδόν μιας νέας πλατείας. Πριν ξεκινήσει, ζητά από τον χειριστή το μήκος και το πλάτος του ορθογωνίου. Ποιο βασικό κριτήριο του αλγορίθμου εκφράζει αυτή η παραλαβή των δύο τιμών;",a:"Είσοδος",opts:["Είσοδος","Έξοδος","Περατότητα","Αποτελεσματικότητα"],hint:"Οι δύο πλευρές είναι δεδομένα που δίνονται στον αλγόριθμο."},
+      {q:"Ένα αυτόματο ρολόι της πόλης εμφανίζει κάθε μεσημέρι το ίδιο προκαθορισμένο μήνυμα, χωρίς να ζητά δεδομένα από χρήστη ή αισθητήρα. Μπορεί ένας τέτοιος αλγόριθμος να θεωρείται σωστός, παρότι δεν λαμβάνει καμία τιμή εισόδου;",a:"Ναι",opts:["Ναι","Όχι"],hint:"Η είσοδος μπορεί να είναι καμία, μία ή περισσότερες τιμές."}
+    ]
+  },
+  {
+    name:"Έξοδος", icon:"📡",
+    mission:"Οι υπολογισμοί ολοκληρώνονται, αλλά κανένα αποτέλεσμα δεν φτάνει στους πολίτες.",
+    questions:[
+      {q:"Το σύστημα παρακολούθησης θερμοκρασιών διαβάζει όλες τις μετρήσεις και εντοπίζει σωστά τη μεγαλύτερη. Ωστόσο, μετά τον υπολογισμό δεν εμφανίζει την τιμή, δεν τη γράφει σε αρχείο και δεν τη μεταβιβάζει σε άλλο σύστημα. Ποιο κριτήριο παραβιάζεται;",a:"Έξοδος",opts:["Έξοδος","Είσοδος","Καθοριστικότητα","Περατότητα"],hint:"Το πρόβλημα είναι ότι δεν παράγεται αποτέλεσμα."},
+      {q:"Ένα σχολικό πληροφοριακό σύστημα διαβάζει τους βαθμούς, υπολογίζει το άθροισμα και τον μέσο όρο και στη συνέχεια ολοκληρώνει τη διαδικασία. Ποια από τις παρακάτω ενέργειες αποτελεί πραγματική έξοδο του αλγορίθμου προς τον χρήστη;",a:"Εμφάνιση μέσου όρου",opts:["Διάβασμα βαθμών","Εμφάνιση μέσου όρου","Έλεγχος επανάληψης","Αποθήκευση μεταβλητής"],hint:"Η έξοδος είναι αυτό που παράγει ο αλγόριθμος."}
+    ]
+  },
+  {
+    name:"Καθοριστικότητα", icon:"🧭",
+    mission:"Οι εντολές του συστήματος είναι ασαφείς και διαφορετικοί εκτελεστές κάνουν διαφορετικά πράγματα.",
+    questions:[
+      {q:"Στο σύστημα ελέγχου κυκλοφορίας υπάρχει η οδηγία: «Βρες έναν αρκετά μεγάλο αριθμό οχημάτων και ενεργοποίησε το κόκκινο φως». Διαφορετικοί χειριστές θεωρούν διαφορετικό πλήθος ως «αρκετά μεγάλο». Ποιο κριτήριο παραβιάζει αυτή η ασαφής διατύπωση;",a:"Καθοριστικότητα",opts:["Καθοριστικότητα","Έξοδος","Περατότητα","Αποτελεσματικότητα"],hint:"Η λέξη «αρκετά» δεν είναι μονοσήμαντη."},
+      {q:"Ο υπεύθυνος του συστήματος θέλει να αντικαταστήσει μια ασαφή εντολή με μία που να μπορεί να εκτελεστεί ακριβώς με τον ίδιο τρόπο από κάθε άνθρωπο ή υπολογιστή. Ποια από τις παρακάτω διατυπώσεις ικανοποιεί καλύτερα αυτή την απαίτηση;",a:"Διάβασε ακέραιο μεγαλύτερο από 100",opts:["Διάλεξε έναν καλό αριθμό","Βρες κάτι μεγάλο","Διάβασε ακέραιο μεγαλύτερο από 100","Κάνε τον σωστό υπολογισμό"],hint:"Η σωστή εντολή πρέπει να μην επιδέχεται διαφορετικές ερμηνείες."}
+    ]
+  },
+  {
+    name:"Περατότητα", icon:"⏱️",
+    mission:"Ένας βρόχος κρατά την πόλη παγιδευμένη σε ατελείωτη επανάληψη.",
+    questions:[
+      {q:"Το σύστημα φωτισμού εκτελεί συνεχώς την εντολή «άναψε–σβήσε» χωρίς μετρητή, χρονικό όριο ή συνθήκη εξόδου. Οι εντολές είναι σαφείς, αλλά η εκτέλεση δεν ολοκληρώνεται ποτέ. Ποιο κριτήριο παραβιάζεται;",a:"Περατότητα",opts:["Περατότητα","Είσοδος","Έξοδος","Καθοριστικότητα"],hint:"Ρώτησε αν ο αλγόριθμος σταματά."},
+      {q:"Για τη δοκιμή των σειρήνων απαιτείται μια επανάληψη που να ολοκληρώνεται με βεβαιότητα και να μην εξαρτάται από ασαφείς ανθρώπινες κρίσεις. Ποια από τις παρακάτω οδηγίες εξασφαλίζει σαφώς πεπερασμένο αριθμό επαναλήψεων;",a:"Επανάλαβε ακριβώς 10 φορές",opts:["Επανάλαβε για πάντα","Επανάλαβε μέχρι να βαρεθείς","Επανάλαβε ακριβώς 10 φορές","Επανάλαβε όσο χρειάζεται"],hint:"Χρειάζεται σαφές και πεπερασμένο πλήθος βημάτων."}
+    ]
+  },
+  {
+    name:"Αποτελεσματικότητα", icon:"⚙️",
+    mission:"Το σύστημα λαμβάνει εντολές που δεν μπορούν να εκτελεστούν πρακτικά.",
+    questions:[
+      {q:"Ένα υποσύστημα περιέχει μια απολύτως σαφή εντολή, αλλά η πράξη που ζητά δεν μπορεί να ολοκληρωθεί με συγκεκριμένα και πεπερασμένα βήματα ούτε από άνθρωπο ούτε από υπολογιστή. Ποιο κριτήριο παραβιάζεται, παρότι η διατύπωση είναι σαφής;",a:"Αποτελεσματικότητα",opts:["Αποτελεσματικότητα","Έξοδος","Καθοριστικότητα","Είσοδος"],hint:"Η εντολή πρέπει να είναι απλή και εκτελέσιμη."},
+      {q:"Ο μηχανικός της πόλης εξετάζει τέσσερις πιθανές εντολές. Χρειάζεται μία εντολή που να είναι απλή, πρακτικά εκτελέσιμη και να ολοκληρώνεται με ακρίβεια σε πεπερασμένο χρόνο. Ποια επιλογή πληροί αυτές τις προϋποθέσεις;",a:"Πρόσθεσε δύο αριθμούς",opts:["Λύσε αμέσως κάθε πιθανό πρόβλημα","Υπολόγισε κάτι αδύνατο","Πρόσθεσε δύο αριθμούς","Διάλεξε την τέλεια απάντηση"],hint:"Πρέπει να μπορεί να εκτελεστεί με ακρίβεια σε πεπερασμένο χρόνο."}
+    ]
+  }
+];
+
+const perspectives = [
+  {
+    name:"Σκοπιά Υλικού", icon:"🖥️", cls:"p-blue",
+    explanation:"Μελετά πώς επεξεργαστής, μνήμη και αρχιτεκτονική επηρεάζουν την εκτέλεση.",
+    questions:[
+      {q:"Ο ίδιος ακριβώς αλγόριθμος, με τα ίδια δεδομένα και την ίδια γλώσσα, εκτελείται αισθητά γρηγορότερα σε έναν νέο υπολογιστή με ισχυρότερο επεξεργαστή. Από ποια σκοπιά της Πληροφορικής μελετάμε αυτή τη διαφορά;",a:"Σκοπιά Υλικού",opts:["Σκοπιά Υλικού","Θεωρητική Σκοπιά","Αναλυτική Σκοπιά","Σκοπιά Γλωσσών Προγραμματισμού"],hint:"Η διαφορά οφείλεται στο μηχάνημα."},
+      {q:"Οι ερευνητές δεν αλλάζουν ούτε τον αλγόριθμο ούτε τη γλώσσα. Εξετάζουν μόνο πώς το μέγεθος και η ταχύτητα της κρυφής μνήμης cache επηρεάζουν τον χρόνο εκτέλεσης. Ποια σκοπιά χρησιμοποιούν;",a:"Σκοπιά Υλικού",opts:["Σκοπιά Υλικού","Θεωρητική Σκοπιά","Αναλυτική Σκοπιά","Καθοριστικότητα"],hint:"Η cache είναι τμήμα του υπολογιστικού συστήματος."}
+    ]
+  },
+  {
+    name:"Σκοπιά Γλωσσών Προγραμματισμού", icon:"💻", cls:"p-green",
+    explanation:"Μελετά πώς η γλώσσα επηρεάζει δομή, πλήθος εντολών και ταχύτητα.",
+    questions:[
+      {q:"Η ίδια αλγοριθμική ιδέα υλοποιείται μία φορά σε Python και μία σε C. Συγκρίνουμε το πλήθος εντολών, τον τρόπο μετάφρασης και τη διαφορά στην ταχύτητα. Από ποια σκοπιά γίνεται η μελέτη;",a:"Σκοπιά Γλωσσών Προγραμματισμού",opts:["Σκοπιά Γλωσσών Προγραμματισμού","Αναλυτική Σκοπιά","Σκοπιά Υλικού","Θεωρητική Σκοπιά"],hint:"Το στοιχείο που αλλάζει είναι η γλώσσα."},
+      {q:"Ένα ερευνητικό εργαστήριο εξετάζει γιατί μια γλώσσα χαμηλού επιπέδου μπορεί να παράγει κώδικα που εκτελείται ταχύτερα από μια γλώσσα υψηλού επιπέδου, χωρίς να αλλάζει η βασική αλγοριθμική λύση. Ποια σκοπιά αφορά το ερώτημα;",a:"Σκοπιά Γλωσσών Προγραμματισμού",opts:["Σκοπιά Γλωσσών Προγραμματισμού","Σκοπιά Υλικού","Αναλυτική Σκοπιά","Καθοριστικότητα"],hint:"Το ερώτημα αφορά το είδος της γλώσσας."}
+    ]
+  },
+  {
+    name:"Θεωρητική Σκοπιά", icon:"🎯", cls:"p-orange",
+    explanation:"Συγκρίνει ιδέες και αναζητά την καταλληλότερη λύση για ένα πρόβλημα.",
+    questions:[
+      {q:"Για έναν πολύ μεγάλο και ήδη ταξινομημένο πίνακα, οι μαθητές συγκρίνουν τη σειριακή με τη δυαδική αναζήτηση και συζητούν ποια αλγοριθμική ιδέα είναι καταλληλότερη για το συγκεκριμένο πρόβλημα. Ποια σκοπιά χρησιμοποιούν;",a:"Θεωρητική Σκοπιά",opts:["Θεωρητική Σκοπιά","Αναλυτική Σκοπιά","Σκοπιά Υλικού","Έξοδος"],hint:"Συγκρίνουμε διαφορετικές ιδέες επίλυσης."},
+      {q:"Δύο ομάδες προτείνουν διαφορετικές μεθόδους για το ίδιο πρόβλημα δρομολόγησης. Πριν μετρηθούν χρόνοι σε συγκεκριμένο υπολογιστή, εξετάζουμε ποια ιδέα ταιριάζει καλύτερα στη φύση του προβλήματος. Ποια σκοπιά είναι αυτή;",a:"Θεωρητική Σκοπιά",opts:["Θεωρητική Σκοπιά","Σκοπιά Υλικού","Αναλυτική Σκοπιά","Καθοριστικότητα"],hint:"Το ερώτημα είναι ποια λύση αποτελεί καλύτερη ιδέα."}
+    ]
+  },
+  {
+    name:"Αναλυτική Σκοπιά", icon:"📊", cls:"p-violet",
+    explanation:"Μελετά τους πόρους που απαιτούνται, κυρίως χρόνο εκτέλεσης και μνήμη.",
+    questions:[
+      {q:"Για έναν αλγόριθμο ταξινόμησης καταγράφουμε πόσο χρόνο χρειάζεται και πόσες θέσεις μνήμης χρησιμοποιεί για διαφορετικά μεγέθη εισόδου. Από ποια σκοπιά πραγματοποιείται αυτή η μελέτη;",a:"Αναλυτική Σκοπιά",opts:["Αναλυτική Σκοπιά","Θεωρητική Σκοπιά","Σκοπιά Υλικού","Σκοπιά Γλωσσών Προγραμματισμού"],hint:"Οι λέξεις-κλειδιά είναι χρόνος και μνήμη."},
+      {q:"Ο αριθμός των δεδομένων αυξάνεται από 1.000 σε 2.000 και στη συνέχεια σε 4.000. Οι ερευνητές παρακολουθούν πώς μεταβάλλεται ο αριθμός βημάτων και ο απαιτούμενος χρόνος. Ποια σκοπιά χρησιμοποιούν;",a:"Αναλυτική Σκοπιά",opts:["Αναλυτική Σκοπιά","Θεωρητική Σκοπιά","Σκοπιά Υλικού","Περατότητα"],hint:"Εξετάζουμε την κατανάλωση υπολογιστικών πόρων."}
+    ]
+  }
+];
+
+const finalCases = [
+  {q:"Το Broken Core δίνει την οδηγία «επανάλαβε μέχρι να θεωρήσεις ότι το αποτέλεσμα είναι αρκετά καλό». Δεν ορίζει αριθμητικό όριο, ακρίβεια ή αντικειμενική συνθήκη τερματισμού, με αποτέλεσμα διαφορετικοί εκτελεστές να σταματούν σε διαφορετικό σημείο. Ποια είναι η βασική βλάβη της οδηγίας;",a:"Καθοριστικότητα",opts:["Καθοριστικότητα","Περατότητα","Έξοδος","Αναλυτική Σκοπιά"],hint:"Η φράση «αρκετά καλό» δεν είναι σαφής."},
+  {q:"Ένα υποσύστημα επαναλαμβάνει σωστά και με σαφήνεια τις ίδιες εντολές, αλλά δεν διαθέτει συνθήκη εξόδου και συνεχίζεται για πάντα. Ποια είναι η βασική βλάβη του αλγορίθμου;",a:"Περατότητα",opts:["Περατότητα","Είσοδος","Αποτελεσματικότητα","Θεωρητική Σκοπιά"],hint:"Σκέψου τον τερματισμό."},
+  {q:"Οι αναλυτές εκτελούν τον ίδιο αλγόριθμο με 1.000 και 10.000 δεδομένα και καταγράφουν πόσα βήματα, πόσο χρόνο και πόση μνήμη απαιτεί. Ποια σκοπιά μελέτης εφαρμόζεται;",a:"Αναλυτική Σκοπιά",opts:["Αναλυτική Σκοπιά","Σκοπιά Υλικού","Θεωρητική Σκοπιά","Καθοριστικότητα"],hint:"Μελετάμε πόρους και κλιμάκωση."},
+  {q:"Χωρίς αλλαγή στον αλγόριθμο, στη γλώσσα ή στα δεδομένα, ο ίδιος κώδικας εκτελείται ταχύτερα σε υπολογιστή με νεότερο επεξεργαστή και γρηγορότερη μνήμη. Ποια σκοπιά ερμηνεύει αυτή τη διαφορά;",a:"Σκοπιά Υλικού",opts:["Σκοπιά Υλικού","Σκοπιά Γλωσσών Προγραμματισμού","Θεωρητική Σκοπιά","Έξοδος"],hint:"Η αιτία είναι το υλικό."},
+  {q:"Ο αλγόριθμος παραλαμβάνει σωστά δεδομένα, εκτελεί όλες τις πράξεις και τερματίζει. Ωστόσο δεν εμφανίζει, δεν αποθηκεύει και δεν επιστρέφει κανένα αποτέλεσμα. Ποιο κριτήριο λείπει;",a:"Έξοδος",opts:["Έξοδος","Είσοδος","Περατότητα","Αποτελεσματικότητα"],hint:"Δεν παράγεται κάτι προς τον χρήστη."},
+  {q:"Για έναν ταξινομημένο πίνακα συγκρίνουμε τη σειριακή και τη δυαδική αναζήτηση, ώστε να αποφασίσουμε ποια αλγοριθμική ιδέα είναι καταλληλότερη πριν εξετάσουμε συγκεκριμένο υλικό ή γλώσσα. Ποια σκοπιά χρησιμοποιούμε;",a:"Θεωρητική Σκοπιά",opts:["Θεωρητική Σκοπιά","Αναλυτική Σκοπιά","Σκοπιά Υλικού","Καθοριστικότητα"],hint:"Συγκρίνουμε ιδέες επίλυσης."},
+  {q:"Μια εντολή είναι διατυπωμένη με ακρίβεια, αλλά η πράξη που ζητά δεν μπορεί να πραγματοποιηθεί πρακτικά και να ολοκληρωθεί σε πεπερασμένο χρόνο. Ποιο κριτήριο παραβιάζεται;",a:"Αποτελεσματικότητα",opts:["Αποτελεσματικότητα","Καθοριστικότητα","Περατότητα","Είσοδος"],hint:"Η εντολή πρέπει να είναι εκτελέσιμη."},
+  {q:"Η ίδια λύση υλοποιείται σε Java και C++. Μελετάμε τις διαφορές στη δομή, στον αριθμό εντολών, στη μεταγλώττιση και στην ταχύτητα εκτέλεσης. Ποια σκοπιά εφαρμόζεται;",a:"Σκοπιά Γλωσσών Προγραμματισμού",opts:["Σκοπιά Γλωσσών Προγραμματισμού","Σκοπιά Υλικού","Αναλυτική Σκοπιά","Θεωρητική Σκοπιά"],hint:"Αλλάζει η γλώσσα."}
+];
+
+let score=0,energy=3;
+let chapterUnlocked=1;
+let criteriaDone=0,perspectivesDone=0;
+let currentCriterion=0,currentCriterionQ=0;
+let currentPerspective=0,currentPerspectiveQ=0;
+let finalList=[],finalIndex=0,bossHealth=100;
+const systemDone=new Set(), portalDone=new Set(), logEntries=[];
+
+function startGame(){
+  initAudio();playStart();
+  intro.classList.add("hide");
+  toastMsg("Η ALGO CITY σε περιμένει. Ξεκίνα από τα 5 συστήματα.");
+}
+function buildWorld(){
+  const heights=[42,66,52,80,46,72,58,88,55,76,44,68,50,82,60,70,48,86,56,74,45,64,52,78,58,84];
+  heights.forEach((h,i)=>{
+    const t=document.createElement("div");t.className="tower";t.style.height=h+"%";t.style.animationDelay=(i*.15)+"s";city.appendChild(t)
+  });
+  const tokens=["INPUT","OUTPUT","FINITE","CLEAR","O(n)","CPU","MEMORY","ALGORITHM","{ }","WHILE","✓","?"];
+  for(let i=0;i<28;i++){
+    const p=document.createElement("div");p.className="packet";p.textContent=tokens[i%tokens.length];
+    p.style.top=(Math.random()*80)+"vh";p.style.fontSize=(18+Math.random()*28)+"px";
+    p.style.animationDuration=(11+Math.random()*17)+"s";p.style.animationDelay=(-Math.random()*24)+"s";world.appendChild(p)
+  }
+  for(let i=0;i<25;i++){
+    const o=document.createElement("div");o.className="data-orb";o.style.left=(Math.random()*100)+"vw";o.style.top=(Math.random()*78)+"vh";o.style.animationDelay=(Math.random()*1.8)+"s";world.appendChild(o)
+  }
+}
+function openChapter(n){
+  if(n>chapterUnlocked){toastMsg("Το κεφάλαιο παραμένει κλειδωμένο.");return}
+  workspace.classList.add("show");
+  if(n===1)renderCriteriaChapter();
+  if(n===2)renderPerspectiveChapter();
+  if(n===3)renderFinalChapter();
+  workspace.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function closeWorkspace(){workspace.classList.remove("show")}
+function renderCriteriaChapter(){
+  workspaceTitle.textContent="Κεφάλαιο 1 — Επανεκκίνηση των 5 συστημάτων";
+  workspaceSubtitle.textContent="Κάθε σύστημα περιέχει δύο διαγνωστικές δοκιμές.";
+  workspaceContent.innerHTML=`
+    <div class="mission-layout">
+      <div class="case-card">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px" id="systemButtons"></div>
+        <h3 id="caseTitle"></h3>
+        <div class="case" id="caseText"></div>
+        <div class="answers" id="caseAnswers"></div>
+        <div class="feedback" id="caseFeedback"></div>
+        <div class="controls">
+          <button class="ghost" onclick="criteriaHint()">Υπόδειξη</button>
+          <button class="primary" id="criteriaNext" onclick="nextCriterionQuestion()" disabled>Επόμενη δοκιμή</button>
+        </div>
+      </div>
+      <aside class="side-card">
+        <h3>Πίνακας αποκατάστασης</h3>
+        <div class="meter"><div id="criteriaMeter"></div></div>
+        <div class="badges" id="criteriaBadges"></div>
+        <h3 style="margin-top:16px">Καταγραφή</h3>
+        <div class="log" id="missionLog"></div>
+      </aside>
+    </div>`;
+  renderSystemButtons();selectCriterion(0);renderBadges();renderLog();
+}
+function renderSystemButtons(){
+  systemButtons.innerHTML=criteria.map((c,i)=>`
+    <button class="${systemDone.has(i)?'gold':'ghost'}" onclick="selectCriterion(${i})">${c.icon} ${c.name}</button>
+  `).join("");
+}
+function nextIncompleteCriterion(afterIndex){
+  for(let step=1;step<=criteria.length;step++){
+    const idx=(afterIndex+step)%criteria.length;
+    if(!systemDone.has(idx)) return idx;
+  }
+  return -1;
+}
+function selectCriterion(i){
+  currentCriterion=i;currentCriterionQ=0;renderCriterionQuestion()
+}
+function renderCriterionQuestion(){
+  const c=criteria[currentCriterion],q=c.questions[currentCriterionQ];
+  caseTitle.textContent=`${c.icon} ${c.name} — Δοκιμή ${currentCriterionQ+1}/2`;
+  caseText.innerHTML=`<span class="question-kicker">ΠΡΟΒΛΗΜΑ ΤΟΥ ΣΥΣΤΗΜΑΤΟΣ</span><br><strong>${c.mission}</strong><br><br><span class="question-kicker">ΕΡΩΤΗΣΗ ΠΡΟΣ ΤΟΝ ΜΑΘΗΤΗ</span><br>${q.q}`;
+  caseAnswers.innerHTML=shuffle([...q.opts]).map(o=>`<button class="answer" onclick="answerCriterion('${esc(o)}',this)">${o}</button>`).join("");
+  caseFeedback.className="feedback";criteriaNext.disabled=true;
+}
+function answerCriterion(ans,el){
+  const q=criteria[currentCriterion].questions[currentCriterionQ];
+  if(ans===q.a){
+    score+=10;good(caseFeedback,"Σωστή διάγνωση.");
+    criteriaNext.disabled=false;flyAnswer(el);burst(workspace);flashCore()
+  }else{
+    fail(caseFeedback,q.hint);loseEnergy()
+  }
+  updateStatus()
+}
+function criteriaHint(){hint(caseFeedback,criteria[currentCriterion].questions[currentCriterionQ].hint)}
+function nextCriterionQuestion(){
+  if(currentCriterionQ===0){
+    currentCriterionQ=1;
+    renderCriterionQuestion();
+    return;
+  }
+
+  const completedIndex=currentCriterion;
+  systemDone.add(completedIndex);
+  addLog(`Αποκαταστάθηκε: ${criteria[completedIndex].name}`);
+
+  if(systemDone.size===criteria.length){
+    chapterUnlocked=Math.max(chapterUnlocked,2);
+    chapter1.classList.add("complete");
+    state1.textContent="ΟΛΟΚΛΗΡΩΜΕΝΟ";
+    chapter2.classList.remove("locked");
+    state2.textContent="ΔΙΑΘΕΣΙΜΟ";
+    playChapter();
+    toastMsg("Τα 5 συστήματα λειτουργούν. Οι 4 πύλες ξεκλειδώθηκαν.");
+    renderCriteriaChapter();
+  }else{
+    const nextIndex=nextIncompleteCriterion(completedIndex);
+    renderCriteriaChapter();
+    if(nextIndex>=0){
+      selectCriterion(nextIndex);
+      toastMsg(`Επόμενο σύστημα: ${criteria[nextIndex].name}`);
+    }
+  }
+
+  updateProgress();
+  updateStatus();
+}
+function renderBadges(){
+  criteriaBadges.innerHTML=criteria.map((c,i)=>`<div class="badge ${systemDone.has(i)?'earned':''}">${c.icon}<br>${c.name}</div>`).join("");
+  criteriaMeter.style.width=(systemDone.size/criteria.length*100)+"%"
+}
+
+function renderPerspectiveChapter(){
+  workspaceTitle.textContent="Κεφάλαιο 2 — Άνοιγμα των 4 αναλυτικών πυλών";
+  workspaceSubtitle.textContent="Κάθε πύλη αλλάζει τον τρόπο με τον οποίο παρατηρούμε τον ίδιο αλγόριθμο.";
+  workspaceContent.innerHTML=`
+    <div class="mission-layout">
+      <div class="case-card">
+        <div class="portals" id="portalButtons"></div>
+        <h3 id="portalTitle"></h3>
+        <div class="case" id="portalCase"></div>
+        <div class="answers" id="portalAnswers"></div>
+        <div class="feedback" id="portalFeedback"></div>
+        <div class="controls">
+          <button class="ghost" onclick="portalHint()">Υπόδειξη</button>
+          <button class="primary" id="portalNext" onclick="nextPortalQuestion()" disabled>Επόμενη δοκιμή</button>
+        </div>
+      </div>
+      <aside class="side-card">
+        <h3>Ενεργές πύλες</h3>
+        <div class="meter"><div id="portalMeter"></div></div>
+        <div class="badges" id="portalBadges"></div>
+        <h3 style="margin-top:16px">Καταγραφή</h3>
+        <div class="log" id="missionLog"></div>
+      </aside>
+    </div>`;
+  renderPortalButtons();selectPerspective(0);renderPortalBadges();renderLog()
+}
+function renderPortalButtons(){
+  portalButtons.innerHTML=perspectives.map((p,i)=>`
+    <button class="portal ${p.cls}" onclick="selectPerspective(${i})">
+      <div class="picon">${p.icon}</div><h4>${p.name}</h4>
+    </button>`).join("")
+}
+function nextIncompletePerspective(afterIndex){
+  for(let step=1;step<=perspectives.length;step++){
+    const idx=(afterIndex+step)%perspectives.length;
+    if(!portalDone.has(idx)) return idx;
+  }
+  return -1;
+}
+function selectPerspective(i){currentPerspective=i;currentPerspectiveQ=0;renderPerspectiveQuestion()}
+function renderPerspectiveQuestion(){
+  const p=perspectives[currentPerspective],q=p.questions[currentPerspectiveQ];
+  portalTitle.textContent=`${p.icon} ${p.name} — Δοκιμή ${currentPerspectiveQ+1}/2`;
+  portalCase.innerHTML=`<span class="question-kicker">ΘΕΩΡΙΑ ΤΗΣ ΣΚΟΠΙΑΣ</span><br><strong>${p.explanation}</strong><br><br><span class="question-kicker">ΕΡΩΤΗΣΗ ΠΡΟΣ ΤΟΝ ΜΑΘΗΤΗ</span><br>${q.q}`;
+  portalAnswers.innerHTML=shuffle([...q.opts]).map(o=>`<button class="answer" onclick="answerPerspective('${esc(o)}',this)">${o}</button>`).join("");
+  portalFeedback.className="feedback";portalNext.disabled=true
+}
+function answerPerspective(ans,el){
+  const q=perspectives[currentPerspective].questions[currentPerspectiveQ];
+  if(ans===q.a){
+    score+=10;good(portalFeedback,"Η πύλη ανταποκρίθηκε.");portalNext.disabled=false;flyAnswer(el);burst(workspace);flashCore()
+  }else{fail(portalFeedback,q.hint);loseEnergy()}
+  updateStatus()
+}
+function portalHint(){hint(portalFeedback,perspectives[currentPerspective].questions[currentPerspectiveQ].hint)}
+function nextPortalQuestion(){
+  if(currentPerspectiveQ===0){
+    currentPerspectiveQ=1;
+    renderPerspectiveQuestion();
+    return;
+  }
+
+  const completedIndex=currentPerspective;
+  portalDone.add(completedIndex);
+  addLog(`Άνοιξε πύλη: ${perspectives[completedIndex].name}`);
+
+  if(portalDone.size===perspectives.length){
+    chapterUnlocked=Math.max(chapterUnlocked,3);
+    chapter2.classList.add("complete");
+    state2.textContent="ΟΛΟΚΛΗΡΩΜΕΝΟ";
+    chapter3.classList.remove("locked");
+    state3.textContent="ΔΙΑΘΕΣΙΜΟ";
+    playChapter();
+    toastMsg("Οι 4 πύλες άνοιξαν. Το Broken Core είναι εκτεθειμένο.");
+    renderPerspectiveChapter();
+  }else{
+    const nextIndex=nextIncompletePerspective(completedIndex);
+    renderPerspectiveChapter();
+    if(nextIndex>=0){
+      selectPerspective(nextIndex);
+      toastMsg(`Επόμενη πύλη: ${perspectives[nextIndex].name}`);
+    }
+  }
+
+  updateProgress();
+  updateStatus();
+}
+function renderPortalBadges(){
+  portalBadges.innerHTML=perspectives.map((p,i)=>`<div class="badge ${portalDone.has(i)?'earned':''}">${p.icon}<br>${p.name}</div>`).join("");
+  portalMeter.style.width=(portalDone.size/perspectives.length*100)+"%"
+}
+
+function renderFinalChapter(){
+  if(!finalList.length){finalList=shuffle([...finalCases]);finalIndex=0;bossHealth=100}
+  workspaceTitle.textContent="Κεφάλαιο 3 — Τελική μάχη με το Broken Core";
+  workspaceSubtitle.textContent="Κάθε σωστή διάγνωση αφαιρεί ενέργεια από τον λανθασμένο πυρήνα.";
+  workspaceContent.innerHTML=`
+    <div class="mission-layout">
+      <div class="case-card">
+        <div class="boss">
+          <div class="boss-avatar">👾</div>
+          <div style="flex:1">
+            <b>Broken Core</b>
+            <div class="health"><div id="bossHealth"></div></div>
+            <small id="bossText">${bossHealth}% ακεραιότητα</small>
+          </div>
+        </div>
+        <h3 id="finalCount"></h3>
+        <div class="case" id="finalCase"></div>
+        <div class="answers" id="finalAnswers"></div>
+        <div class="feedback" id="finalFeedback"></div>
+        <div class="controls">
+          <button class="ghost" onclick="finalHint()">Υπόδειξη</button>
+          <button class="primary" id="finalNext" onclick="nextFinalCase()" disabled>Επόμενη διάγνωση</button>
+        </div>
+      </div>
+      <aside class="side-card">
+        <h3>Διαβατήριο ελεγκτή</h3>
+        <div class="badges">
+          ${criteria.map((c,i)=>`<div class="badge earned">${c.icon}<br>${c.name}</div>`).join("")}
+          <div class="badge earned">🌀<br>4 Σκοπιές</div>
+        </div>
+        <h3 style="margin-top:16px">Καταγραφή</h3>
+        <div class="log" id="missionLog"></div>
+      </aside>
+    </div>`;
+  renderLog();renderFinalCase()
+}
+function renderFinalCase(){
+  if(finalIndex>=finalList.length){finishGame();return}
+  const q=finalList[finalIndex];
+  finalCount.textContent=`Διάγνωση ${finalIndex+1} από ${finalList.length}`;
+  finalCase.innerHTML=`<span class="question-kicker">ΤΕΛΙΚΗ ΔΙΑΓΝΩΣΗ</span><br>${q.q}`;
+  finalAnswers.innerHTML=shuffle([...q.opts]).map(o=>`<button class="answer" onclick="answerFinal('${esc(o)}',this)">${o}</button>`).join("");
+  finalFeedback.className="feedback";finalNext.disabled=true;
+  bossHealthElUpdate()
+}
+function answerFinal(ans,el){
+  const q=finalList[finalIndex];
+  if(ans===q.a){
+    score+=15;bossHealth=Math.max(0,bossHealth-Math.ceil(100/finalList.length));
+    good(finalFeedback,"Η διάγνωση αποδυνάμωσε το Broken Core.");finalNext.disabled=false;flyAnswer(el);burst(workspace);flashCore();bossHealthElUpdate()
+  }else{fail(finalFeedback,q.hint);loseEnergy()}
+  updateStatus()
+}
+function finalHint(){hint(finalFeedback,finalList[finalIndex].hint)}
+function nextFinalCase(){finalIndex++;renderFinalCase()}
+function bossHealthElUpdate(){
+  const el=document.getElementById("bossHealth"),txt=document.getElementById("bossText");
+  if(el)el.style.width=bossHealth+"%";if(txt)txt.textContent=bossHealth+"% ακεραιότητα"
+}
+function finishGame(){
+  bossHealth=0;bossHealthElUpdate();
+  chapter3.classList.add("complete");state3.textContent="ΟΛΟΚΛΗΡΩΜΕΝΟ";
+  addLog("Το Broken Core αποκαταστάθηκε.");
+  finalCase.innerHTML=`<h2 style="color:#8be9fd">Η ALGO CITY αποκαταστάθηκε.</h2>
+    <p>Ο μαθητής απέδειξε ότι μπορεί να αναγνωρίζει τα 5 κριτήρια και τις 4 σκοπιές, όχι ως ορισμούς αλλά ως εργαλεία διάγνωσης.</p>
+    <h3>Τελική βαθμολογία: ${score}</h3>`;
+  finalAnswers.innerHTML="";finalNext.disabled=true;playVictory();good(finalFeedback,"Αποστολή ολοκληρώθηκε.");burst(workspace);updateProgress();toastMsg("Η πόλη λειτουργεί ξανά.")
+}
+
+function good(el,msg){playSuccess();el.className="feedback show ok";el.innerHTML="✅ "+msg}
+function fail(el,msg){playError();el.className="feedback show bad";el.innerHTML="⚠️ Όχι ακόμη. "+msg}
+function hint(el,msg){el.className="feedback show hint";el.innerHTML="💡 "+msg}
+function loseEnergy(){
+  energy--;if(energy<=0){energy=3;toastMsg("Η ενέργεια ανανεώθηκε. Χρησιμοποίησε τις υποδείξεις πιο στρατηγικά.")}
+}
+function addLog(text){logEntries.unshift(text);if(logEntries.length>8)logEntries.pop()}
+function renderLog(){
+  const el=document.getElementById("missionLog");if(!el)return;
+  el.innerHTML=logEntries.length?logEntries.map((x,i)=>`<div class="log-item"><b>${i+1}.</b> ${x}</div>`).join(""):'<div class="log-item">Δεν υπάρχει ακόμη καταγραφή.</div>'
+}
+function updateStatus(){
+  document.getElementById("score").textContent=score;
+  document.getElementById("energy").textContent=energy;
+  document.getElementById("badgesCount").textContent=systemDone.size+portalDone.size;
+}
+function updateProgress(){
+  const total=5+4+1,done=systemDone.size+portalDone.size+(chapter3.classList.contains("complete")?1:0);
+  globalProgress.style.width=(done/total*100)+"%"
+}
+function flashCore(){
+  core.animate([{transform:"scale(.94)"},{transform:"scale(1.38)",filter:"brightness(1.8)"},{transform:"scale(.94)"}],{duration:650,easing:"ease-out"})
+}
+function burst(container){
+  const colors=["#21d4fd","#2563eb","#7c3aed","#ec4899","#f59e0b","#22c55e"];
+  for(let i=0;i<38;i++){
+    const s=document.createElement("i");s.className="spark";s.style.left="50%";s.style.top="48%";s.style.background=colors[i%colors.length];
+    s.style.setProperty("--x",(Math.random()*620-310)+"px");s.style.setProperty("--y",(Math.random()*420-210)+"px");
+    container.appendChild(s);setTimeout(()=>s.remove(),950)
+  }
+}
+function flyAnswer(source){
+  const r=source.getBoundingClientRect(),target=core.getBoundingClientRect();
+  const clone=document.createElement("div");clone.className="flying-card";clone.textContent=source.textContent;
+  clone.style.left=r.left+"px";clone.style.top=r.top+"px";document.body.appendChild(clone);
+  clone.animate([
+    {transform:"translate(0,0) scale(1)",opacity:1},
+    {transform:`translate(${target.left-r.left}px,${target.top-r.top}px) scale(.35)`,opacity:.2}
+  ],{duration:760,easing:"cubic-bezier(.2,.8,.2,1)"}).onfinish=()=>clone.remove()
+}
+function toastMsg(msg){
+  toast.textContent=msg;toast.className="toast show";setTimeout(()=>toast.className="toast",3200)
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function esc(s){return s.replace(/\\/g,"\\\\").replace(/'/g,"\\'")}
+
+buildWorld();updateStatus();updateProgress();
+</script>
+</body>
+</html>

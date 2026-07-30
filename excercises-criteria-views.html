@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>AlgoLab - Κριτήρια & Σκοπιές</title>
+    <style>
+        :root {
+            --bg-color: #0f172a; --panel-bg: #1e293b; --text-color: #f8fafc;
+            --primary: #3b82f6; --success: #10b981; --warning: #f59e0b; --danger: #ef4444; 
+            --border-color: #334155; --glow: 0 0 15px rgba(59, 130, 246, 0.5);
+        }
+
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* TABS */
+        .main-tabs-wrapper { display: flex; align-items: flex-end; background: #020617; border-bottom: 2px solid var(--primary); padding-top: 8px; z-index: 10;}
+        .main-tabs { display: flex; padding-left: 15px; overflow-x: auto; gap: 5px; flex: 1;}
+        .m-tab { padding: 10px 20px; cursor: pointer; font-weight: bold; font-size: 0.9rem; border-radius: 8px 8px 0 0; background: var(--panel-bg); color: #94a3b8; transition: 0.3s; border: 1px solid var(--border-color); border-bottom: none;}
+        .m-tab.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 -4px 10px rgba(59,130,246,0.3);}
+
+        /* HEADER */
+        header { background-color: #020617; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); z-index: 100;}
+        header h1 { margin: 0; font-size: 1.2rem; color: var(--primary); display: flex; align-items: center; gap: 10px;}
+        .subtitle { font-size: 0.8rem; color: #94a3b8; font-weight: normal; margin-left: 10px;}
+
+        /* MAIN LAYOUT */
+        .main-container { display: flex; flex: 1; padding: 15px; gap: 15px; overflow: hidden; position: relative; }
+
+        /* FLYING BACKGROUND ANIMATION */
+        .logic-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; opacity: 0.5; }
+        .fly-token { 
+            position: absolute; font-family: Consolas, monospace; font-weight: 900; 
+            color: rgba(59, 130, 246, 0.2); font-size: 2rem;
+            animation: floatSpace linear infinite; 
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+        }
+        @keyframes floatSpace { 
+            0% { transform: translateY(110vh) rotate(0deg) scale(0.5); opacity: 0; } 
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { transform: translateY(-20vh) rotate(360deg) scale(1.5); opacity: 0; } 
+        }
+
+        /* PANELS */
+        .col { display: flex; flex-direction: column; gap: 15px; z-index: 10; }
+        .col-left { flex: 0 0 320px; }
+        .col-mid { flex: 1; position: relative;}
+
+        .card { background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.3);}
+        .card-header { padding: 12px 15px; font-weight: bold; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px;}
+        .card-body { padding: 15px; font-size: 0.9rem; line-height: 1.5; overflow-y: auto;}
+
+        /* TAB 1: CRITERIA GAME */
+        .criteria-arena { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; border: 2px dashed var(--border-color); border-radius: 12px; background: radial-gradient(circle, #1e293b 0%, #0f172a 100%);}
+        
+        /* SCENARIO BOX - REDESIGNED TO WHITE IDE-STYLE */
+        .scenario-box { 
+            background: #ffffff; 
+            color: #000000; 
+            padding: 20px 30px; 
+            border-radius: 8px; 
+            border: 3px solid var(--warning); 
+            font-family: Consolas, monospace; 
+            font-size: 1.1rem; 
+            text-align: left; 
+            max-width: 90%; 
+            min-width: 350px;
+            box-shadow: 0 0 25px rgba(245,158,11,0.2); 
+            z-index: 5; 
+            margin-bottom: 30px; 
+            min-height: 120px; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center;
+            transition: 0.3s;
+        }
+        .scenario-box pre {
+            margin: 0;
+            font-family: inherit;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+        /* Syntax highlighting for the white box */
+        .scenario-box .kw { font-weight: bold; color: #0000CD; }
+        .scenario-box .str { color: #800080; }
+        
+        .progress-counter { position: absolute; top: 15px; right: 15px; background: var(--primary); color: white; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; box-shadow: 0 0 10px rgba(59,130,246,0.5);}
+
+        .shields-container { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; width: 100%; padding: 20px;}
+        .shield-btn { background: #1e293b; border: 2px solid var(--primary); color: white; padding: 12px 18px; border-radius: 30px; font-weight: bold; cursor: pointer; transition: 0.3s; box-shadow: var(--glow); position: relative; overflow: hidden;}
+        .shield-btn:hover:not(:disabled) { transform: translateY(-3px); background: rgba(59,130,246,0.2);}
+        .shield-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; transform: none;}
+        .shield-btn.success { border-color: var(--success); background: rgba(16,185,129,0.2); box-shadow: 0 0 20px rgba(16,185,129,0.5); opacity: 1 !important;}
+        .shield-btn.error { border-color: var(--danger); animation: shake 0.4s; background: rgba(239,68,68,0.2);}
+
+        @keyframes shake { 0%, 100% {transform: translateX(0);} 25%, 75% {transform: translateX(-5px);} 50% {transform: translateX(5px);} }
+
+        /* TAB 2: PERSPECTIVES DASHBOARD */
+        .dashboard { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        
+        .control-panel { display: flex; flex-direction: column; gap: 15px; }
+        .control-group { background: #020617; border: 1px solid var(--border-color); border-radius: 10px; padding: 15px;}
+        .cg-title { font-size: 0.85rem; color: var(--primary); font-weight: bold; text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 5px;}
+        
+        .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;}
+        .toggle-label { font-weight: bold; font-size: 0.9rem; color: #cbd5e1;}
+        .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #334155; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(24px); }
+
+        /* Analytical Monitor */
+        .monitor-panel { background: #000; border: 4px solid #334155; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 20px; box-shadow: inset 0 0 30px rgba(0,0,0,0.8); position: relative; overflow: hidden;}
+        .monitor-glare { position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: linear-gradient(to bottom right, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0) 100%); pointer-events: none; transform: rotate(30deg);}
+        
+        .bar-container { display: flex; flex-direction: column; gap: 5px;}
+        .bar-title { display: flex; justify-content: space-between; font-family: Consolas; font-weight: bold; font-size: 0.9rem; color: #94a3b8;}
+        .progress-track { width: 100%; height: 20px; background: #1e293b; border-radius: 10px; overflow: hidden; border: 1px solid #334155;}
+        .progress-fill { height: 100%; width: 50%; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s;}
+        
+        #timeBar { background: var(--success); }
+        #memBar { background: var(--warning); }
+
+        .log-area { font-family: Consolas; font-size: 0.8rem; color: #64748b; margin-top: auto; border-top: 1px dashed #334155; padding-top: 10px; height: 60px; overflow-y: auto;}
+
+        .tab-content { display: none; height: 100%; width: 100%; flex-direction: column;}
+        .tab-content.active { display: flex; animation: fadeIn 0.4s; }
+        @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
+
+        /* Explanatory Callout */
+        .callout { background: rgba(59,130,246,0.1); border-left: 4px solid var(--primary); padding: 10px 15px; border-radius: 0 8px 8px 0; margin-bottom: 15px; font-size: 0.85rem;}
+    </style>
+</head>
+<body>
+
+<div class="main-tabs-wrapper">
+    <div class="main-tabs">
+        <div class="m-tab active" onclick="switchTab(1)" id="tab-1">🛡️ Φάση 1: Τα 5 Κριτήρια</div>
+        <div class="m-tab" onclick="switchTab(2)" id="tab-2">🎛️ Φάση 2: Οι 4 Σκοπιές</div>
+    </div>
+</div>
+
+<header>
+    <h1>Διαδραστικό Εργαστήριο Αλγορίθμων <span class="subtitle">Από τη Θεωρία στην Πράξη</span></h1>
+    <button class="shield-btn" style="padding: 6px 12px; font-size: 0.8rem;" onclick="location.reload()">🔄 Επανεκκίνηση</button>
+</header>
+
+<div class="main-container">
+    
+    <!-- FLYING BACKGROUND -->
+    <div class="logic-bg" id="logicBg"></div>
+
+    <!-- LEFT PANEL: Dynamic Theory -->
+    <div class="col col-left">
+        <div class="card" style="flex: 1;">
+            <div class="card-header" id="theoryTitle">📘 Θεωρία & Οδηγίες</div>
+            <div class="card-body" id="theoryBody">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MID PANEL: The Interactive Lab -->
+    <div class="col col-mid">
+        
+        <!-- TAB 1: CRITERIA -->
+        <div class="tab-content active" id="content-1">
+            <div class="criteria-arena">
+                <div style="position: absolute; top: 15px; left: 15px; font-size: 0.85rem; color: #94a3b8; font-weight:bold;">Εντόπισε το σφάλμα στον κώδικα:</div>
+                <div class="progress-counter" id="progressCounter">Σενάριο 1 / 7</div>
+                
+                <div class="scenario-box" id="scenarioText">
+                    Περιμένω σενάριο...
+                </div>
+
+                <div class="shields-container" id="shieldContainer">
+                    <button class="shield-btn" onclick="checkCriteria('Είσοδος', this)">1. Είσοδος</button>
+                    <button class="shield-btn" onclick="checkCriteria('Έξοδος', this)">2. Έξοδος</button>
+                    <button class="shield-btn" onclick="checkCriteria('Καθοριστικότητα', this)">3. Καθοριστικότητα</button>
+                    <button class="shield-btn" onclick="checkCriteria('Περατότητα', this)">4. Περατότητα</button>
+                    <button class="shield-btn" onclick="checkCriteria('Αποτελεσματικότητα', this)">5. Αποτελεσματικότητα</button>
+                </div>
+
+                <button id="nextScenarioBtn" style="display: none; margin-top: 10px; padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; box-shadow: 0 4px 10px rgba(59,130,246,0.4); transition: 0.2s;">Επόμενο Σενάριο ➔</button>
+            </div>
+        </div>
+
+        <!-- TAB 2: PERSPECTIVES -->
+        <div class="tab-content" id="content-2">
+            <div class="dashboard">
+                
+                <!-- Left: 3 Perspectives Controls -->
+                <div class="control-panel">
+                    
+                    <div class="control-group" onchange="updateAnalytics()">
+                        <div class="cg-title">💻 1. Σκοπια Υλικου (Hardware)</div>
+                        <div class="toggle-row">
+                            <span class="toggle-label" id="lblHW">Παλιός Η/Υ (Αργός)</span>
+                            <label class="switch"><input type="checkbox" id="hwSwitch"> <span class="slider"></span></label>
+                            <span class="toggle-label" style="color:#64748b">Supercomputer</span>
+                        </div>
+                    </div>
+
+                    <div class="control-group" onchange="updateAnalytics()">
+                        <div class="cg-title">⌨️ 2. Σκοπια Γλωσσων (Language)</div>
+                        <div class="toggle-row">
+                            <span class="toggle-label" id="lblLang">Υψηλού Επιπέδου (Python)</span>
+                            <label class="switch"><input type="checkbox" id="langSwitch"> <span class="slider"></span></label>
+                            <span class="toggle-label" style="color:#64748b">Χαμηλού Επιπέδου (C)</span>
+                        </div>
+                    </div>
+
+                    <div class="control-group" onchange="updateAnalytics()">
+                        <div class="cg-title">🧠 3. Θεωρητικη Σκοπια (Algorithm)</div>
+                        <div class="toggle-row">
+                            <span class="toggle-label" id="lblTheo">Απλός Αλγόριθμος (Αργός)</span>
+                            <label class="switch"><input type="checkbox" id="theoSwitch"> <span class="slider"></span></label>
+                            <span class="toggle-label" style="color:#64748b">Βελτιστοποιημένος (Γρήγορος)</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right: The 4th Perspective (Analytics) -->
+                <div class="monitor-panel">
+                    <div class="monitor-glare"></div>
+                    <div class="cg-title" style="color: white; border-bottom: 1px solid #334155; padding-bottom: 10px;">
+                        📈 4. Αναλυτικη Σκοπια (Ποροι)
+                    </div>
+                    
+                    <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;">Η Αναλυτική Σκοπιά μελετά τον χρόνο και τη μνήμη, τα οποία εξαρτώνται άμεσα από τις επιλογές σου αριστερά!</div>
+
+                    <div class="bar-container">
+                        <div class="bar-title"><span>Χρόνος Εκτέλεσης (Time)</span> <span id="timeVal">50%</span></div>
+                        <div class="progress-track"><div class="progress-fill" id="timeBar"></div></div>
+                    </div>
+
+                    <div class="bar-container">
+                        <div class="bar-title"><span>Απαίτηση Μνήμης (RAM)</span> <span id="memVal">50%</span></div>
+                        <div class="progress-track"><div class="progress-fill" id="memBar"></div></div>
+                    </div>
+
+                    <div class="log-area" id="analyticsLog">
+                        > Σύστημα έτοιμο...<br>
+                        > Περιμένω αλλαγές παραμέτρων...
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // --- THEORY CONTENT ---
+    const theoryHTML = {
+        1: `
+            <div class="callout">Ένας αλγόριθμος για να θεωρηθεί <b>σωστός και χρήσιμος</b> πρέπει να ικανοποιεί 5 αυστηρά κριτήρια. Διαφορετικά... καταρρέει!</div>
+            <ul style="padding-left: 20px;">
+                <li style="margin-bottom:8px;"><b>1. Είσοδος:</b> Δέχεται δεδομένα (καμία, 1 ή περισσότερες τιμές).</li>
+                <li style="margin-bottom:8px;"><b>2. Έξοδος:</b> Παράγει ΠΑΝΤΑ τουλάχιστον 1 αποτέλεσμα. Διαφορετικά, γιατί να τον τρέξουμε;</li>
+                <li style="margin-bottom:8px;"><b>3. Καθοριστικότητα:</b> Κάθε βήμα είναι ξεκάθαρο, χωρίς ασάφειες. Απαγορεύεται η διαίρεση με το 0!</li>
+                <li style="margin-bottom:8px;"><b>4. Περατότητα:</b> Πρέπει να τελειώνει κάποτε! Όχι ατέρμονοι βρόχοι.</li>
+                <li style="margin-bottom:8px;"><b>5. Αποτελεσματικότητα:</b> Τα βήματα να είναι απλά και εκτελέσιμα, ακόμη και με μολύβι και χαρτί.</li>
+            </ul>
+        `,
+        2: `
+            <div class="callout">Η Πληροφορική δεν φτιάχνει απλώς αλγορίθμους. Ψάχνει τον <b>καλύτερο</b> μελετώντας τους από 4 Σκοπιές!</div>
+            <ul style="padding-left: 20px;">
+                <li style="margin-bottom:8px;"><b>1. Σκοπιά Υλικού:</b> Ο ίδιος κώδικας τρέχει πιο γρήγορα σε έναν σύγχρονο Η/Υ παρά σε ένα κινητό 10ετίας.</li>
+                <li style="margin-bottom:8px;"><b>2. Σκοπιά Γλωσσών:</b> Μια γλώσσα χαμηλού επιπέδου (π.χ. C) είναι πολύ γρήγορη, ενώ μία υψηλού (Python) γράφεται πιο εύκολα αλλά ίσως είναι πιο αργή.</li>
+                <li style="margin-bottom:8px;"><b>3. Θεωρητική Σκοπιά:</b> Υπάρχει πιο "έξυπνη" ιδέα για το ίδιο πρόβλημα; (π.χ. πώς ψάχνω μια λέξη στο λεξικό).</li>
+                <li style="margin-bottom:12px;"><b>4. Αναλυτική Σκοπιά:</b> Εδώ μετράμε! <b>Χρόνος Εκτέλεσης</b> και <b>Μνήμη</b>. Η Αναλυτική σκοπιά μας δείχνει το αποτέλεσμα των επιλογών μας στις 3 προηγούμενες.</li>
+            </ul>
+            <p style="color:var(--warning); font-size:0.8rem; text-align:center; font-weight:bold;">Παίξε με τους διακόπτες και δες την Αναλυτική Σκοπιά να αλλάζει!</p>
+        `
+    };
+
+    // --- ENHANCED SCENARIOS FOR TAB 1 (IDE Layout) ---
+    const scenarios = [
+        { 
+            text: "<pre><span class='kw'>ΔΙΑΒΑΣΕ</span> Χ\nΥ &lt;- Χ / 0\n<span class='kw'>ΕΚΤΥΠΩΣΕ</span> Υ</pre>", 
+            answer: "Καθοριστικότητα", 
+            expl: "Η διαίρεση με το μηδέν απαγορεύεται αυστηρά. Η εντολή δεν είναι μαθηματικά ορισμένη, προκαλώντας ασάφεια." 
+        },
+        { 
+            text: "<pre>Χ &lt;- 1\n<span class='kw'>ΟΣΟ</span> Χ > 0 <span class='kw'>ΕΠΑΝΑΛΑΒΕ</span>\n  Χ &lt;- Χ + 1\n<span class='kw'>ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span>\n<span class='kw'>ΕΚΤΥΠΩΣΕ</span> Χ</pre>", 
+            answer: "Περατότητα", 
+            expl: "Το Χ ξεκινάει από 1 και συνεχώς αυξάνεται. Η συνθήκη (Χ > 0) θα είναι πάντα αληθής, άρα δημιουργείται ένας ατέρμονος βρόχος!" 
+        },
+        { 
+            text: "<pre><span class='kw'>ΔΙΑΒΑΣΕ</span> Α, Β\nΑΘΡΟΙΣΜΑ &lt;- Α + Β\n<span class='kw'>ΤΕΛΟΣ</span></pre>", 
+            answer: "Έξοδος", 
+            expl: "Ο αλγόριθμος υπολόγισε σωστά το άθροισμα, αλλά δεν το εκτύπωσε πουθενά! Δεν παράγει κανένα αποτέλεσμα για τον χρήστη." 
+        },
+        { 
+            text: "<pre><span class='kw'>ΓΙΑ</span> i <span class='kw'>ΑΠΟ</span> 1 <span class='kw'>ΜΕΧΡΙ</span> 10 <span class='kw'>ΜΕ_ΒΗΜΑ</span> 0\n  <span class='kw'>ΕΚΤΥΠΩΣΕ</span> i\n<span class='kw'>ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ</span></pre>", 
+            answer: "Περατότητα", 
+            expl: "Το βήμα 0 σημαίνει ότι ο μετρητής i δεν θα αλλάξει ποτέ. Η επανάληψη δεν πρόκειται να τερματίσει." 
+        },
+        { 
+            text: "<pre>Α &lt;- <span class='str'>\"Καλημέρα\"</span>\nΒ &lt;- 5\nΓ &lt;- Α - Β\n<span class='kw'>ΕΚΤΥΠΩΣΕ</span> Γ</pre>", 
+            answer: "Καθοριστικότητα", 
+            expl: "Δεν μπορούμε να αφαιρέσουμε έναν αριθμό από μια λέξη! Η πράξη αυτή είναι λογικά αδύνατη και προκαλεί σύγχυση (ασάφεια)." 
+        },
+        { 
+            text: "<pre><span class='kw'>ΔΙΑΒΑΣΕ</span> ΑΚΤΙΝΑ\nΥ &lt;- Ακριβής τιμή του άρρητου αριθμού π\nΕΜΒΑΔΟ &lt;- Υ * ΑΚΤΙΝΑ^2\n<span class='kw'>ΕΚΤΥΠΩΣΕ</span> ΕΜΒΑΔΟ</pre>", 
+            answer: "Αποτελεσματικότητα", 
+            expl: "Ο αριθμός π έχει άπειρα δεκαδικά ψηφία. Ο υπολογιστής δεν μπορεί να βρει την απόλυτα ακριβή τιμή του σε πεπερασμένο χρόνο." 
+        },
+        { 
+            text: "<pre><span class='kw'>ΔΙΑΒΑΣΕ</span> Χ\n<span class='kw'>ΑΝ</span> Χ > 0 <span class='kw'>ΤΟΤΕ</span>\n  Υ &lt;- 10\n<span class='kw'>ΤΕΛΟΣ_ΑΝ</span>\n<span class='kw'>ΕΚΤΥΠΩΣΕ</span> Υ</pre>", 
+            answer: "Καθοριστικότητα", 
+            expl: "Αν ο χρήστης δώσει π.χ. Χ = -5, η μεταβλητή Υ δεν θα πάρει ποτέ τιμή. Όταν πάει να την τυπώσει στο τέλος, δημιουργείται ασάφεια (Uninitialized variable)!" 
+        }
+    ];
+    let currentScenario = 0;
+    let isCompleted = false;
+
+    function switchTab(num) {
+        document.querySelectorAll('.m-tab').forEach((el, idx) => el.classList.toggle('active', idx + 1 === num));
+        document.querySelectorAll('.tab-content').forEach((el, idx) => el.classList.toggle('active', idx + 1 === num));
+        document.getElementById('theoryBody').innerHTML = theoryHTML[num];
+        
+        updateFlyingTokens(num);
+        if(num === 1 && !isCompleted) loadScenario();
+    }
+
+    // --- TAB 1 LOGIC ---
+    function loadScenario() {
+        if(isCompleted) return;
+        
+        // Show current progress
+        document.getElementById('progressCounter').innerText = `Σενάριο ${currentScenario + 1} από ${scenarios.length}`;
+        
+        // Load Code
+        document.getElementById('scenarioText').innerHTML = scenarios[currentScenario].text;
+        document.getElementById('scenarioText').style.borderColor = 'var(--warning)';
+        document.getElementById('scenarioText').style.backgroundColor = '#ffffff';
+        document.getElementById('scenarioText').style.color = '#000000';
+        
+        // Hide next button, reset shields
+        document.getElementById('nextScenarioBtn').style.display = 'none';
+        document.querySelectorAll('.shield-btn').forEach(btn => {
+            btn.className = 'shield-btn';
+            btn.disabled = false;
+        });
+    }
+
+    function checkCriteria(guess, btnElement) {
+        if (isCompleted) return;
+        
+        const correct = scenarios[currentScenario].answer;
+        if(guess === correct) {
+            btnElement.classList.add('success');
+            
+            // Transform scenario box to show explanation
+            document.getElementById('scenarioText').style.borderColor = 'var(--success)';
+            document.getElementById('scenarioText').innerHTML = `
+                <div style="font-family: 'Segoe UI', sans-serif; text-align: center;">
+                    <b style="color: #166534; font-size: 1.3rem;">✅ Σωστή Διάγνωση!</b><br><br>
+                    <span style="font-size:1rem; color:#334155;">${scenarios[currentScenario].expl}</span>
+                </div>
+            `;
+            
+            document.querySelectorAll('.shield-btn').forEach(b => b.disabled = true);
+            createSparks(btnElement);
+            
+            // Move to next or Finish
+            document.getElementById('nextScenarioBtn').style.display = 'block';
+            document.getElementById('nextScenarioBtn').onclick = () => {
+                currentScenario++;
+                if(currentScenario >= scenarios.length) {
+                    showCompletionScreen();
+                } else {
+                    loadScenario();
+                }
+            };
+        } else {
+            btnElement.classList.add('error');
+            setTimeout(() => btnElement.classList.remove('error'), 400);
+        }
+    }
+
+    function showCompletionScreen() {
+        isCompleted = true;
+        document.getElementById('progressCounter').innerText = "Ολοκληρώθηκε!";
+        document.getElementById('progressCounter').style.backgroundColor = "var(--success)";
+        
+        document.getElementById('scenarioText').style.borderColor = 'var(--success)';
+        document.getElementById('scenarioText').style.backgroundColor = '#f0fdf4';
+        document.getElementById('scenarioText').innerHTML = `
+            <div style="font-family: 'Segoe UI', sans-serif; text-align: center;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">🏆</div>
+                <b style="color: #166534; font-size: 1.4rem;">Συγχαρητήρια!</b><br>
+                <span style="font-size:1.1rem; color:#1e293b; margin-top: 5px; display:inline-block;">Ολοκλήρωσες επιτυχώς τον διαγνωστικό έλεγχο και των 7 σεναρίων.</span>
+            </div>
+        `;
+        
+        document.getElementById('nextScenarioBtn').style.display = 'none';
+        document.getElementById('shieldContainer').style.display = 'none';
+        
+        // Trigger extra sparks
+        for(let i=0; i<3; i++) {
+            setTimeout(() => createSparks(document.getElementById('scenarioText')), i*300);
+        }
+    }
+
+    // --- TAB 2 LOGIC (Perspectives Simulator) ---
+    function updateAnalytics() {
+        const hw = document.getElementById('hwSwitch').checked;
+        const lang = document.getElementById('langSwitch').checked;
+        const theo = document.getElementById('theoSwitch').checked;
+
+        document.getElementById('lblHW').style.color = hw ? '#64748b' : 'white';
+        document.getElementById('lblHW').nextElementSibling.nextElementSibling.style.color = hw ? 'white' : '#64748b';
+        document.getElementById('lblLang').style.color = lang ? '#64748b' : 'white';
+        document.getElementById('lblLang').nextElementSibling.nextElementSibling.style.color = lang ? 'white' : '#64748b';
+        document.getElementById('lblTheo').style.color = theo ? '#64748b' : 'white';
+        document.getElementById('lblTheo').nextElementSibling.nextElementSibling.style.color = theo ? 'white' : '#64748b';
+
+        let time = 90; 
+        let memory = 50;
+        let logMsg = "> Αναλύονται πόροι...<br>";
+
+        if(hw) { time -= 30; logMsg += "> Υλικό: Το Supercomputer μειώνει ραγδαία το Χρόνο.<br>"; }
+        if(lang) { time -= 20; memory -= 15; logMsg += "> Γλώσσα: Η C εκτελείται ταχύτερα και απαιτεί λιγότερη RAM.<br>"; }
+        if(theo) { time -= 30; memory += 10; logMsg += "> Θεωρία: Ο έξυπνος αλγόριθμος εξαφάνισε το χρόνο, αλλά δέσμευσε λίγο παραπάνω μνήμη!<br>"; }
+
+        time = Math.max(5, Math.min(time, 100));
+        memory = Math.max(5, Math.min(memory, 100));
+
+        const tBar = document.getElementById('timeBar');
+        const mBar = document.getElementById('memBar');
+        
+        tBar.style.width = time + '%';
+        document.getElementById('timeVal').innerText = time + '%';
+        tBar.style.backgroundColor = time < 30 ? 'var(--success)' : (time > 70 ? 'var(--danger)' : 'var(--warning)');
+
+        mBar.style.width = memory + '%';
+        document.getElementById('memVal').innerText = memory + '%';
+        mBar.style.backgroundColor = memory < 40 ? 'var(--success)' : (memory > 75 ? 'var(--danger)' : 'var(--warning)');
+
+        document.getElementById('analyticsLog').innerHTML = logMsg;
+    }
+
+    // --- VISUAL EFFECTS ---
+    function createSparks(element) {
+        const rect = element.getBoundingClientRect();
+        for(let i=0; i<20; i++) {
+            let spark = document.createElement('div');
+            spark.style.position = 'absolute';
+            spark.style.width = '8px'; spark.style.height = '8px';
+            spark.style.background = 'var(--success)';
+            spark.style.borderRadius = '50%';
+            spark.style.zIndex = '1000';
+            spark.style.left = (rect.left + rect.width/2) + 'px';
+            spark.style.top = (rect.top + rect.height/2) + 'px';
+            spark.style.transition = 'all 0.6s ease-out';
+            document.body.appendChild(spark);
+            
+            setTimeout(() => {
+                spark.style.transform = `translate(${(Math.random()-0.5)*180}px, ${(Math.random()-0.5)*180}px) scale(0)`;
+                spark.style.opacity = '0';
+            }, 10);
+            setTimeout(() => spark.remove(), 600);
+        }
+    }
+
+    function updateFlyingTokens(tabNum) {
+        const bg = document.getElementById('logicBg');
+        bg.innerHTML = '';
+        
+        let tokens = [];
+        if(tabNum === 1) tokens = ['∞', '0', 'X / 0', 'Είσοδος', 'Έξοδος', '!', '?', '{ }'];
+        else tokens = ['CPU', '</>', 'O(n)', 'O(n²)', 'RAM', '1010', 'Python', 'C++'];
+
+        for(let i=0; i<20; i++) {
+            let el = document.createElement('div');
+            el.className = 'fly-token';
+            el.textContent = tokens[Math.floor(Math.random() * tokens.length)];
+            el.style.left = (Math.random() * 90) + '%';
+            el.style.animationDuration = (8 + Math.random() * 10) + 's';
+            el.style.animationDelay = (Math.random() * -10) + 's';
+            el.style.fontSize = (1.5 + Math.random() * 2) + 'rem';
+            bg.appendChild(el);
+        }
+    }
+
+    // Init
+    switchTab(1);
+    updateAnalytics();
+
+</script>
+</body>
+</html>
