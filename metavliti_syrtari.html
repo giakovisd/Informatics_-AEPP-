@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Η Μεταβλητή ως Διάφανο Συρτάρι v3</title>
+<style>
+:root{
+  --navy:#0c315f;
+  --blue:#1a79ea;
+  --cyan:#20d8ef;
+  --violet:#7458e8;
+  --green:#29aa60;
+  --orange:#ef7d18;
+  --red:#e84c5a;
+  --gold:#f2b830;
+  --ink:#17283d;
+  --muted:#60758b;
+  --line:#c7ddea;
+  --wood1:#6b3c1e;
+  --wood2:#b87943;
+  --wood3:#d99c67;
+  --shadow:0 24px 72px rgba(18,67,112,.18);
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden}
+body{
+  position:relative;
+  font-family:"Segoe UI",Tahoma,Arial,sans-serif;
+  color:var(--ink);
+  background:
+    radial-gradient(circle at 12% 8%,rgba(32,216,239,.27),transparent 29%),
+    radial-gradient(circle at 88% 9%,rgba(116,88,232,.22),transparent 30%),
+    linear-gradient(180deg,#e9fbff,#f7f8ff 54%,#fff9ed);
+}
+button,input{font:inherit}
+button{cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}
+
+/* ambient */
+.sky{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.fly{
+  position:absolute;left:-24vw;white-space:nowrap;
+  font:1000 18px Consolas,"Courier New",monospace;
+  color:rgba(20,70,112,.15);
+  text-shadow:0 0 15px rgba(32,216,239,.46);
+  animation:fly linear infinite;
+}
+@keyframes fly{
+  0%{transform:translate3d(-12vw,9vh,0) rotate(-6deg);opacity:0}
+  10%,90%{opacity:1}
+  100%{transform:translate3d(144vw,-14vh,0) rotate(6deg);opacity:0}
+}
+.dot{
+  position:absolute;width:7px;height:7px;border-radius:50%;
+  background:var(--cyan);
+  box-shadow:0 0 10px var(--cyan),0 0 24px var(--blue);
+  animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{transform:scale(.5);opacity:.2}50%{transform:scale(1.7);opacity:1}}
+
+#app{
+  position:absolute;left:50%;top:50%;
+  width:1440px;height:810px;
+  transform-origin:center center;
+  z-index:2;
+  padding:8px;
+  display:flex;flex-direction:column;
+}
+header{
+  flex:0 0 78px;
+  display:flex;justify-content:space-between;align-items:center;gap:18px;
+  padding:10px 16px;
+  border-radius:20px;
+  background:rgba(255,255,255,.86);
+  border:1px solid #b7dbea;
+  backdrop-filter:blur(15px);
+  box-shadow:var(--shadow);
+}
+header h1{margin:0;color:var(--navy);font-size:1.88rem}
+header p{margin:3px 0 0;color:#4f6d88;font-weight:730;font-size:.9rem}
+.rule-strip{
+  min-width:520px;padding:10px 14px;border-radius:15px;
+  background:linear-gradient(135deg,#fff8dd,#eefaff);
+  border-left:6px solid var(--gold);
+  color:#665100;font-weight:900;text-align:center;
+}
+.header-actions{display:flex;gap:7px}
+.small-btn{
+  padding:8px 10px;border-radius:11px;border:1px solid #b7d8e9;
+  background:#edf8ff;color:#174d80;font-weight:1000;
+}
+.small-btn:hover{transform:translateY(-2px)}
+
+.workspace{
+  flex:1;min-height:0;margin-top:8px;
+  display:grid;grid-template-columns:338px minmax(0,1fr) 304px;
+  gap:9px;
+}
+.panel{
+  min-width:0;min-height:0;height:100%;overflow:hidden;
+  border-radius:20px;background:rgba(255,255,255,.94);
+  border:1px solid var(--line);box-shadow:var(--shadow);
+}
+.controls-panel{padding:13px}
+.cabinet-panel{padding:9px}
+.monitor-panel{padding:12px}
+.explain{
+  padding:9px 10px;border-radius:12px;background:#eefaff;
+  border-left:5px solid var(--cyan);color:#285771;line-height:1.35;font-size:.84rem;
+}
+.field{margin-top:8px}
+.field label{display:block;margin-bottom:3px;color:#315b85;font-weight:1000;font-size:.84rem}
+.field input{
+  width:100%;padding:8px 10px;border-radius:10px;border:2px solid #bdd7e8;background:white;
+  color:#244e72;font:1000 .91rem Consolas;outline:none;
+}
+.field input:focus{border-color:var(--blue);box-shadow:0 0 0 5px rgba(25,119,232,.10)}
+.type-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:4px}
+.type-btn{
+  min-height:54px;padding:6px;border-radius:11px;border:2px solid #c4d9e7;background:white;
+  color:#315b85;font-weight:1000;transition:.18s;
+}
+.type-btn small{display:block;margin-top:2px;color:#75889a;font-size:.69rem;font-weight:700}
+.type-btn:hover,.type-btn.active{
+  transform:translateY(-2px);color:white;border-color:transparent;
+  background:linear-gradient(135deg,var(--blue),var(--violet));
+  box-shadow:0 10px 22px rgba(49,84,194,.20);
+}
+.type-btn.active small{color:#e9f7ff}
+.actions{display:grid;grid-template-columns:1fr;gap:6px;margin-top:10px}
+.action-btn{
+  border:0;border-radius:11px;padding:9px 11px;color:white;font-weight:1000;transition:.18s;
+}
+.action-btn:hover:not(:disabled){transform:translateY(-2px)}
+.declare-btn{background:linear-gradient(135deg,var(--blue),var(--violet))}
+.assign-btn{background:linear-gradient(135deg,var(--green),#0c9d80)}
+.read-btn{background:linear-gradient(135deg,var(--orange),#e84c5a)}
+.feedback{
+  display:none;margin-top:7px;padding:8px 9px;border-radius:11px;border-left:5px solid;
+  font-size:.81rem;line-height:1.3;
+}
+.feedback.show{display:block}
+.feedback.ok{background:#ecfff3;border-color:var(--green);color:#14773d}
+.feedback.info{background:#eefaff;border-color:var(--cyan);color:#245a73}
+.feedback.bad{background:#fff0f1;border-color:var(--red);color:#9d2631}
+.code{
+  margin-top:7px;min-height:47px;padding:7px 9px;border-radius:10px;background:#102d51;color:#edf9ff;
+  font:900 12px/1.35 Consolas;white-space:pre-wrap;
+}
+.quick-note{
+  margin-top:6px;color:#718598;font-size:.7rem;line-height:1.25;text-align:center;
+}
+
+/* stage */
+.cabinet-stage{
+  position:relative;width:100%;height:100%;overflow:hidden;border-radius:16px;
+  background:
+    radial-gradient(circle at 50% 34%,rgba(32,216,239,.20),transparent 34%),
+    linear-gradient(180deg,#caf8ff,#f4fcff 49%,#e9ecff);
+  border:1px solid #a9ddef;
+}
+.computer{
+  position:absolute;left:16px;top:16px;width:138px;height:92px;border-radius:19px;
+  display:grid;place-items:center;text-align:center;color:white;font-weight:1000;
+  background:linear-gradient(145deg,#0a3b72,#1977e8);
+  border:3px solid rgba(255,255,255,.82);
+  box-shadow:0 0 0 7px rgba(25,119,232,.10),0 16px 32px rgba(20,66,120,.22);
+}
+.computer small{font-weight:700;opacity:.86}
+.flow-line{
+  position:absolute;left:152px;right:20px;top:62px;height:5px;
+  background:linear-gradient(90deg,var(--cyan),var(--blue),var(--violet));
+  box-shadow:0 0 15px var(--cyan);
+}
+.cabinet{
+  position:absolute;left:50%;top:53%;
+  width:706px;height:532px;transform:translate(-50%,-50%);
+  border-radius:24px;padding:18px 20px 16px;
+  background:
+    linear-gradient(90deg,#73401f 0 2.6%,#b87b45 2.6% 97.4%,#673818 97.4% 100%);
+  border:8px solid #6b3b1d;
+  box-shadow:inset 0 0 0 4px rgba(255,255,255,.12),0 24px 50px rgba(54,38,27,.28);
+}
+.drawer-row > .drawer{justify-self:start}
+
+.cabinet-title{
+  text-align:center;color:#fff4df;font-weight:1000;letter-spacing:.08em;margin-bottom:8px;
+}
+.drawer-row{
+  height:108px;
+  display:grid;
+  grid-template-columns:138px minmax(0,1fr);
+  align-items:center;
+  border-top:3px solid rgba(81,42,14,.55);
+  padding:0 6px;
+}
+.drawer-row:first-of-type{border-top:0}
+.drawer-label{
+  width:120px;padding:11px 12px;border-radius:15px;
+  background:linear-gradient(180deg,#fff0da,#f0cfa9);
+  border:3px solid rgba(255,255,255,.55);
+  color:#68411e;box-shadow:0 5px 12px rgba(77,47,23,.16);
+}
+.drawer-label b{display:block;font-size:1rem;color:#fffefb;text-shadow:0 1px 2px rgba(0,0,0,.14)}
+.drawer-label span{display:block;font-size:.73rem;color:#fff3df;text-shadow:0 1px 2px rgba(0,0,0,.14)}
+/* keep same colors as screenshot but readable */
+.drawer-label{background:linear-gradient(180deg,#dcb98f,#c6905a)}
+
+.drawer{
+  position:relative;
+  height:78px;
+  border-radius:16px;
+  perspective:1200px;
+  max-width:100%;
+}
+.drawer.logical{
+  width:clamp(150px,32%,192px);
+}
+.drawer.integer{
+  width:clamp(210px,50%,280px);
+}
+.drawer.real{
+  width:clamp(300px,72%,395px);
+}
+.drawer.characters{
+  width:min(100%,580px);
+}
+.drawer.active .drawer-door{box-shadow:0 0 0 7px rgba(32,216,239,.15),0 16px 25px rgba(43,71,113,.16)}
+.drawer-box{
+  position:absolute;inset:0;border-radius:16px;overflow:hidden;
+  background:linear-gradient(180deg,rgba(255,248,237,.16),rgba(255,255,255,.12));
+  border:3px solid rgba(255,247,232,.56);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.22),0 8px 18px rgba(63,38,20,.16);
+}
+.drawer-box::before{
+  content:"";
+  position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,.03));
+  pointer-events:none;
+}
+.drawer-inside{
+  position:absolute;left:12px;right:12px;top:36px;bottom:10px;
+  display:flex;gap:5px;align-items:center;overflow:hidden;z-index:1;
+}
+.characters .drawer-inside{flex-wrap:wrap;align-content:flex-start}
+.compartment{
+  min-width:28px;min-height:26px;padding:3px 5px;border-radius:8px;
+  display:grid;place-items:center;text-align:center;
+  background:rgba(255,255,255,.92);
+  border:2px solid rgba(139,89,39,.78);
+  color:#402610;font:1000 12px Consolas;line-height:1.0;
+  box-shadow:0 2px 7px rgba(0,0,0,.09);
+}
+.compartment small{display:block;margin-top:1px;font-size:7px;font-weight:800;color:#6f533a}
+.compartment.char{
+  flex:0 0 auto;
+  min-width:var(--tile,26px);width:var(--tile,26px);height:var(--tile,26px);min-height:var(--tile,26px);
+  padding:0;font-size:calc(var(--tile,26px) * .46);
+}
+
+.name-tag{
+  position:absolute;top:8px;left:50%;transform:translateX(-50%);
+  min-width:120px;max-width:240px;padding:5px 12px;border-radius:10px;
+  background:#fff2bf;border:2px dashed #d0a536;color:#523f18;
+  font:1000 14px Consolas;text-align:center;z-index:4;
+  box-shadow:0 3px 6px rgba(0,0,0,.10);
+  opacity:0;
+}
+.drawer.declared .name-tag{opacity:1}
+.drawer-handle{
+  position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  width:42px;height:15px;border-radius:999px;
+  background:linear-gradient(#f3d7a4,#9b672f);
+  border:2px solid #6f431d;box-shadow:0 3px 5px rgba(54,34,18,.25);
+  z-index:5;
+}
+.drawer-door{
+  position:absolute;inset:0;border-radius:16px;z-index:3;
+  background:linear-gradient(180deg,rgba(255,251,245,.18),rgba(255,255,255,.10));
+  border:3px solid rgba(255,245,220,.58);
+  backdrop-filter:blur(1px);
+  transform-origin:left center;
+  transform-style:preserve-3d;
+  transition:transform .8s cubic-bezier(.19,.84,.25,1), box-shadow .3s;
+}
+.drawer-door::after{
+  content:"";
+  position:absolute;right:-15px;top:2px;bottom:2px;width:15px;
+  border-radius:0 12px 12px 0;
+  background:linear-gradient(180deg,#936238,#5f3618);
+  transform-origin:left center;
+  transform:rotateY(90deg);
+  box-shadow:0 0 8px rgba(0,0,0,.18);
+}
+.drawer.open .drawer-door{
+  transform:translateX(34px) rotateY(-58deg);
+}
+.drawer.open .drawer-door::after{
+  box-shadow:6px 0 12px rgba(0,0,0,.22);
+}
+.status-bar{
+  position:absolute;left:18px;right:18px;bottom:13px;padding:8px 10px;border-radius:11px;
+  background:rgba(255,255,255,.90);border-left:5px solid var(--cyan);
+  color:#31566f;text-align:center;font-size:.82rem;font-weight:900;
+}
+
+/* packets */
+.value-packet,.monitor-copy{
+  position:absolute;z-index:30;min-width:72px;max-width:210px;min-height:40px;padding:7px 10px;
+  border-radius:13px;display:grid;place-items:center;text-align:center;color:white;
+  font:1000 12px Consolas;pointer-events:none;opacity:0;
+  box-shadow:0 0 18px rgba(237,125,24,.42);
+}
+.value-packet{background:linear-gradient(135deg,var(--orange),#eb4f9c)}
+.monitor-copy{background:linear-gradient(135deg,#26b87f,#109ed0);box-shadow:0 0 18px rgba(33,159,208,.42)}
+
+/* right panel */
+.monitor-panel{display:flex;flex-direction:column}
+.monitor{
+  flex:0 0 240px;padding:14px;border-radius:20px;background:#122f51;border:6px solid #254c73;
+  box-shadow:inset 0 0 28px rgba(32,216,239,.10),0 18px 34px rgba(21,56,88,.22);
+}
+.monitor-title{color:#6ff4ff;font-weight:1000;font-size:.78rem;letter-spacing:.08em}
+.monitor-output{
+  height:145px;margin-top:9px;padding:12px;border-radius:12px;display:grid;place-items:center;text-align:center;
+  background:#071d35;border:1px solid #2d638e;color:#ecfbff;font:1000 1.05rem/1.4 Consolas;
+  overflow:hidden;word-break:break-word;
+}
+.monitor-stand{width:80px;height:26px;margin:0 auto;background:#254c73;clip-path:polygon(35% 0,65% 0,80% 100%,20% 100%)}
+.monitor-base{width:150px;height:16px;margin:0 auto 8px;border-radius:999px;background:#254c73}
+.lesson{
+  flex:1;min-height:0;margin-top:8px;padding:11px;border-radius:15px;
+  background:linear-gradient(135deg,#fff8dd,#eefaff);border:1px solid #d7d9ad;
+}
+.lesson h3{margin:0 0 8px;color:#123f75;font-size:1.03rem}
+.lesson-step{
+  display:grid;grid-template-columns:34px 1fr;gap:8px;align-items:center;margin-top:7px;padding:8px;
+  border-radius:11px;background:white;border:1px solid #cbddea;color:#345873;font-size:.79rem;line-height:1.3;
+}
+.lesson-num{
+  width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:white;font-weight:1000;
+  background:linear-gradient(135deg,var(--blue),var(--violet));
+}
+.memory-phrase{
+  margin-top:8px;padding:9px;border-radius:12px;background:#ecfff3;border-left:5px solid var(--green);
+  color:#14773d;text-align:center;font-weight:1000;font-size:.83rem;
+}
+</style>
+</head>
+<body>
+<div class="sky" id="sky"></div>
+
+<div id="app">
+<header>
+  <div>
+    <h1>Η ΜΕΤΑΒΛΗΤΗ ΜΟΙΑΖΕΙ ΜΕ ΣΥΡΤΑΡΙ</h1>
+    <p>Ο υπολογιστής ανοίγει το συρτάρι για να βάλει κάτι (αποθήκευση) ή για να πάρει κάτι (ανάκτηση - η τιμή δεν σβήνεται, αλλά αντιγράφεται) .</p>
+  </div>
+  <div class="rule-strip">
+    Ανάθεση = η τιμή αποθηκεύεται. Ανάκτηση = η τιμή ανακτάται.
+  </div>
+  <div class="header-actions">
+    <button class="small-btn" id="soundBtn" onclick="toggleSound()">🔊 Ήχος</button>
+    <button class="small-btn" onclick="resetAll()">↻ Επαναφορά</button>
+  </div>
+</header>
+
+<div class="workspace">
+  <section class="panel controls-panel">
+    <div class="explain">
+      Εδώ η μεταβλητή παρουσιάζεται σαν <b>διάφανο συρτάρι</b>. Φαίνεται το μέγεθος του συρταριού και το περιεχόμενο που βρίσκεται μέσα.
+    </div>
+
+    <div class="field">
+      <label for="varName">Όνομα μεταβλητής</label>
+      <input id="varName" value="μήνυμα" oninput="invalidate()">
+    </div>
+
+    <div class="field">
+      <label>Τύπος μεταβλητής</label>
+      <div class="type-buttons">
+        <button class="type-btn" data-type="ΛΟΓΙΚΟΣ" onclick="selectType(this)">ΛΟΓΙΚΟΣ<small>πολύ μικρό συρτάρι</small></button>
+        <button class="type-btn" data-type="ΑΚΕΡΑΙΟΣ" onclick="selectType(this)">ΑΚΕΡΑΙΟΣ<small>μικρό συρτάρι</small></button>
+        <button class="type-btn" data-type="ΠΡΑΓΜΑΤΙΚΟΣ" onclick="selectType(this)">ΠΡΑΓΜΑΤΙΚΟΣ<small>μεσαίο συρτάρι</small></button>
+        <button class="type-btn active" data-type="ΧΑΡΑΚΤΗΡΕΣ" onclick="selectType(this)">ΧΑΡΑΚΤΗΡΕΣ<small>μεγάλο συρτάρι</small></button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="varValue">Τι θα βάλουμε μέσα;</label>
+      <input id="varValue" value="&quot;ΛΑΡΙΣΑ&quot;" oninput="invalidateValue()">
+    </div>
+
+    <div class="actions">
+      <button class="action-btn declare-btn" onclick="declareDrawer()">1. Δήλωση — Βάλε ετικέτα</button>
+      <button class="action-btn assign-btn" id="assignBtn" onclick="putValue()" disabled>2. Ανάθεση — Βάλε την τιμή</button>
+      <button class="action-btn read-btn" id="readBtn" onclick="takeValue()" disabled>3. Ανάκτηση — Πάρε την τιμή</button>
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+
+    <div class="code" id="declarationCode">ΜΕΤΑΒΛΗΤΕΣ
+   ΧΑΡΑΚΤΗΡΕΣ: μήνυμα</div>
+
+    <div class="quick-note">
+      Η τιμή που ανακτάται από το συρτάρι είναι αντίγραφο. Το αρχικό περιεχόμενο μένει στη μνήμη.
+    </div>
+  </section>
+
+  <section class="panel cabinet-panel">
+    <div class="cabinet-stage" id="cabinetStage">
+      <div class="computer">ΥΠΟΛΟΓΙΣΤΗΣ<br><small>βάζει ή παίρνει δεδομένα</small></div>
+      <div class="flow-line"></div>
+      <div class="value-packet" id="valuePacket">τιμή</div>
+
+      <div class="cabinet">
+        <div class="cabinet-title">ΝΤΟΥΛΑΠΙ ΜΕΤΑΒΛΗΤΩΝ</div>
+
+        <div class="drawer-row">
+          <div class="drawer-label"><b>ΛΟΓΙΚΟΣ</b><span>πολύ μικρό</span></div>
+          <div class="drawer logical" id="drawer-ΛΟΓΙΚΟΣ">
+            <div class="drawer-box"></div>
+            <div class="drawer-inside"></div>
+            <div class="name-tag">χωρίς ετικέτα</div>
+            <div class="drawer-door"></div>
+            <div class="drawer-handle"></div>
+          </div>
+        </div>
+
+        <div class="drawer-row">
+          <div class="drawer-label"><b>ΑΚΕΡΑΙΟΣ</b><span>μικρό</span></div>
+          <div class="drawer integer" id="drawer-ΑΚΕΡΑΙΟΣ">
+            <div class="drawer-box"></div>
+            <div class="drawer-inside"></div>
+            <div class="name-tag">χωρίς ετικέτα</div>
+            <div class="drawer-door"></div>
+            <div class="drawer-handle"></div>
+          </div>
+        </div>
+
+        <div class="drawer-row">
+          <div class="drawer-label"><b>ΠΡΑΓΜΑΤΙΚΟΣ</b><span>μεσαίο</span></div>
+          <div class="drawer real" id="drawer-ΠΡΑΓΜΑΤΙΚΟΣ">
+            <div class="drawer-box"></div>
+            <div class="drawer-inside"></div>
+            <div class="name-tag">χωρίς ετικέτα</div>
+            <div class="drawer-door"></div>
+            <div class="drawer-handle"></div>
+          </div>
+        </div>
+
+        <div class="drawer-row">
+          <div class="drawer-label"><b>ΧΑΡΑΚΤΗΡΕΣ</b><span>μεγάλο</span></div>
+          <div class="drawer characters active" id="drawer-ΧΑΡΑΚΤΗΡΕΣ">
+            <div class="drawer-box"></div>
+            <div class="drawer-inside"></div>
+            <div class="name-tag">χωρίς ετικέτα</div>
+            <div class="drawer-door"></div>
+            <div class="drawer-handle"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="status-bar" id="statusBar">
+        Επίλεξε τύπο και κάνε δήλωση. Το σωστό συρτάρι θα πάρει ετικέτα και θα ξεχωρίσει.
+      </div>
+    </div>
+  </section>
+
+  <aside class="panel monitor-panel">
+    <div class="monitor">
+      <div class="monitor-title">ΟΘΟΝΗ ΕΞΟΔΟΥ</div>
+      <div class="monitor-output" id="monitorOutput">Δεν έχει ανακτηθεί ακόμη κάποια τιμή.</div>
+    </div>
+    <div class="monitor-stand"></div>
+    <div class="monitor-base"></div>
+
+    <div class="lesson">
+      <h3>Βασικές ιδέες</h3>
+      <div class="lesson-step">
+        <div class="lesson-num">1</div>
+        <div><b>Δήλωση:</b> επιλέγουμε το κατάλληλο μέγεθος συρταριού και βάζουμε έντονη ετικέτα.</div>
+      </div>
+      <div class="lesson-step">
+        <div class="lesson-num">2</div>
+        <div><b>Ανάθεση:</b> το συρτάρι ανοίγει σε 3D και η τιμή μπαίνει μέσα.</div>
+      </div>
+      <div class="lesson-step">
+        <div class="lesson-num">3</div>
+        <div><b>Ανάκτηση:</b> το συρτάρι ανοίγει ξανά, αλλά η τιμή <b>μένει μέσα</b>. Βγαίνει μόνο αντίγραφο.</div>
+      </div>
+      <div class="memory-phrase">
+        Μεταβλητή = συρτάρι με όνομα, μέγεθος και περιεχόμενο.
+      </div>
+    </div>
+  </aside>
+</div>
+</div>
+
+<script>
+const TYPE_INFO={
+  "ΛΟΓΙΚΟΣ":{section:"ΛΟΓΙΚΕΣ",sample:"ΑΛΗΘΗΣ",parts:1},
+  "ΑΚΕΡΑΙΟΣ":{section:"ΑΚΕΡΑΙΕΣ",sample:"15",parts:2},
+  "ΠΡΑΓΜΑΤΙΚΟΣ":{section:"ΠΡΑΓΜΑΤΙΚΕΣ",sample:"12.5",parts:4},
+  "ΧΑΡΑΚΤΗΡΕΣ":{section:"ΧΑΡΑΚΤΗΡΕΣ",sample:"\"ΛΑΡΙΣΑ\"",parts:null}
+};
+
+let selectedType="ΧΑΡΑΚΤΗΡΕΣ";
+let declared=false;
+let hasValue=false;
+let storedValue="";
+let soundEnabled=true;
+let audioCtx=null;
+let busy=false;
+
+function fitApp(){
+  const app=document.getElementById("app");
+  const scale=Math.min((window.innerWidth-4)/1440,(window.innerHeight-4)/810);
+  app.style.transform=`translate(-50%,-50%) scale(${scale})`;
+}
+window.addEventListener("resize",fitApp);
+
+function initAudio(){
+  if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==="suspended")audioCtx.resume();
+}
+function tone(f,d=.12,type="sine",v=.05,delay=0){
+  if(!soundEnabled)return;
+  initAudio();
+  const s=audioCtx.currentTime+delay,o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type=type;o.frequency.setValueAtTime(f,s);
+  g.gain.setValueAtTime(.001,s);g.gain.linearRampToValueAtTime(v,s+.015);g.gain.exponentialRampToValueAtTime(.001,s+d);
+  o.connect(g);g.connect(audioCtx.destination);o.start(s);o.stop(s+d+.03);
+}
+function goodSound(){tone(523,.1);tone(659,.13,"sine",.055,.09);tone(784,.18,"triangle",.05,.2);}
+function toggleSound(){
+  soundEnabled=!soundEnabled;
+  document.getElementById("soundBtn").textContent=soundEnabled?"🔊 Ήχος":"🔇 Ήχος";
+  if(soundEnabled){initAudio();tone(660,.12)}
+}
+function showFeedback(type,msg){
+  const el=document.getElementById("feedback");
+  el.className="feedback show "+type;
+  el.innerHTML=(type==="ok"?"✅ ":type==="bad"?"⚠️ ":"💡 ")+msg;
+}
+function wait(ms){return new Promise(r=>setTimeout(r,ms))}
+function stripQuotes(value){
+  const s=value.trim();
+  const pairs=[['"','"'],["'","'"],["«","»"]];
+  for(const [a,b] of pairs){if(s.startsWith(a)&&s.endsWith(b)&&s.length>=2)return s.slice(a.length,s.length-b.length)}
+  return s;
+}
+function validateValue(){
+  const raw=document.getElementById("varValue").value.trim();
+  if(selectedType==="ΛΟΓΙΚΟΣ"){
+    const v=raw.toUpperCase();
+    if(!["ΑΛΗΘΗΣ","ΨΕΥΔΗΣ"].includes(v))throw new Error("Ο λογικός τύπος δέχεται μόνο ΑΛΗΘΗΣ ή ΨΕΥΔΗΣ.");
+    return v;
+  }
+  if(selectedType==="ΑΚΕΡΑΙΟΣ"){
+    const n=Number(raw.replace(",","."));
+    if(!Number.isInteger(n))throw new Error("Ο ακέραιος τύπος χρειάζεται αριθμό χωρίς δεκαδικό μέρος.");
+    return String(n);
+  }
+  if(selectedType==="ΠΡΑΓΜΑΤΙΚΟΣ"){
+    const n=Number(raw.replace(",","."));
+    if(!Number.isFinite(n))throw new Error("Ο πραγματικός τύπος χρειάζεται αριθμητική τιμή.");
+    return String(n);
+  }
+  const text=stripQuotes(raw);
+  if(!text.length)throw new Error("Γράψε ένα κείμενο.");
+  return text;
+}
+function updateDeclarationCode(){
+  const name=document.getElementById("varName").value.trim()||"μεταβλητή";
+  document.getElementById("declarationCode").textContent=`ΜΕΤΑΒΛΗΤΕΣ\n   ${TYPE_INFO[selectedType].section}: ${name}`;
+}
+function updateStatus(msg){document.getElementById("statusBar").textContent=msg}
+
+function selectType(btn){
+  if(busy)return;
+  selectedType=btn.dataset.type;
+  document.querySelectorAll(".type-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  document.querySelectorAll(".drawer").forEach(d=>d.classList.remove("active","declared","open"));
+  document.getElementById("drawer-"+selectedType).classList.add("active");
+  document.getElementById("varValue").value=TYPE_INFO[selectedType].sample;
+  invalidate();
+  updateDeclarationCode();
+  updateStatus(`Επιλέχθηκε ο τύπος ${selectedType}. Το αντίστοιχο συρτάρι φωτίστηκε.`);
+  tone(523,.1);
+}
+
+function invalidate(){
+  declared=false;hasValue=false;storedValue="";
+  document.getElementById("assignBtn").disabled=true;
+  document.getElementById("readBtn").disabled=true;
+  document.querySelectorAll(".drawer").forEach(d=>{
+    d.classList.remove("declared","open");
+    d.querySelector(".name-tag").textContent="χωρίς ετικέτα";
+    d.querySelector(".drawer-inside").innerHTML="";
+  });
+  document.getElementById("drawer-"+selectedType).classList.add("active");
+  document.getElementById("monitorOutput").textContent="Δεν έχει ανακτηθεί ακόμη κάποια τιμή.";
+  updateStatus("Κάνε δήλωση για να αποκτήσει ετικέτα το σωστό συρτάρι.");
+  document.getElementById("feedback").className="feedback";
+  updateDeclarationCode();
+}
+function invalidateValue(){
+  hasValue=false;
+  document.getElementById("readBtn").disabled=true;
+  const drawer=document.getElementById("drawer-"+selectedType);
+  drawer.classList.remove("open");
+  drawer.querySelector(".drawer-inside").innerHTML="";
+  document.getElementById("monitorOutput").textContent="Δεν έχει ανακτηθεί ακόμη κάποια τιμή.";
+}
+
+function declareDrawer(){
+  if(busy)return;
+  const name=document.getElementById("varName").value.trim();
+  if(!name){showFeedback("info","Γράψε πρώτα το όνομα της μεταβλητής.");return;}
+  declared=true;
+  const drawer=document.getElementById("drawer-"+selectedType);
+  drawer.classList.add("declared","active");
+  drawer.querySelector(".name-tag").textContent=name;
+  document.getElementById("assignBtn").disabled=false;
+  updateStatus(`Το συρτάρι ${selectedType} απέκτησε την ετικέτα «${name}».`);
+  showFeedback("ok","Η δήλωση διάλεξε το σωστό μέγεθος συρταριού και έβαλε καθαρή ετικέτα.");
+  goodSound();
+}
+
+function buildContents(value){
+  const drawer=document.getElementById("drawer-"+selectedType);
+  const inside=drawer.querySelector(".drawer-inside");
+  inside.innerHTML="";
+  if(selectedType==="ΧΑΡΑΚΤΗΡΕΣ"){
+    const chars=Array.from(value);
+    const usableWidth=Math.max(140, drawer.clientWidth - 86); // περιθώρια + χερούλι
+    let tile;
+    if(chars.length<=14) tile=26;
+    else if(chars.length<=22) tile=22;
+    else if(chars.length<=32) tile=18;
+    else if(chars.length<=44) tile=15;
+    else tile=12;
+
+    // Πόσα κελιά χωράνε σε μία μόνο σειρά
+    let maxVisible=Math.max(4, Math.floor((usableWidth + 5) / (tile + 5)));
+    let visibleChars=chars.slice();
+
+    if(chars.length>maxVisible){
+      visibleChars=chars.slice(0, Math.max(1, maxVisible-1));
+    }
+
+    drawer.style.setProperty("--tile",tile+"px");
+
+    visibleChars.forEach(ch=>{
+      const c=document.createElement("div");
+      c.className="compartment char";
+      c.textContent=ch===" "?"␠":ch;
+      inside.appendChild(c);
+    });
+
+    if(chars.length>maxVisible){
+      const more=document.createElement("div");
+      more.className="compartment char";
+      more.textContent="…";
+      inside.appendChild(more);
+    }
+
+    // Ενημερωτική ένδειξη πλήθους χαρακτήρων, χωρίς να βγαίνει έξω από το συρτάρι
+    const badge=document.createElement("div");
+    badge.className="compartment";
+    badge.style.minWidth="78px";
+    badge.style.height="26px";
+    badge.style.minHeight="26px";
+    badge.style.fontSize="10px";
+    badge.style.padding="2px 6px";
+    badge.innerHTML=`${chars.length}<small>χαρακτήρες</small>`;
+    inside.appendChild(badge);
+  }else{
+    const parts=TYPE_INFO[selectedType].parts;
+    for(let i=0;i<parts;i++){
+      const c=document.createElement("div");
+      c.className="compartment";
+      c.innerHTML=`${i+1}ο<small>τμήμα</small>`;
+      inside.appendChild(c);
+    }
+    const valueCard=document.createElement("div");
+    valueCard.className="compartment";
+    valueCard.style.minWidth="88px";
+    valueCard.innerHTML=`${value}<small>περιεχόμενο</small>`;
+    inside.appendChild(valueCard);
+  }
+}
+
+function drawerCenter(drawer){
+  const stage=document.getElementById("cabinetStage").getBoundingClientRect();
+  const r=drawer.getBoundingClientRect();
+  return {x:r.left-stage.left+r.width/2,y:r.top-stage.top+r.height/2};
+}
+function monitorCenter(){
+  const stage=document.getElementById("cabinetStage").getBoundingClientRect();
+  const monitor=document.getElementById("monitorOutput").getBoundingClientRect();
+  return {x:monitor.left-stage.left+monitor.width/2,y:monitor.top-stage.top+monitor.height/2};
+}
+function computerPoint(){return {x:85,y:92}}
+
+function animatePacketIn(label, target){
+  return new Promise(resolve=>{
+    const p=document.getElementById("valuePacket");
+    const start=computerPoint();
+    const end=drawerCenter(target);
+    p.textContent=label;
+    p.style.left=(start.x-36)+"px";
+    p.style.top=(start.y-20)+"px";
+    p.style.opacity="1";
+    const anim=p.animate([
+      {left:(start.x-36)+"px",top:(start.y-20)+"px",opacity:0,transform:"scale(.75)"},
+      {opacity:1,offset:.15},
+      {left:(end.x-40)+"px",top:(end.y-20)+"px",opacity:1,transform:"scale(1.08)",offset:.82},
+      {left:(end.x-40)+"px",top:(end.y-20)+"px",opacity:0,transform:"scale(.25)"}
+    ],{duration:930,easing:"cubic-bezier(.2,.8,.2,1)",fill:"forwards"});
+    anim.onfinish=()=>{p.style.opacity="0";resolve();}
+  });
+}
+function animatePacketOut(label, source){
+  return new Promise(resolve=>{
+    const stage=document.getElementById("cabinetStage");
+    const start=drawerCenter(source);
+    const end=monitorCenter();
+    const p=document.createElement("div");
+    p.className="monitor-copy";
+    p.textContent=label;
+    p.style.left=(start.x-40)+"px";
+    p.style.top=(start.y-20)+"px";
+    stage.appendChild(p);
+    const anim=p.animate([
+      {left:(start.x-40)+"px",top:(start.y-20)+"px",opacity:0,transform:"scale(.75)"},
+      {opacity:1,offset:.15},
+      {left:(end.x-60)+"px",top:(end.y-24)+"px",opacity:1,transform:"scale(1.08)",offset:.82},
+      {left:(end.x-60)+"px",top:(end.y-24)+"px",opacity:0,transform:"scale(.25)"}
+    ],{duration:930,easing:"cubic-bezier(.2,.8,.2,1)",fill:"forwards"});
+    anim.onfinish=()=>{p.remove();resolve();}
+  });
+}
+
+async function putValue(){
+  if(!declared||busy)return;
+  let value;
+  try{value=validateValue()}catch(err){showFeedback("bad",err.message);return;}
+  busy=true;
+  storedValue=value;
+  const drawer=document.getElementById("drawer-"+selectedType);
+  buildContents(value);
+  drawer.classList.add("open");
+  updateStatus("Το συρτάρι ανοίγει και η τιμή μπαίνει μέσα.");
+  await animatePacketIn(selectedType==="ΧΑΡΑΚΤΗΡΕΣ"?`"${value}"`:value, drawer);
+  await wait(220);
+  drawer.classList.remove("open");
+  hasValue=true;
+  document.getElementById("readBtn").disabled=false;
+  updateStatus(`Η τιμή αποθηκεύτηκε στο συρτάρι «${document.getElementById("varName").value.trim()}». Επειδή το συρτάρι είναι διάφανο, το περιεχόμενο φαίνεται καθαρά. Αν το κείμενο είναι πολύ μεγάλο, προβάλλονται όσοι χαρακτήρες χωρούν και μετά εμφανίζεται αποσιωπητικό.`);
+  showFeedback("ok","Η τιμή μπήκε μέσα στο συρτάρι.");
+  goodSound();
+  busy=false;
+}
+
+async function takeValue(){
+  if(!hasValue||busy)return;
+  busy=true;
+  const drawer=document.getElementById("drawer-"+selectedType);
+  drawer.classList.add("open");
+  updateStatus("Το συρτάρι ανοίγει. Ο υπολογιστής παίρνει αντίγραφο της τιμής, αλλά το περιεχόμενο μένει μέσα.");
+  await animatePacketOut(selectedType==="ΧΑΡΑΚΤΗΡΕΣ"?`"${storedValue}"`:storedValue, drawer);
+  document.getElementById("monitorOutput").textContent=selectedType==="ΧΑΡΑΚΤΗΡΕΣ"?`"${storedValue}"`:storedValue;
+  await wait(220);
+  drawer.classList.remove("open");
+  updateStatus(`Η τιμή ανακτήθηκε, αλλά παρέμεινε μέσα στο συρτάρι «${document.getElementById("varName").value.trim()}».`);
+  showFeedback("ok","Η ανάκτηση δεν διαγράφει την τιμή από τη μνήμη.");
+  goodSound();
+  busy=false;
+}
+
+function resetAll(){
+  if(busy)return;
+  selectedType="ΧΑΡΑΚΤΗΡΕΣ";
+  document.getElementById("varName").value="μήνυμα";
+  document.getElementById("varValue").value="\"ΛΑΡΙΣΑ\"";
+  document.querySelectorAll(".type-btn").forEach(b=>b.classList.toggle("active",b.dataset.type==="ΧΑΡΑΚΤΗΡΕΣ"));
+  document.querySelectorAll(".drawer").forEach(d=>{
+    d.classList.remove("active","declared","open");
+    d.querySelector(".name-tag").textContent="χωρίς ετικέτα";
+    d.querySelector(".drawer-inside").innerHTML="";
+  });
+  document.getElementById("drawer-ΧΑΡΑΚΤΗΡΕΣ").classList.add("active");
+  document.getElementById("assignBtn").disabled=true;
+  document.getElementById("readBtn").disabled=true;
+  document.getElementById("monitorOutput").textContent="Δεν έχει ανακτηθεί ακόμη κάποια τιμή.";
+  updateStatus("Επίλεξε τύπο και κάνε δήλωση. Το σωστό συρτάρι θα πάρει ετικέτα και θα ξεχωρίσει.");
+  document.getElementById("feedback").className="feedback";
+  declared=false;hasValue=false;storedValue="";busy=false;
+  updateDeclarationCode();
+}
+
+function buildSky(){
+  const tokens=["ΔΗΛΩΣΗ","ΑΝΑΘΕΣΗ","ΑΝΑΚΤΗΣΗ","ΛΟΓΙΚΟΣ","ΑΚΕΡΑΙΟΣ","ΠΡΑΓΜΑΤΙΚΟΣ","ΧΑΡΑΚΤΗΡΕΣ","συρτάρι","όνομα","τιμή"];
+  for(let i=0;i<28;i++){
+    const d=document.createElement("div");
+    d.className="fly";
+    d.textContent=tokens[i%tokens.length];
+    d.style.top=Math.random()*92+"vh";
+    d.style.fontSize=(16+Math.random()*25)+"px";
+    d.style.animationDuration=(13+Math.random()*19)+"s";
+    d.style.animationDelay=(-Math.random()*25)+"s";
+    sky.appendChild(d);
+  }
+  for(let i=0;i<22;i++){
+    const d=document.createElement("div");
+    d.className="dot";
+    d.style.left=Math.random()*100+"vw";
+    d.style.top=Math.random()*86+"vh";
+    d.style.animationDelay=Math.random()*2+"s";
+    sky.appendChild(d);
+  }
+}
+
+fitApp();
+buildSky();
+updateDeclarationCode();
+</script>
+</body>
+</html>
