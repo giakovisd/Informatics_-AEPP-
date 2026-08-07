@@ -18,7 +18,7 @@
 <body>
 <div class="sky" id="sky"></div>
 <div id="app">
-<header><div><h1>ΕΡΓΑΣΤΗΡΙΟ ΕΝΤΟΛΗΣ ΓΡΑΨΕ</h1><p>Σταθερές, μεταβλητές και εκφράσεις ταξιδεύουν προς τη μονάδα εξόδου.</p></div><div class="rule-strip">Η ΓΡΑΨΕ δεν αλλάζει τα δεδομένα. Παίρνει τιμές και αποτελέσματα και τα στέλνει στην οθόνη ή στον εκτυπωτή.</div><div class="header-actions"><button class="small-btn" id="soundBtn" onclick="toggleSound()">🔊 Ήχος</button><button class="small-btn" onclick="restartAll()">↻ Νέα σειρά</button></div></header>
+<header><div><h1>ΕΝΤΟΛΗ ΕΞΟΔΟΥ ΓΡΑΨΕ</h1><p>Σταθερές, μεταβλητές και εκφράσεις ταξιδεύουν προς τη μονάδα εξόδου.</p></div><div class="rule-strip">Η ΓΡΑΨΕ δεν αλλάζει τα δεδομένα. Παίρνει τιμές και αποτελέσματα και τα στέλνει στην οθόνη ή στον εκτυπωτή.</div><div class="header-actions"><button class="small-btn" id="soundBtn" onclick="toggleSound()">🔊 Ήχος</button><button class="small-btn" onclick="restartAll()">↻ Νέα σειρά</button></div></header>
 <div class="workspace">
 <section class="panel left">
 <div class="explain">Πρόβλεψε πρώτα την έξοδο. Μετά παρακολούθησε κάθε στοιχείο της λίστας να ακολουθεί τη σωστή διαδρομή.</div>
@@ -61,7 +61,7 @@ const E=[
 [25,'mixed',3,"ΓΡΑΨΕ 'Μέσος όρος:', (α+β)/2",{α:16,β:20},[['constant',"'Μέσος όρος:'",'Μέσος όρος:'],['expression','(α+β)/2','18']],'Μέσος όρος: 18','(16+20)/2=18.'],
 [26,'mixed',3,"ΓΡΑΨΕ 'Υπόλοιπο:', ν MOD 3",{ν:14},[['constant',"'Υπόλοιπο:'",'Υπόλοιπο:'],['expression','ν MOD 3','2']],'Υπόλοιπο: 2','14 MOD 3=2.'],
 [27,'mixed',3,"ΓΡΑΨΕ 'Μεγαλύτερος:', α>β",{α:12,β:9},[['constant',"'Μεγαλύτερος:'",'Μεγαλύτερος:'],['expression','α>β','ΑΛΗΘΗΣ']],'Μεγαλύτερος: ΑΛΗΘΗΣ','12>9 είναι αληθές.'],
-[28,'mixed',3,"ΓΡΑΨΕ 'x=', x, 'x²=', x^2",{x:6},[['constant',"'x='",'x='],['variable','x','6','x'],['constant',"'x²='",'x²='],['expression','x^2','36']],'x= 6 x²= 36','Η x δίνει 6 και η έκφραση x^2 δίνει 36.'],
+[28,'mixed',3,"ΓΡΑΨΕ α, '+', β, '=', α+β",{α:10,β:3},[['variable','α','10','α'],['constant',"'+'",'+'],['variable','β','3','β'],['constant',"'='",'='],['expression','α+β','13']],'10+3=13','Η α έχει τιμή 10 και η β έχει τιμή 3. Εμφανίζονται διαδοχικά οι δύο τιμές, τα σύμβολα + και = και στο τέλος το αποτέλεσμα α+β=13.'],
 [29,'mixed',3,"ΓΡΑΨΕ 'Έγκυρος:', ηλικία>=18 ΚΑΙ έχει_ταυτότητα",{ηλικία:20,έχει_ταυτότητα:'ΑΛΗΘΗΣ'},[['constant',"'Έγκυρος:'",'Έγκυρος:'],['expression','ηλικία>=18 ΚΑΙ έχει_ταυτότητα','ΑΛΗΘΗΣ']],'Έγκυρος: ΑΛΗΘΗΣ','Και οι δύο συνθήκες είναι αληθείς.'],
 [30,'mixed',3,"ΓΡΑΨΕ 'Τελικό:', αρχική+μπόνους, 'Πέρασε:', αρχική+μπόνους>=10",{αρχική:8,μπόνους:3},[['constant',"'Τελικό:'",'Τελικό:'],['expression','αρχική+μπόνους','11'],['constant',"'Πέρασε:'",'Πέρασε:'],['expression','αρχική+μπόνους>=10','ΑΛΗΘΗΣ']],'Τελικό: 11 Πέρασε: ΑΛΗΘΗΣ','8+3=11 και 11>=10 είναι ΑΛΗΘΗΣ.']
 ].map(x=>({id:x[0],cat:x[1],d:x[2],cmd:x[3],vars:x[4],items:x[5].map(i=>({k:i[0],s:i[1],r:i[2],v:i[3]})),out:x[6],hint:x[7]}));
@@ -70,7 +70,7 @@ function fitApp(){const s=Math.min((innerWidth-4)/1440,(innerHeight-4)/810);app.
 function initAudio(){if(!audioCtx)audioCtx=new(AudioContext||webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume()}
 function tone(f,d=.12,t='sine',v=.05,delay=0){if(!soundEnabled)return;initAudio();const s=audioCtx.currentTime+delay,o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=t;o.frequency.setValueAtTime(f,s);g.gain.setValueAtTime(.001,s);g.gain.linearRampToValueAtTime(v,s+.015);g.gain.exponentialRampToValueAtTime(.001,s+d);o.connect(g);g.connect(audioCtx.destination);o.start(s);o.stop(s+d+.03)}
 function goodSound(){tone(523,.1);tone(659,.13,'sine',.055,.09);tone(784,.18,'triangle',.05,.2)}function badSound(){tone(180,.12,'sawtooth',.022);tone(130,.17,'sawtooth',.018,.1)}function toggleSound(){soundEnabled=!soundEnabled;soundBtn.textContent=soundEnabled?'🔊 Ήχος':'🔇 Ήχος';if(soundEnabled){initAudio();tone(660,.12)}}
-function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}function normalize(s){return String(s).trim().replace(/[«»"'“”]/g,'').replace(/\s+/g,' ').toUpperCase()}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}function normalize(s){return String(s).trim().replace(/[«»"'“”]/g,'').replace(/\s+/g,' ').replace(/\s*([,:=+\-*/<>])\s*/g,'$1').toUpperCase()}
 function fb(type,msg){feedback.className='feedback show '+type;feedback.innerHTML=(type==='ok'?'✅ ':type==='bad'?'⚠️ ':'💡 ')+msg;if(type==='ok')goodSound();if(type==='bad')badSound()}
 function kindStyle(k){return {constant:['#299a4b','#effff2'],variable:['#1778e8','#eef7ff'],expression:['#7a43b6','#fbf3ff']}[k]}
 function buildPool(){const c=category.value,d=difficulty.value;pool=E.filter(e=>(c==='all'||e.cat===c)&&(d==='all'||String(e.d)===d));if(!pool.length)pool=E.slice();order=shuffle(pool.slice());position=0}
