@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Μετατροπέας Διαγράμματος Ροής σε ΓΛΩΣΣΑ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EEF3F7;
+    --grid-line: rgba(43,58,103,0.07);
+    --surface:#FFFFFF;
+    --ink:#1B2438;
+    --ink-soft:#5A6580;
+    --indigo:#2B3A67;
+    --indigo-deep:#182544;
+    --indigo-soft:#DCE4F2;
+    --coral:#E4572E;
+    --coral-soft:#FBE0D6;
+    --teal:#2E8B84;
+    --teal-soft:#DCEFED;
+    --amber:#F4B93D;
+    --amber-soft:#FFF4D6;
+    --code-bg:#111A2E;
+    --code-ink:#DDE6F5;
+    --radius:16px;
+    --shadow: 0 6px 18px rgba(27,36,56,0.08);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; font-family:'Inter',sans-serif; color:var(--ink);
+    background: linear-gradient(var(--grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+                var(--bg);
+    background-size: 28px 28px, 28px 28px, 100% 100%;
+    padding-bottom:80px;
+  }
+  h1,h2,h3{font-family:'Baloo 2',sans-serif;}
+  
+  /* ---------- HERO & HEADER ---------- */
+  header.hero{ padding:50px 20px 30px; text-align:center; }
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700;
+    color:#fff; background:var(--indigo); padding:6px 14px; border-radius:999px; margin-bottom:15px;
+  }
+  h1.title{ font-size:clamp(30px,5vw,48px); font-weight:800; color:var(--indigo-deep); margin:0 0 10px; line-height:1.1;}
+  h1.title span{color:var(--coral);}
+  .subtitle{ max-width:600px; margin:0 auto; color:var(--ink-soft); font-size:16px; line-height:1.6;}
+
+  /* ---------- MAIN LAYOUT ---------- */
+  main{ max-width:800px; margin:0 auto; padding:0 20px; display:flex; flex-direction:column; gap:20px; }
+
+  /* API Settings Card */
+  .api-card {
+    background: var(--amber-soft); border: 2px dashed var(--amber);
+    border-radius: var(--radius); padding: 20px; text-align:center;
+  }
+  .api-card p { margin:0 0 12px; font-size:15px; font-weight:700; color:var(--indigo-deep);}
+  .api-input-wrap { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; align-items:center;}
+  .api-input {
+    flex: 1; min-width: 250px; max-width: 400px; padding: 10px 14px; border-radius: 8px;
+    border: 1px solid var(--amber); font-family: 'JetBrains Mono', monospace; font-size: 13px;
+  }
+  .btn-help {
+    background: #fff; color: var(--indigo); border: 2px solid var(--indigo-soft);
+    padding: 9px 14px; border-radius: 8px; font-family: 'Inter', sans-serif; font-weight: 700;
+    font-size: 13px; cursor: pointer; transition: .2s;
+  }
+  .btn-help:hover { border-color: var(--indigo); background: var(--indigo-soft); }
+  .api-hint { font-size: 12px; color: var(--ink-soft); margin-top: 10px; font-style: italic;}
+
+  /* Upload Area */
+  .upload-card{
+    background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow);
+    padding:40px 20px; text-align:center; transition: .2s; border: 2px dashed var(--indigo-soft);
+    position: relative;
+  }
+  .upload-card.dragover { border-color: var(--teal); background: var(--teal-soft); }
+  .upload-icon { font-size: 40px; margin-bottom: 10px; }
+  .upload-text { font-weight: 600; color: var(--indigo-deep); font-size: 18px; margin: 0 0 5px; }
+  .upload-sub { color: var(--ink-soft); font-size: 14px; margin: 0 0 20px; }
+  
+  .file-input { display: none; }
+  .btn-upload {
+    background: var(--teal); color: #fff; font-family: 'Inter', sans-serif; font-weight: 700;
+    padding: 12px 24px; border-radius: 10px; border: none; cursor: pointer; font-size: 15px; transition: .2s;
+  }
+  .btn-upload:hover { background: #236e68; }
+
+  /* Image Preview */
+  #preview-container { display: none; margin-top: 20px; }
+  #preview-image { max-width: 100%; max-height: 300px; border-radius: 8px; border: 1px solid var(--grid-line); box-shadow: var(--shadow); }
+
+  /* Loading State */
+  #loading-state { display: none; margin-top: 30px; text-align: center; }
+  .spinner {
+    width: 40px; height: 40px; border: 4px solid var(--indigo-soft); border-top-color: var(--coral);
+    border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px;
+  }
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+  #loading-state p { font-weight: 600; color: var(--indigo-deep); animation: pulse 1.5s infinite; }
+  #loading-subtext { font-size: 12px; color: var(--ink-soft); margin-top: 5px; animation: none; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+  /* Result Area */
+  #result-card {
+    display: none; background: var(--code-bg); border-radius: var(--radius);
+    padding: 20px; box-shadow: var(--shadow); position: relative; margin-top: 20px;
+  }
+  #result-card h3 { color: #fff; margin: 0 0 15px; font-size: 18px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+  pre.code {
+    color: var(--code-ink); font-family: 'JetBrains Mono', monospace; font-size: 14px;
+    line-height: 1.8; margin: 0; white-space: pre-wrap; overflow-x: auto;
+  }
+  .btn-copy {
+    position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); color: #fff;
+    border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-family: 'Inter', sans-serif;
+    cursor: pointer; transition: .2s; font-weight: 600;
+  }
+  .btn-copy:hover { background: rgba(255,255,255,0.2); }
+  
+  .error-msg { color: var(--coral); background: var(--coral-soft); padding: 15px; border-radius: 8px; font-weight: 600; display: none; margin-top:20px; text-align:center;}
+
+  /* ---------- MODAL STYLES ---------- */
+  .modal-bg { position:fixed; inset:0; z-index:100; padding:18px; display:none; place-items:center; background:rgba(4,18,43,.67); backdrop-filter:blur(8px); }
+  .modal-bg.show { display:grid; animation:fade .22s ease; }
+  @keyframes fade{from{opacity:0}}
+  .modal { position:relative; width:min(750px,100%); max-height:calc(100vh - 36px); padding:clamp(26px,4vw,44px); overflow:auto; border:5px solid #fff; border-radius:26px; background:linear-gradient(180deg,#f8fcff,#fff); box-shadow:0 28px 80px rgba(0,0,0,.28); animation:modalIn .38s cubic-bezier(.2,.9,.25,1.15); }
+  @keyframes modalIn{from{opacity:0;transform:translateY(30px) scale(.92)}}
+  .close { position:absolute; right:15px; top:15px; width:38px; height:38px; display:grid; place-items:center; color:var(--indigo-deep); border:1px solid var(--indigo-soft); border-radius:50%; background:#fff; font-size:1.4rem; cursor:pointer; transition:.2s; }
+  .close:hover { background:var(--indigo-soft); }
+  .modal h2 { margin:8px 0 18px; color:var(--indigo-deep); font-size:clamp(1.5rem,3vw,2rem); }
+  .rules { margin-top:20px; display:grid; grid-template-columns:1fr; gap:12px; }
+  @media(min-width:600px){ .rules{grid-template-columns:repeat(2,1fr);} }
+  .rules article { position:relative; padding:15px 15px 15px 52px; border:1px solid var(--indigo-soft); border-radius:14px; background:#fff; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
+  .rules article > span { position:absolute; left:12px; top:15px; width:28px; height:28px; display:grid; place-items:center; color:#fff; border-radius:50%; background:var(--teal); font-size:.8rem; font-weight:950; }
+  .rules h3 { margin:0; color:var(--indigo-deep); font-size:1rem; }
+  .rules p { margin:5px 0 0; color:var(--ink-soft); font-size:.85rem; line-height:1.5; }
+  .rules p a { color: var(--teal); font-weight:700; text-decoration:none; border-bottom:1px solid transparent; transition:.2s; }
+  .rules p a:hover { border-bottom-color:var(--teal); }
+  .benefit { margin-top:20px; padding:16px; display:flex; align-items:flex-start; gap:15px; border-radius:16px; color:#175c5f; border:1px solid #9ed3d4; background:#eefafa; }
+  .benefit > span { font-size:2rem; line-height:1;}
+  .benefit p { margin:0; line-height:1.55; font-size:.9rem; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="eyebrow">✨ AI Vision</div>
+  <h1 class="title">Διάγραμμα Ροής σε <span>ΓΛΩΣΣΑ</span></h1>
+  <p class="subtitle">Ανέβασε την εικόνα ενός διαγράμματος ροής και άσε την Τεχνητή Νοημοσύνη να γράψει αυτόματα τον αντίστοιχο κώδικα για σένα.</p>
+</header>
+
+<main>
+  <!-- Ρυθμίσεις API -->
+  <div class="api-card">
+    <p>Σύνδεση με το AI της Google</p>
+    <div class="api-input-wrap">
+      <input type="password" id="apiKey" class="api-input" placeholder="Επικόλλησε εδώ το Gemini API Key σου...">
+      <button class="btn-help" id="btn-help-api">Πώς βρίσκω κλειδί;</button>
+    </div>
+    <div class="api-hint">Το κλειδί αποθηκεύεται με ασφάλεια τοπικά στον υπολογιστή σας και δεν απαιτείται να το ξαναβάλετε.</div>
+  </div>
+
+  <!-- Περιοχή Ανεβάσματος Αρχείου -->
+  <div class="upload-card" id="drop-zone">
+    <div class="upload-icon">📄</div>
+    <p class="upload-text">Σύρε και άσε την εικόνα εδώ</p>
+    <p class="upload-sub">Υποστηρίζονται αρχεία PNG, JPG, WEBP</p>
+    <input type="file" id="file-input" class="file-input" accept="image/png, image/jpeg, image/webp">
+    <button class="btn-upload" onclick="document.getElementById('file-input').click()">Επιλογή Αρχείου</button>
+    
+    <div id="preview-container">
+      <img id="preview-image" src="" alt="Προεπισκόπηση">
+    </div>
+  </div>
+
+  <!-- Περιοχή Φόρτωσης -->
+  <div id="loading-state">
+    <div class="spinner"></div>
+    <p id="loading-text">Γίνεται ανάλυση του διαγράμματος...</p>
+    <div id="loading-subtext"></div>
+  </div>
+
+  <!-- Μήνυμα Λάθους -->
+  <div id="error-msg" class="error-msg"></div>
+
+  <!-- Περιοχή Αποτελέσματος -->
+  <div id="result-card">
+    <h3>Αποκωδικοποιημένος Αλγόριθμος</h3>
+    <button class="btn-copy" id="btn-copy">Αντιγραφή</button>
+    <pre class="code" id="code-output"></pre>
+  </div>
+</main>
+
+<!-- API Instructions Modal -->
+<div class="modal-bg" id="apiModalBg">
+  <div class="modal">
+    <button class="close" id="closeApiModal">&times;</button>
+    <h2>🔑 Πώς να αποκτήσετε δωρεάν API Key</h2>
+    <p style="color:var(--ink-soft); margin-top:0; font-size:0.95rem;">Η εφαρμογή αυτή λειτουργεί κατευθείαν από τον περιηγητή σας (BYOK). Αυτό σημαίνει ότι τα δεδομένα σας είναι 100% ιδιωτικά και η χρήση εντελώς δωρεάν.</p>
+    
+    <div class="rules">
+      <article>
+        <span>1</span>
+        <h3>Google AI Studio</h3>
+        <p>Επισκεφθείτε την επίσημη σελίδα της Google στο <a href="https://aistudio.google.com/app/apikey" target="_blank">AI Studio</a> και συνδεθείτε με το Google (Gmail) account σας.</p>
+      </article>
+      <article>
+        <span>2</span>
+        <h3>Δημιουργία Κλειδιού</h3>
+        <p>Πατήστε το μπλε κουμπί <b>"Create API key"</b>. Θα σας ζητηθεί να δημιουργήσετε ή να επιλέξετε ένα νέο Cloud project.</p>
+      </article>
+      <article>
+        <span>3</span>
+        <h3>Αντιγραφή (Copy)</h3>
+        <p>Μόλις δημιουργηθεί το κλειδί (ένας μακρύς κωδικός με γράμματα και αριθμούς), πατήστε το κουμπί της αντιγραφής δίπλα του.</p>
+      </article>
+      <article>
+        <span>4</span>
+        <h3>Επικόλληση (Paste)</h3>
+        <p>Επιστρέψτε σε αυτήν την εφαρμογή, κάντε επικόλληση το κλειδί στο πεδίο και είστε έτοιμοι! Ο browser θα το θυμάται για πάντα.</p>
+      </article>
+    </div>
+
+    <div class="benefit">
+      <span>💡</span>
+      <p><b>Κοστίζει κάτι;</b> Απολύτως τίποτα! Η Google προσφέρει δωρεάν το Gemini API για εκπαιδευτική και προσωπική χρήση (με γενναιόδωρο όριο 15 αναλύσεων ανά λεπτό).</p>
+    </div>
+    
+    <div style="text-align:center; margin-top:25px;">
+      <button class="btn-upload" id="btnModalUnderstood">Το κατάλαβα</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // DOM Elements
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+  const previewContainer = document.getElementById('preview-container');
+  const previewImage = document.getElementById('preview-image');
+  const loadingState = document.getElementById('loading-state');
+  const loadingText = document.getElementById('loading-text');
+  const loadingSubtext = document.getElementById('loading-subtext');
+  const resultCard = document.getElementById('result-card');
+  const codeOutput = document.getElementById('code-output');
+  const errorMsg = document.getElementById('error-msg');
+  const apiKeyInput = document.getElementById('apiKey');
+  const btnCopy = document.getElementById('btn-copy');
+  
+  // Modal Elements
+  const btnHelpApi = document.getElementById('btn-help-api');
+  const apiModalBg = document.getElementById('apiModalBg');
+  const closeApiModal = document.getElementById('closeApiModal');
+  const btnModalUnderstood = document.getElementById('btnModalUnderstood');
+
+  let currentBase64 = null;
+  let currentMimeType = null;
+
+  // --- Modal Logic ---
+  const openModal = () => apiModalBg.classList.add('show');
+  const closeModal = () => apiModalBg.classList.remove('show');
+  
+  btnHelpApi.addEventListener('click', openModal);
+  closeApiModal.addEventListener('click', closeModal);
+  btnModalUnderstood.addEventListener('click', closeModal);
+  apiModalBg.addEventListener('mousedown', (e) => {
+    if (e.target === apiModalBg) closeModal();
+  });
+
+  // --- Initialize Key from Storage ---
+  window.addEventListener('DOMContentLoaded', () => {
+    const savedKey = localStorage.getItem('gemini_api_key');
+    if (savedKey) {
+      apiKeyInput.value = savedKey;
+    }
+  });
+
+  // --- Drag & Drop ---
+  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault(); dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+  });
+
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files && e.target.files.length > 0) handleFile(e.target.files[0]);
+  });
+
+  function handleFile(file) {
+    resultCard.style.display = 'none';
+    errorMsg.style.display = 'none';
+    
+    if (!file.type.startsWith('image/')) {
+      showError("Παρακαλώ επέλεξε ένα αρχείο εικόνας (PNG, JPG, WEBP).");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      const base64String = event.target.result;
+      currentBase64 = base64String.split(',')[1];
+      currentMimeType = file.type;
+      
+      previewImage.src = base64String;
+      previewContainer.style.display = 'block';
+
+      processWithAI();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // --- AI Processing ---
+  async function processWithAI() {
+    const apiKey = apiKeyInput.value.trim();
+    if (!apiKey) {
+      showError("Πρέπει πρώτα να εισάγεις το Gemini API Key σου στις ρυθμίσεις.");
+      return;
+    }
+
+    // Save key
+    localStorage.setItem('gemini_api_key', apiKey);
+
+    loadingState.style.display = 'block';
+    loadingText.textContent = "Αναζήτηση διαθέσιμων μοντέλων...";
+    loadingSubtext.textContent = "";
+    errorMsg.style.display = 'none';
+
+    try {
+      const modelsResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+      const modelsData = await modelsResponse.json();
+
+      if (!modelsResponse.ok) {
+        throw new Error(modelsData.error?.message || "Αποτυχία επαλήθευσης του API Key.");
+      }
+
+      let availableModels = modelsData.models
+        .filter(m => m.supportedGenerationMethods?.includes("generateContent"))
+        .map(m => m.name)
+        .filter(name => name.includes("gemini"));
+
+      if (availableModels.length === 0) {
+         throw new Error("Δεν βρέθηκε κανένα συμβατό μοντέλο AI στον λογαριασμό σου.");
+      }
+
+      availableModels.sort((a, b) => {
+        if (a.includes("1.5-flash") && !b.includes("1.5-flash")) return -1;
+        if (!a.includes("1.5-flash") && b.includes("1.5-flash")) return 1;
+        if (a.includes("1.5-pro") && !b.includes("1.5-pro")) return -1;
+        if (!a.includes("1.5-pro") && b.includes("1.5-pro")) return 1;
+        return 0;
+      });
+
+      const prompt = `Είσαι ένας έμπειρος καθηγητής Πληροφορικής (ΑΕΠΠ) στο ελληνικό λύκειο. 
+      Σου δίνω μια εικόνα που περιέχει ένα διάγραμμα ροής. 
+      Ο στόχος σου είναι να διαβάσεις τα σχήματα (ελλείψεις, παραλληλόγραμμα, ορθογώνια, ρόμβους) 
+      και να ακολουθήσεις τα βέλη για να μετατρέψεις ΑΚΡΙΒΩΣ αυτό το διάγραμμα 
+      σε ένα πλήρες ΠΡΟΓΡΑΜΜΑ στη "ΓΛΩΣΣΑ" (ψευδογλώσσα του σχολικού βιβλίου).
+      
+      Κανόνες:
+      1. Χρησιμοποίησε τη σωστή δομή (ΠΡΟΓΡΑΜΜΑ..., ΜΕΤΑΒΛΗΤΕΣ..., ΑΡΧΗ..., ΤΕΛΟΣ_ΠΡΟΓΡΑΜΜΑΤΟΣ).
+      2. Απόδωσε σωστά τις Δομές Επιλογής (ΑΝ...ΤΟΤΕ...ΑΛΛΙΩΣ) και τις Δομές Επανάληψης.
+      3. Επίστρεψε ΑΠΟΚΛΕΙΣΤΙΚΑ ΚΑΙ ΜΟΝΟ τον κώδικα. Χωρίς markdown blocks (\`\`\`), χωρίς εισαγωγές, χωρίς επεξηγήσεις.`;
+
+      let generatedCode = null;
+      let lastErrorMessage = "";
+
+      loadingText.textContent = "Γίνεται ανάλυση του διαγράμματος...";
+      
+      for (const modelName of availableModels) {
+        loadingSubtext.textContent = `Δοκιμή σε παρασκήνιο με: ${modelName.replace('models/', '')}`;
+        
+        try {
+          const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                parts: [
+                  { text: prompt },
+                  { inlineData: { mimeType: currentMimeType, data: currentBase64 } }
+                ]
+              }]
+            })
+          });
+
+          const aiData = await aiResponse.json();
+
+          if (aiResponse.ok) {
+            generatedCode = aiData.candidates[0].content.parts[0].text;
+            break; 
+          } else {
+            lastErrorMessage = aiData.error?.message || "Άγνωστο σφάλμα";
+            console.warn(`Το ${modelName} απέτυχε: ${lastErrorMessage}`);
+          }
+        } catch (e) {
+          lastErrorMessage = e.message;
+          console.warn(`Σφάλμα σύνδεσης με ${modelName}: ${e.message}`);
+        }
+      }
+
+      if (!generatedCode) {
+        throw new Error(`Όλα τα διαθέσιμα μοντέλα απέτυχαν. Τελευταίο σφάλμα: ${lastErrorMessage}`);
+      }
+      
+      generatedCode = generatedCode.replace(/```(?:[a-zA-Z]*)\n/g, '').replace(/```/g, '').trim();
+      displayResult(generatedCode);
+
+    } catch (err) {
+      showError("Σφάλμα: " + err.message);
+    } finally {
+      loadingState.style.display = 'none';
+      loadingSubtext.textContent = "";
+    }
+  }
+
+  function displayResult(code) {
+    codeOutput.textContent = code;
+    resultCard.style.display = 'block';
+    resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    errorMsg.style.display = 'block';
+    loadingState.style.display = 'none';
+  }
+
+  // --- Copy Button ---
+  btnCopy.addEventListener('click', () => {
+    navigator.clipboard.writeText(codeOutput.textContent).then(() => {
+      const originalText = btnCopy.textContent;
+      btnCopy.textContent = "Αντιγράφηκε!";
+      btnCopy.style.background = "var(--teal)";
+      setTimeout(() => {
+        btnCopy.textContent = originalText;
+        btnCopy.style.background = "rgba(255,255,255,0.1)";
+      }, 2000);
+    });
+  });
+</script>
+</body>
+</html>
