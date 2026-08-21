@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Οπτικοποίηση Μεταβλητών (Perfect Fit No-Scroll)</title>
+<style>
+:root{
+  --navy:#0c315f; --blue:#1a79ea; --cyan:#20d8ef; --violet:#7458e8;
+  --green:#29aa60; --orange:#ef7d18; --red:#e84c5a; --gold:#f2b830;
+  --ink:#17283d; --muted:#60758b; --line:#c7ddea;
+  --shadow:0 15px 45px rgba(18,67,112,.12);
+}
+*{box-sizing:border-box}
+
+/* ============ ΑΠΟΛΥΤΟ ΚΛΕΙΔΩΜΑ ΟΘΟΝΗΣ (NO SCROLL) ============ */
+html,body{
+  margin:0; padding:0; width:100vw; height:100vh; 
+  overflow:hidden; /* Κανένα scrollbar */
+  background:#f0f4f8;
+}
+
+body{
+  font-family:"Segoe UI",Tahoma,Arial,sans-serif;
+  color:var(--ink);
+  background:
+    radial-gradient(circle at 12% 8%,rgba(32,216,239,.15),transparent 29%),
+    radial-gradient(circle at 88% 9%,rgba(116,88,232,.1),transparent 30%),
+    linear-gradient(180deg,#e9fbff,#f4f7fb 54%,#e8edf2);
+}
+button,input{font:inherit}
+button{cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}
+
+/* Ambient Sky */
+.sky{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.fly{
+  position:absolute;left:-24vw;white-space:nowrap;
+  font:900 24px Consolas,"Courier New",monospace;
+  color:rgba(20,70,112,.08);
+  animation:fly linear infinite;
+}
+@keyframes fly{
+  0%{transform:translate3d(-12vw,9vh,0) rotate(-6deg);opacity:0}
+  10%,90%{opacity:1}
+  100%{transform:translate3d(144vw,-14vh,0) rotate(6deg);opacity:0}
+}
+
+/* ============ 1920x1080 FULL HD BASE ============ */
+#app{
+  position:absolute; left:50%; top:50%;
+  width:1920px; height:1080px; 
+  display:flex; flex-direction:column; z-index:2;
+  padding:25px;
+}
+
+header{
+  flex:0 0 auto; display:flex; justify-content:space-between; align-items:center;
+  padding:15px 25px; border-radius:16px; background:rgba(255,255,255,.9);
+  border:2px solid #b7dbea; box-shadow:var(--shadow); margin-bottom:20px;
+}
+header h1{margin:0;color:var(--navy);font-size:2rem; letter-spacing:0.5px;}
+header p{margin:0;color:#4f6d88;font-weight:700;font-size:1.2rem;}
+
+.header-actions{display:flex;gap:15px}
+.small-btn{
+  padding:10px 16px;border-radius:10px;border:2px solid #b7d8e9;
+  background:#edf8ff;color:#174d80;font-weight:800; transition:.2s; font-size:1.1rem;
+}
+.small-btn:hover{background:#dcedfa; transform:translateY(-3px)}
+
+/* 3-Column Fluid Workspace */
+.workspace{
+  flex:1; min-height:0; 
+  display:grid; grid-template-columns:440px minmax(700px, 1fr) 420px; gap:25px;
+}
+.panel{
+  display:flex; flex-direction:column;
+  border-radius:20px; background:rgba(255,255,255,.9);
+  border:2px solid var(--line); box-shadow:var(--shadow);
+}
+
+/* ============ LEFT PANEL: COMPACTED FOR NO SCROLL ============ */
+.controls-panel{
+  padding:20px; 
+  overflow:hidden; /* Αφαιρέθηκε το scroll */
+  justify-content: space-between; /* Κατανέμει τον χώρο τέλεια */
+}
+
+.field{margin-bottom:12px;}
+.field label{display:block; margin-bottom:6px; color:#315b85; font-weight:800; font-size:1.2rem}
+.field input{
+  width:100%; padding:12px 15px; border-radius:10px; border:3px solid #bdd7e8; background:white;
+  color:#244e72; font:900 1.4rem Consolas; outline:none; transition:.2s;
+}
+.field input:focus{border-color:var(--blue); box-shadow:0 0 0 5px rgba(25,119,232,.15)}
+
+.type-buttons{display:grid; grid-template-columns:repeat(2,1fr); gap:10px;}
+.type-btn{
+  min-height:65px; padding:10px; border-radius:10px; border:3px solid #c4d9e7; background:white;
+  color:#315b85; font-weight:800; transition:.2s; font-size:1.1rem;
+}
+.type-btn small{display:block; margin-top:3px; color:#75889a; font-size:.9rem; font-weight:600;}
+.type-btn:hover, .type-btn.active{
+  transform:translateY(-2px); color:white; border-color:transparent;
+  background:linear-gradient(135deg,var(--blue),var(--violet));
+  box-shadow:0 8px 20px rgba(49,84,194,.25);
+}
+.type-btn.active small{color:#e9f7ff}
+
+.actions{display:grid; grid-template-columns:1fr; gap:10px; margin-top:15px;}
+.action-btn{
+  border:0; border-radius:10px; padding:14px; color:white; font-weight:800; font-size:1.2rem; transition:.2s;
+}
+.action-btn:hover:not(:disabled){transform:translateY(-2px); box-shadow:0 6px 15px rgba(0,0,0,0.2);}
+.declare-btn{background:linear-gradient(135deg,var(--blue),var(--violet))}
+.assign-btn{background:linear-gradient(135deg,var(--green),#0c9d80)}
+.read-btn{background:linear-gradient(135deg,var(--orange),#e84c5a)}
+
+.feedback{
+  display:none; margin-top:12px; padding:14px; border-radius:10px; border-left:6px solid;
+  font-size:1.1rem; line-height:1.3; font-weight:700;
+}
+.feedback.show{display:block; animation:fadeIn .3s;}
+.feedback.ok{background:#ecfff3; border-color:var(--green); color:#14773d}
+.feedback.info{background:#eefaff; border-color:var(--cyan); color:#245a73}
+.feedback.bad{background:#fff0f1; border-color:var(--red); color:#9d2631}
+
+.code{
+  margin-top:10px; padding:15px; border-radius:10px; background:#102d51; color:#edf9ff;
+  font:900 1.1rem/1.4 Consolas; white-space:pre-wrap;
+}
+
+@keyframes fadeIn{from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:translateY(0)}}
+
+/* ============ CABINET STAGE (CENTER PANEL) ============ */
+.cabinet-panel{
+  position:relative; overflow:hidden;
+  background:
+    radial-gradient(circle at 50% 34%,rgba(32,216,239,.1),transparent 40%),
+    linear-gradient(180deg,#fafcff,#e4ebf3);
+}
+
+.cabinet-stage{
+  position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  perspective: 2000px; perspective-origin: 50% 30%;
+}
+
+.computer{
+  position:absolute; left:30px; top:30px; width:220px; height:140px; border-radius:18px;
+  display:grid; place-items:center; text-align:center; color:white; font-weight:900; font-size:1.6rem;
+  background:linear-gradient(145deg,#0a3b72,#1977e8); border:5px solid rgba(255,255,255,.8);
+  box-shadow:0 15px 35px rgba(20,66,120,.2); z-index:5;
+}
+.computer small{font-weight:600; opacity:.8; font-size:1.1rem;}
+
+.flow-line{
+  position:absolute; left:250px; right:40px; top:100px; height:6px;
+  background:linear-gradient(90deg,var(--cyan),var(--blue),var(--violet));
+  box-shadow:0 0 18px var(--cyan); z-index:4;
+}
+
+/* Cabinet Container */
+.cabinet{
+  position:relative; width:900px; height:550px; border-radius:24px; padding:45px;
+  background:linear-gradient(90deg,#73401f 0 2%,#b87b45 2% 98%,#673818 98% 100%);
+  border:12px solid #5a2f15; box-shadow:inset 0 0 0 6px rgba(255,255,255,.1), 0 40px 80px rgba(54,38,27,.4);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+}
+
+.active-type-label{
+  position:absolute; top:-35px; background:#f0cfa9; padding:10px 30px; border-radius:30px;
+  border:5px solid #fff; color:#68411e; font-weight:900; font-size:1.6rem; box-shadow:0 8px 20px rgba(0,0,0,.2);
+}
+
+/* ============ TRUE 3D DRAWER BOX ============ */
+.drawer-wrapper {
+  position:relative; height:180px;
+  transition: width 0.6s cubic-bezier(0.2, 0.9, 0.3, 1);
+  transform-style: preserve-3d; z-index: 10;
+}
+.drawer-wrapper.open { z-index: 100; }
+
+.drawer-hole{
+  position:absolute; inset:-3px; border-radius:8px; background: #1f1008;
+  border: 3px solid #4a2a16; box-shadow:inset 0 30px 60px rgba(0, 0, 0, 0.9);
+  transform: translateZ(-302px); 
+}
+
+.drawer-body{
+  position:absolute; inset:0; transform-style:preserve-3d;
+  transition:transform 2.0s cubic-bezier(0.25, 1, 0.35, 1);
+  transform-origin: center center -150px; 
+}
+
+.drawer-wrapper.open .drawer-body{
+  transform: translateZ(400px) translateY(-20px) rotateX(-30deg) rotateY(-8deg);
+}
+
+.drawer-wrapper.active .drawer-front{
+  box-shadow:0 0 0 6px rgba(32,216,239,.6), 0 20px 40px rgba(43,71,113,.5); border-color:#a1e8ff;
+}
+
+.drawer-back{
+  position:absolute; inset:0; background: #4a2c16; transform:translateZ(-300px); 
+  border:3px solid #2a1608; box-shadow:inset 0 30px 60px rgba(0,0,0,.8);
+}
+.drawer-bottom{
+  position:absolute; left:0; right:0; bottom:0; height:300px; background: #a3754b; 
+  transform-origin:bottom center; transform:rotateX(90deg); border:3px solid #5a361b;
+  box-shadow:inset 0 0 80px rgba(0,0,0,0.6);
+}
+.drawer-left{
+  position:absolute; left:0; top:0; bottom:0; width:300px; background: #875a36; 
+  transform-origin:left center; transform:rotateY(90deg); border:3px solid #4a2c16;
+  box-shadow:inset -20px 0 40px rgba(0,0,0,0.5);
+}
+.drawer-right{
+  position:absolute; right:0; top:0; bottom:0; width:300px; background: #6e4424; 
+  transform-origin:right center; transform:rotateY(-90deg); border:3px solid #4a2c16;
+  box-shadow:inset 20px 0 40px rgba(0,0,0,0.5);
+}
+.drawer-front{
+  position:absolute; inset:0; background: rgba(255,255,255,0.05); 
+  border: 15px solid #5c3a21; transform:translateZ(0px); border-radius:8px;
+  box-shadow: inset 0 0 15px rgba(0,0,0,0.3);
+}
+
+/* HANGING CLOTHING TAG */
+.name-tag{
+  position:absolute; top: 100%; left: 50%;
+  transform-origin: top center;
+  transform: translateX(-50%) rotate(-3deg) translateZ(15px); 
+  margin-top: 25px; 
+  
+  min-width:180px; max-width:340px; padding:15px 25px; border-radius:8px;
+  background:#f4ebd0; border: 2px solid #d4a373;
+  color:#523f18; font:1000 24px Consolas; text-align:center;
+  box-shadow:3px 8px 20px rgba(0,0,0,0.4);
+  
+  opacity:0; transition:opacity .3s;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.drawer-wrapper.declared .name-tag{opacity:1}
+
+.name-tag::before {
+  content: ''; position: absolute; top: 10px; left: 15px; width: 14px; height: 14px; border-radius: 50%;
+  background: #3b2210; box-shadow: inset 0 3px 6px rgba(0,0,0,.8);
+}
+.name-tag::after {
+  content: ''; position: absolute; top: -25px; left: 20px; width: 4px; height: 40px;
+  background: #c68e58; transform: rotate(15deg); box-shadow: -2px 2px 5px rgba(0,0,0,0.3);
+}
+
+.drawer-handle{
+  position:absolute; bottom:10px; left:50%;
+  transform:translateX(-50%) translateZ(15px);
+  width:90px; height:30px; border-radius:999px; background:linear-gradient(#f3d7a4,#9b672f);
+  border:3px solid #4a2c16; box-shadow:0 8px 15px rgba(0,0,0,.6);
+}
+
+/* DATA INSIDE */
+.drawer-inside{
+  position:absolute; left:30px; right:30px; top:30px; bottom:30px;
+  display:flex; align-items:center; justify-content:center;
+  transform:translateZ(-150px); transform-style:preserve-3d;
+}
+
+/* BIG DATA CARD */
+.compartment{
+  padding:20px 40px; border-radius:12px; max-width:100%;
+  display:grid; place-items:center; text-align:center; background:rgba(255,255,255,.98); 
+  border:4px solid #a3754b; color:#402610; font:1000 38px Consolas; line-height:1.0;
+  box-shadow:0 15px 30px rgba(0,0,0,.5); transform-origin: center center;
+  transition: transform 2.0s cubic-bezier(0.25, 1, 0.35, 1);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+
+.drawer-wrapper.open .compartment {
+  transform: rotateX(30deg) rotateY(8deg) translateZ(15px);
+  box-shadow: -8px 25px 40px rgba(0,0,0,.6);
+}
+
+.throw-out{ animation:throwOut 0.7s forwards cubic-bezier(.5,-0.5,.5,1.5); }
+@keyframes throwOut{
+  to{transform: translateY(-400px) translateZ(300px) scale(0) rotate(80deg); opacity:0;}
+}
+
+.shake-error .drawer-body{ animation:shakeError .4s; }
+@keyframes shakeError{
+  0%,100%{transform:translateZ(0) translateX(0);}
+  20%,60%{transform:translateZ(0) translateX(-15px);}
+  40%,80%{transform:translateZ(0) translateX(15px);}
+}
+
+/* Packets & Status */
+.status-bar{
+  position:absolute;left:30px;right:30px;bottom:30px;padding:18px 25px;border-radius:16px;
+  background:rgba(255,255,255,.95);border-left:8px solid var(--cyan); box-shadow:var(--shadow);
+  color:#31566f;text-align:center;font-size:1.4rem;font-weight:800;
+}
+.value-packet, .monitor-copy{
+  position:absolute;z-index:105;
+  min-width:120px;max-width:340px;min-height:60px;padding:15px 25px;
+  border-radius:15px;display:grid;place-items:center;text-align:center;color:white;
+  font:1000 20px Consolas;pointer-events:none;opacity:0;
+}
+.value-packet{background:linear-gradient(135deg,var(--orange),#eb4f9c); box-shadow:0 0 25px rgba(237,125,24,.4);}
+.monitor-copy{background:linear-gradient(135deg,#26b87f,#109ed0); box-shadow:0 0 25px rgba(33,159,208,.4);}
+
+/* ============ RIGHT: MONITOR PANEL (COMPACTED) ============ */
+.monitor-panel{padding:20px; background:#f8fafc; justify-content: space-between;}
+.monitor{
+  padding:20px; border-radius:20px; background:#122f51; border:8px solid #254c73;
+  box-shadow:inset 0 0 30px rgba(32,216,239,.1), 0 20px 40px rgba(21,56,88,.2);
+}
+.monitor-title{color:#6ff4ff;font-weight:900;font-size:1rem;letter-spacing:1px; margin-bottom:12px;}
+.monitor-output{
+  height:180px; padding:20px; border-radius:10px; display:grid; place-items:center; text-align:center;
+  background:#071d35; border:3px solid #2d638e; color:#ecfbff; font:1000 1.8rem/1.5 Consolas;
+  overflow:hidden; word-break:break-word;
+}
+.monitor-stand{width:120px;height:35px;margin:0 auto;background:#254c73;clip-path:polygon(30% 0,70% 0,85% 100%,15% 100%)}
+.monitor-base{width:200px;height:20px;margin:0 auto 15px;border-radius:999px;background:#254c73}
+
+.lesson{
+  padding:20px; border-radius:14px; background:white; border:2px solid #d7d9ad;
+}
+.lesson h3{margin:0 0 15px; color:#123f75; font-size:1.4rem; text-align:center;}
+.lesson-step{
+  display:grid; grid-template-columns:40px 1fr; gap:12px; align-items:center; margin-bottom:12px; padding:12px;
+  border-radius:10px; background:#f4f7fb; color:#345873; font-size:1.1rem; line-height:1.3; font-weight:700;
+}
+.lesson-num{
+  width:40px; height:40px; border-radius:8px; display:grid; place-items:center; color:white; font-weight:900;
+  background:linear-gradient(135deg,var(--blue),var(--violet)); font-size:1.3rem;
+}
+</style>
+</head>
+<body>
+<div class="sky" id="sky"></div>
+
+<div id="app">
+<header>
+  <div>
+    <h1>ΟΠΤΙΚΟΠΟΙΗΣΗ ΜΝΗΜΗΣ RAM</h1>
+    <p>Διαχείριση Μεταβλητών &amp; Τύπων Δεδομένων</p>
+  </div>
+  <div class="header-actions">
+    <button class="small-btn" id="soundBtn" onclick="toggleSound()">🔊 Ήχος: ΕΝΕΡΓΟΣ</button>
+    <button class="small-btn" onclick="resetAll()">↻ Αρχικοποίηση</button>
+  </div>
+</header>
+
+<div class="workspace">
+  <!-- LEFT PANEL -->
+  <section class="panel controls-panel">
+    
+    <div class="field">
+      <label for="varName">Όνομα Μεταβλητής</label>
+      <input id="varName" value="μήνυμα" maxlength="15" oninput="invalidate()">
+    </div>
+
+    <div class="field">
+      <label>Τύπος Δεδομένων (Μέγεθος στη Μνήμη)</label>
+      <div class="type-buttons">
+        <button class="type-btn" data-type="ΛΟΓΙΚΟΣ" onclick="selectType(this)">ΛΟΓΙΚΟΣ</button>
+        <button class="type-btn" data-type="ΑΚΕΡΑΙΟΣ" onclick="selectType(this)">ΑΚΕΡΑΙΟΣ</button>
+        <button class="type-btn" data-type="ΠΡΑΓΜΑΤΙΚΟΣ" onclick="selectType(this)">ΠΡΑΓΜΑΤΙΚΟΣ</button>
+        <button class="type-btn active" data-type="ΧΑΡΑΚΤΗΡΕΣ" onclick="selectType(this)">ΧΑΡΑΚΤΗΡΕΣ</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="varValue">Τιμή προς Αποθήκευση</label>
+      <input id="varValue" value="&quot;ΛΑΡΙΣΑ&quot;" oninput="invalidateValue()">
+    </div>
+
+    <div class="actions">
+      <button class="action-btn declare-btn" onclick="declareDrawer()">1. ΔΗΛΩΣΗ (ΟΝΟΜΑΣΙΑ)</button>
+      <button class="action-btn assign-btn" id="assignBtn" onclick="putValue()" disabled>2. ΑΝΑΘΕΣΗ (ΑΠΟΘΗΚΕΥΣΗ)</button>
+      <button class="action-btn read-btn" id="readBtn" onclick="takeValue()" disabled>3. ΑΝΑΚΤΗΣΗ (ΕΚΤΥΠΩΣΗ)</button>
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+
+    <div class="code" id="declarationCode">ΜΕΤΑΒΛΗΤΕΣ
+   ΧΑΡΑΚΤΗΡΕΣ: μήνυμα</div>
+  </section>
+
+  <!-- CENTER PANEL -->
+  <section class="panel cabinet-panel">
+    <div class="cabinet-stage" id="cabinetStage">
+      <div class="computer">ΠΡΟΓΡΑΜΜΑ<br><small>Εκτέλεση</small></div>
+      <div class="flow-line"></div>
+      <div class="value-packet" id="valuePacket">τιμή</div>
+
+      <div class="cabinet">
+        <div class="active-type-label" id="drawerLabel">ΤΥΠΟΣ: ΧΑΡΑΚΤΗΡΕΣ</div>
+
+        <!-- THE TRUE 3D DRAWER -->
+        <div class="drawer-wrapper characters active" id="mainDrawer" style="width:760px;">
+          <div class="drawer-hole"></div>
+          
+          <div class="drawer-body">
+            <div class="drawer-back"></div>
+            <div class="drawer-bottom"></div>
+            <div class="drawer-left"></div>
+            <div class="drawer-right"></div>
+            
+            <div class="drawer-front">
+              <!-- HANGING TAG BELOW THE DRAWER -->
+              <div class="name-tag">χωρίς ετικέτα</div>
+              <div class="drawer-handle"></div>
+            </div>
+            
+            <div class="drawer-inside"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="status-bar" id="statusBar">Επίλεξε Τύπο και πάτησε Δήλωση για να δεσμεύσεις μνήμη.</div>
+    </div>
+  </section>
+
+  <!-- RIGHT PANEL -->
+  <aside class="panel monitor-panel">
+    <div class="monitor">
+      <div class="monitor-title">ΟΘΟΝΗ (OUTPUT)</div>
+      <div class="monitor-output" id="monitorOutput">...</div>
+    </div>
+    <div class="monitor-stand"></div>
+    <div class="monitor-base"></div>
+
+    <div class="lesson">
+      <h3>Βασικοί Κανόνες</h3>
+      <div class="lesson-step">
+        <div class="lesson-num">1</div>
+        <div><b>Δήλωση:</b> Καθορίζουμε το όνομα και το μέγεθος (Τύπο) στη μνήμη.</div>
+      </div>
+      <div class="lesson-step">
+        <div class="lesson-num">2</div>
+        <div><b>Ανάθεση (<-):</b> Η μνήμη κρατάει <b>μόνο 1 τιμή</b>. Η παλιά τιμή διαγράφεται οριστικά.</div>
+      </div>
+      <div class="lesson-step">
+        <div class="lesson-num">3</div>
+        <div><b>Ανάκτηση:</b> Η μεταβλητή δεν αδειάζει. Παράγεται μόνο ένα <b>αντίγραφο</b>.</div>
+      </div>
+    </div>
+  </aside>
+</div>
+</div>
+
+<script>
+// Scaled Up Widths for 1080p
+const TYPE_INFO = {
+  "ΛΟΓΙΚΟΣ": { section:"ΛΟΓΙΚΕΣ", sample:"ΑΛΗΘΗΣ", width:"240px" },
+  "ΑΚΕΡΑΙΟΣ": { section:"ΑΚΕΡΑΙΕΣ", sample:"15", width:"360px" },
+  "ΠΡΑΓΜΑΤΙΚΟΣ": { section:"ΠΡΑΓΜΑΤΙΚΕΣ", sample:"12.5", width:"540px" },
+  "ΧΑΡΑΚΤΗΡΕΣ": { section:"ΧΑΡΑΚΤΗΡΕΣ", sample:"\"ΛΑΡΙΣΑ\"", width:"760px" }
+};
+
+let selectedType = "ΧΑΡΑΚΤΗΡΕΣ";
+let declared = false;
+let hasValue = false;
+let storedValue = "";
+let soundEnabled = true;
+let audioCtx = null;
+let busy = false;
+
+// THE FIX FOR NO SCROLL: Exact Centering with Scale
+function fitApp(){
+  const app = document.getElementById("app");
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  
+  // 0.96 scale creates a 2% border so nothing touches the edges
+  const scale = Math.min(w / 1920, h / 1080) * 0.96;
+  app.style.transform = `scale(${scale})`;
+  app.style.transformOrigin = "top left";
+  
+  const scaledWidth = 1920 * scale;
+  const scaledHeight = 1080 * scale;
+  
+  // Center exactly in available space
+  app.style.left = `${(w - scaledWidth) / 2}px`;
+  app.style.top = `${(h - scaledHeight) / 2}px`;
+}
+window.addEventListener("resize", fitApp);
+fitApp(); 
+
+function initAudio(){
+  if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==="suspended")audioCtx.resume();
+}
+function tone(f,d=.12,type="sine",v=.05,delay=0){
+  if(!soundEnabled)return;
+  initAudio();
+  const s=audioCtx.currentTime+delay,o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type=type;o.frequency.setValueAtTime(f,s);
+  g.gain.setValueAtTime(.001,s);g.gain.linearRampToValueAtTime(v,s+.015);g.gain.exponentialRampToValueAtTime(.001,s+d);
+  o.connect(g);g.connect(audioCtx.destination);o.start(s);o.stop(s+d+.03);
+}
+function goodSound(){tone(523,.1);tone(659,.13,"sine",.055,.09);tone(784,.18,"triangle",.05,.2);}
+function badSound(){tone(180,.1,"sawtooth",.05);tone(140,.15,"sawtooth",.05,.1);}
+function crunchSound(){tone(150,.15,"square",.06);tone(100,.2,"square",.05,.1);}
+function toggleSound(){
+  soundEnabled=!soundEnabled;
+  document.getElementById("soundBtn").textContent=soundEnabled?"🔊 Ήχος: ΕΝΕΡΓΟΣ":"🔇 Ήχος: ΑΝΕΝΕΡΓΟΣ";
+  if(soundEnabled){initAudio();tone(660,.12)}
+}
+function showFeedback(type,msg){
+  const el=document.getElementById("feedback");
+  el.className="feedback show "+type;
+  el.innerHTML=(type==="ok"?"✅ ":type==="bad"?"⚠️ ":"💡 ")+msg;
+}
+function wait(ms){return new Promise(r=>setTimeout(r,ms))}
+function stripQuotes(value){
+  const s=value.trim();
+  const pairs=[['"','"'],["'","'"],["«","»"]];
+  for(const [a,b] of pairs){if(s.startsWith(a)&&s.endsWith(b)&&s.length>=2)return s.slice(a.length,s.length-b.length)}
+  return s;
+}
+
+function validateName(name) {
+  const regex = /^[α-ωΑ-ΩάέήίόύώϊϋΐΰΆΈΉΊΌΎΏA-Za-z][α-ωΑ-ΩάέήίόύώϊϋΐΰΆΈΉΊΌΎΏA-Za-z0-9_]*$/;
+  return regex.test(name);
+}
+
+function validateValue(){
+  const raw=document.getElementById("varValue").value.trim();
+  if(selectedType==="ΛΟΓΙΚΟΣ"){
+    const v=raw.toUpperCase();
+    if(!["ΑΛΗΘΗΣ","ΨΕΥΔΗΣ"].includes(v))throw new Error("Σφάλμα: Ο λογικός τύπος δέχεται ΜΟΝΟ τις τιμές ΑΛΗΘΗΣ ή ΨΕΥΔΗΣ.");
+    return v;
+  }
+  if(selectedType==="ΑΚΕΡΑΙΟΣ"){
+    const n=Number(raw.replace(",","."));
+    if(isNaN(n) || !Number.isInteger(n) || raw === "")throw new Error("Σφάλμα: Η τιμή πρέπει να είναι ακέραιος αριθμός.");
+    return String(n);
+  }
+  if(selectedType==="ΠΡΑΓΜΑΤΙΚΟΣ"){
+    const n=Number(raw.replace(",","."));
+    if(!Number.isFinite(n) || raw === "")throw new Error("Σφάλμα: Η τιμή πρέπει να είναι αριθμός.");
+    return String(n);
+  }
+  const text=stripQuotes(raw);
+  if(!text.length)throw new Error("Σφάλμα: Το αλφαριθμητικό δεν μπορεί να είναι κενό.");
+  return text;
+}
+
+function updateDeclarationCode(){
+  const name=document.getElementById("varName").value.trim()||"μεταβλητή";
+  document.getElementById("declarationCode").textContent=`ΜΕΤΑΒΛΗΤΕΣ\n   ${TYPE_INFO[selectedType].section}: ${name}`;
+}
+function updateStatus(msg){document.getElementById("statusBar").textContent=msg}
+
+function selectType(btn){
+  if(busy)return;
+  selectedType = btn.dataset.type;
+  
+  document.querySelectorAll(".type-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("varValue").value = TYPE_INFO[selectedType].sample;
+  
+  const drawer = document.getElementById("mainDrawer");
+  drawer.style.width = TYPE_INFO[selectedType].width;
+  drawer.className = `drawer-wrapper active ${selectedType.toLowerCase()}`;
+  document.getElementById("drawerLabel").innerHTML = `ΤΥΠΟΣ: ${selectedType}`;
+  
+  invalidate(); updateDeclarationCode();
+  updateStatus(`Αλλαγή τύπου σε ${selectedType}. Ο χώρος μνήμης (μέγεθος) προσαρμόστηκε.`);
+  tone(523,.1);
+}
+
+function invalidate(){
+  declared=false;hasValue=false;storedValue="";
+  document.getElementById("assignBtn").disabled=true;
+  document.getElementById("readBtn").disabled=true;
+  
+  const drawer = document.getElementById("mainDrawer");
+  drawer.classList.remove("declared","open");
+  drawer.querySelector(".name-tag").textContent="χωρίς ετικέτα";
+  drawer.querySelector(".drawer-inside").innerHTML="";
+  
+  document.getElementById("monitorOutput").textContent="...";
+  document.getElementById("feedback").className="feedback";
+  updateDeclarationCode();
+}
+
+function invalidateValue(){
+  hasValue=false;
+  document.getElementById("readBtn").disabled=true;
+  document.getElementById("mainDrawer").classList.remove("open");
+  document.getElementById("monitorOutput").textContent="...";
+}
+
+function declareDrawer(){
+  if(busy)return;
+  const name=document.getElementById("varName").value.trim();
+  
+  if(!name){showFeedback("info","Εισάγετε όνομα μεταβλητής.");return;}
+  if(!validateName(name)){
+    showFeedback("bad","Σφάλμα Ονοματολογίας: Πρέπει να ξεκινά με γράμμα και να μην έχει κενά (π.χ. Βαθμός_1).");
+    badSound(); return;
+  }
+  
+  declared=true;
+  const drawer = document.getElementById("mainDrawer");
+  drawer.classList.add("declared","active");
+  drawer.querySelector(".name-tag").textContent=name;
+  document.getElementById("assignBtn").disabled=false;
+  
+  updateStatus(`Η μεταβλητή "${name}" δηλώθηκε επιτυχώς στη μνήμη.`);
+  showFeedback("ok","Επιτυχής Δήλωση. Η μνήμη δεσμεύτηκε και ονομάστηκε.");
+  goodSound();
+}
+
+function buildContents(value){
+  const drawer = document.getElementById("mainDrawer");
+  const inside = drawer.querySelector(".drawer-inside");
+  inside.innerHTML="";
+  
+  const valueCard = document.createElement("div");
+  valueCard.className = "compartment";
+  
+  if(selectedType === "ΧΑΡΑΚΤΗΡΕΣ"){
+    valueCard.innerHTML = `<b>"${value}"</b>`;
+  } else {
+    valueCard.innerHTML = `<b>${value}</b>`;
+  }
+  
+  inside.appendChild(valueCard);
+}
+
+function drawerCenter(drawer){
+  const stage = document.getElementById("cabinetStage").getBoundingClientRect();
+  const r = drawer.getBoundingClientRect();
+  return {x: r.left - stage.left + r.width/2, y: r.top - stage.top + r.height/2};
+}
+function monitorCenter(){
+  const stage = document.getElementById("cabinetStage").getBoundingClientRect();
+  const monitor = document.getElementById("monitorOutput").getBoundingClientRect();
+  return {x: monitor.left - stage.left + monitor.width/2, y: monitor.top - stage.top + monitor.height/2};
+}
+function computerPoint(){return {x:140,y:100}}
+
+function animatePacketIn(label, target){
+  return new Promise(resolve=>{
+    const p=document.getElementById("valuePacket");
+    const start=computerPoint(); const end=drawerCenter(target);
+    p.textContent=label; p.style.left=(start.x-60)+"px"; p.style.top=(start.y-30)+"px";
+    p.style.opacity="1"; p.style.background="linear-gradient(135deg, var(--orange), #eb4f9c)";
+    
+    // Πέφτει βαθιά στο συρτάρι που είναι ανοιχτό
+    const dropY = end.y + 50; 
+    const anim=p.animate([
+      {left:(start.x-60)+"px",top:(start.y-30)+"px",opacity:0,transform:"scale(.75)"},
+      {opacity:1,offset:.15},
+      {left:(end.x-60)+"px",top:dropY+"px",opacity:1,transform:"scale(1.2)",offset:.85},
+      {left:(end.x-60)+"px",top:dropY+"px",opacity:0,transform:"scale(.4)"}
+    ],{duration:1200,easing:"cubic-bezier(.2,.8,.2,1)",fill:"forwards"});
+    anim.onfinish=()=>{p.style.opacity="0";resolve();}
+  });
+}
+
+function animatePacketReject(label, target){
+  return new Promise(resolve=>{
+    const p=document.getElementById("valuePacket");
+    const start=computerPoint(); const end=drawerCenter(target); 
+    p.textContent=label; p.style.left=(start.x-60)+"px"; p.style.top=(start.y-30)+"px";
+    p.style.opacity="1"; p.style.background="linear-gradient(135deg, var(--red), #800000)";
+
+    const anim = p.animate([
+      {left:(start.x-60)+"px", top:(start.y-30)+"px", opacity:0, transform:"scale(.75)"},
+      {opacity:1, offset: 0.15},
+      {left:(end.x-60)+"px", top:(end.y-40)+"px", opacity:1, transform:"scale(1.1)", offset: 0.5},
+      {left:(end.x-60)+"px", top:(end.y+250)+"px", opacity:0, transform:"scale(0.6) rotate(45deg)", offset: 1}
+    ], {duration: 1200, easing: "ease-in-out", fill: "forwards"});
+
+    setTimeout(() => {
+        target.querySelector(".drawer-body").classList.add("shake-error");
+        badSound();
+    }, 600);
+    anim.onfinish=()=>{ p.style.opacity="0"; target.querySelector(".drawer-body").classList.remove("shake-error"); resolve(); }
+  });
+}
+
+function animatePacketOut(label, source){
+  return new Promise(resolve=>{
+    const stage=document.getElementById("cabinetStage");
+    const start=drawerCenter(source); const end=monitorCenter();
+    const p=document.createElement("div"); p.className="monitor-copy"; p.textContent=label;
+    p.style.left=(start.x-60)+"px"; p.style.top=(start.y-60)+"px"; stage.appendChild(p);
+    
+    const startY = start.y + 60;
+    const anim=p.animate([
+      {left:(start.x-60)+"px",top:startY+"px",opacity:0,transform:"scale(.5)"},
+      {opacity:1,transform:"scale(1.1)",offset:.15},
+      {left:(end.x-120)+"px",top:(end.y-30)+"px",opacity:1,transform:"scale(1.05)",offset:.85},
+      {left:(end.x-120)+"px",top:(end.y-30)+"px",opacity:0,transform:"scale(.3)"}
+    ],{duration:1200,easing:"cubic-bezier(.2,.8,.2,1)",fill:"forwards"});
+    anim.onfinish=()=>{p.remove();resolve();}
+  });
+}
+
+async function putValue(){
+  if(!declared||busy)return;
+  busy=true;
+  let value, errorMsg;
+  const rawText = document.getElementById("varValue").value;
+  const drawer = document.getElementById("mainDrawer");
+  
+  try{ value=validateValue(); } catch(err){ errorMsg = err.message; }
+
+  if (errorMsg) {
+    updateStatus("Ασυμφωνία Τύπου Δεδομένων...");
+    await animatePacketReject(rawText, drawer);
+    showFeedback("bad", errorMsg);
+    busy = false; return;
+  }
+
+  const inside = drawer.querySelector(".drawer-inside");
+  if(hasValue && inside.children.length > 0) {
+    updateStatus("Διαγραφή προηγούμενης τιμής. Η μνήμη χωράει μόνο 1 στοιχείο.");
+    drawer.classList.add("open"); 
+    await wait(1800); 
+    Array.from(inside.children).forEach(c => c.classList.add("throw-out"));
+    crunchSound();
+    await wait(800); 
+    inside.innerHTML = "";
+  } else {
+    updateStatus("Το συρτάρι μνήμης ανοίγει.");
+    drawer.classList.add("open");
+    await wait(1800); 
+  }
+
+  buildContents(value);
+  await animatePacketIn(selectedType==="ΧΑΡΑΚΤΗΡΕΣ"?`"${value}"`:value, drawer);
+  
+  await wait(3000); 
+  
+  drawer.classList.remove("open");
+  hasValue=true; storedValue=value; document.getElementById("readBtn").disabled=false;
+  
+  updateStatus("Επιτυχής Αποθήκευση.");
+  showFeedback("ok","Η τιμή αποθηκεύτηκε. Αν υπήρχε παλιά τιμή, διαγράφηκε οριστικά.");
+  goodSound(); busy=false;
+}
+
+async function takeValue(){
+  if(!hasValue||busy)return;
+  busy=true;
+  const drawer = document.getElementById("mainDrawer");
+  
+  updateStatus("Ανάκτηση: Δημιουργία αντιγράφου...");
+  drawer.classList.add("open");
+  await wait(1800); 
+  
+  await animatePacketOut(selectedType==="ΧΑΡΑΚΤΗΡΕΣ"?`"${storedValue}"`:storedValue, drawer);
+  document.getElementById("monitorOutput").textContent=selectedType==="ΧΑΡΑΚΤΗΡΕΣ"?`"${storedValue}"`:storedValue;
+  
+  await wait(2500); 
+  
+  drawer.classList.remove("open");
+  updateStatus("Η τιμή ανακτήθηκε επιτυχώς.");
+  showFeedback("info","Το περιεχόμενο ΔΕΝ διαγράφηκε. Παράχθηκε ένα αντίγραφο προς χρήση.");
+  goodSound(); busy=false;
+}
+
+function resetAll(){
+  if(busy)return;
+  const initialBtn = document.querySelector('.type-btn[data-type="ΧΑΡΑΚΤΗΡΕΣ"]');
+  selectType(initialBtn);
+}
+</script>
+</body>
+</html>
