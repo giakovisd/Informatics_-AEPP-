@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALGO CITY: Το Τελωνείο της Λογικής (Randomized Edition)</title>
+<style>
+:root{
+  --bg:#070b19; --panel:#111827; --border:#1e293b;
+  --cyan:#00f0ff; --blue:#3b82f6; --violet:#8b5cf6; 
+  --green:#10b981; --red:#ef4444; --orange:#f59e0b;
+  --text:#f8fafc; --muted:#94a3b8;
+  --glow-cyan: 0 0 20px rgba(0,240,255,0.4);
+  --glow-green: 0 0 25px rgba(16,185,129,0.6);
+  --glow-red: 0 0 25px rgba(239,68,68,0.6);
+}
+*{box-sizing:border-box}
+html,body{
+  margin:0; padding:0; width:100vw; height:100vh; 
+  overflow:hidden; 
+  background:var(--bg); color:var(--text); 
+  font-family:"Segoe UI",Tahoma,Arial,sans-serif;
+}
+button{font:inherit;cursor:pointer;border:none;outline:none;}
+button:disabled{opacity:0.5;cursor:not-allowed;}
+
+/* ============ DYNAMIC SCALING ============ */
+#app{
+  position:absolute; left:50%; top:50%;
+  width:1920px; height:1080px; 
+  display:flex; flex-direction:column; z-index:2;
+}
+
+/* ============ HEADER ============ */
+header{
+  flex:0 0 80px; 
+  display:flex; justify-content:space-between; align-items:center;
+  padding:0 30px; background:linear-gradient(180deg, #0f172a, #070b19);
+  border-bottom:2px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  z-index: 10;
+}
+.brand h1{margin:0; font-size:2.2rem; color:var(--cyan); letter-spacing:1px; text-shadow:var(--glow-cyan);}
+.brand p{margin:2px 0 0; color:var(--muted); font-size:1.1rem; font-weight:600;}
+.header-btns{display:flex; gap:15px;}
+.btn-glass{
+  background:rgba(255,255,255,0.05); border:2px solid var(--border); color:var(--text);
+  padding:10px 20px; border-radius:10px; font-weight:800; font-size:1.1rem; transition:0.2s;
+}
+.btn-glass:hover{background:rgba(255,255,255,0.1); border-color:var(--cyan); box-shadow:var(--glow-cyan);}
+
+/* ============ MAIN LAYOUT ============ */
+.main-area{
+  flex:1; display:flex; flex-direction:column; position:relative; overflow:hidden;
+}
+
+/* ============ STAGE (ANIMATION ZONE) ============ */
+.stage{
+  flex:0 0 450px; 
+  position:relative; overflow:hidden;
+  background:
+    linear-gradient(rgba(0,240,255,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,240,255,0.05) 1px, transparent 1px);
+  background-size: 60px 60px;
+  border-bottom: 2px solid var(--border);
+}
+
+.city-bg{
+  position:absolute; bottom:0; left:0; right:0; height:200px;
+  background:url('data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M0,100 L0,40 L10,40 L10,20 L25,20 L25,60 L35,60 L35,10 L50,10 L50,50 L65,50 L65,30 L80,30 L80,60 L90,60 L90,25 L100,25 L100,100 Z" fill="rgba(15,23,42,0.8)"/></svg>');
+  background-size: 1000px 100%; opacity:0.6;
+}
+
+.gate{
+  position:absolute; left:50%; top:30px; bottom:30px; width:120px; transform:translateX(-50%);
+  display:flex; flex-direction:column; justify-content:space-between; align-items:center; z-index:10;
+}
+.gate-pillar{
+  width:100%; height:30px; background:#1e293b; border:4px solid var(--blue); border-radius:8px;
+  box-shadow: 0 0 15px rgba(59,130,246,0.5);
+}
+.gate-laser{
+  width:8px; flex:1; background:var(--orange); box-shadow: 0 0 20px var(--orange);
+  transition: 0.3s;
+}
+.gate.scanning .gate-laser { background:var(--orange); box-shadow: 0 0 20px var(--orange); }
+.gate.success .gate-laser { background:var(--green); box-shadow: var(--glow-green); }
+.gate.fail .gate-laser { background:var(--red); box-shadow: var(--glow-red); }
+
+.drone-container{
+  position:absolute; top:130px; left:-300px; 
+  width:220px; z-index:15;
+}
+.drone{
+  width:100%; background:linear-gradient(135deg, #1e293b, #0f172a); border:3px solid var(--cyan);
+  border-radius:15px; padding:12px; text-align:center; position:relative;
+  box-shadow: 0 15px 30px rgba(0,0,0,0.5), inset 0 0 15px rgba(0,240,255,0.2);
+}
+.drone-propellers{
+  display:flex; justify-content:space-between; position:absolute; top:-12px; left:10px; right:10px;
+}
+.prop{
+  width:35px; height:6px; background:var(--muted); border-radius:4px;
+  animation: spin 0.1s linear infinite;
+}
+@keyframes spin { to { transform: rotateY(180deg); } }
+
+.drone-data{
+  margin-top:8px; padding:8px; background:#020617; border-radius:8px;
+  font-family:Consolas, monospace; font-size:1.15rem; color:var(--cyan); border:1px solid #334155;
+  white-space: pre-line;
+}
+.drone-icon{ font-size:2.5rem; margin-top:5px; }
+
+/* ANIMATION CLASSES */
+.fly-in { animation: flyIn 2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+@keyframes flyIn {
+  from { left: -300px; transform: translateY(0) rotate(5deg); }
+  to { left: 740px; transform: translateY(0) rotate(0deg); }
+}
+.fly-out-success { animation: flyOutSuccess 2s cubic-bezier(0.4, 0, 0.6, 1) forwards; }
+@keyframes flyOutSuccess {
+  from { left: 740px; }
+  to { left: 2000px; } 
+}
+.fly-out-fail { animation: flyOutFail 2s ease-in forwards; }
+@keyframes flyOutFail {
+  0% { left: 740px; transform: translateY(0) rotate(0deg); }
+  20% { left: 740px; transform: translateY(-20px) rotate(-10deg); }
+  100% { left: 820px; transform: translateY(800px) rotate(90deg); opacity:0; } 
+}
+
+/* ============ CONTROL PANEL ============ */
+.control-panel{
+  flex:1; display:flex; padding:30px; gap:30px; background:var(--bg);
+}
+
+.mission-box{
+  flex:1; background:var(--panel); border:2px solid var(--border); border-radius:20px;
+  padding:25px; display:flex; flex-direction:column; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+}
+.mission-header{
+  display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;
+}
+.mission-badge{
+  background:var(--blue); color:white; padding:6px 14px; border-radius:99px; font-weight:800; font-size:1.1rem;
+}
+.mission-title{font-size:1.8rem; color:var(--text); margin:0;}
+.mission-desc{font-size:1.2rem; color:var(--muted); line-height:1.4; margin-bottom:20px;}
+
+.code-area{
+  background:#020617; border:2px solid #334155; border-radius:12px; padding:20px;
+  font-family:Consolas, monospace; font-size:1.8rem; color:white; text-align:center;
+  margin-bottom:20px; box-shadow:inset 0 0 20px rgba(0,0,0,0.8);
+}
+.code-gap{
+  display:inline-block; min-width:100px; padding:0 15px; height:45px; line-height:40px;
+  border-bottom:4px dashed var(--orange); color:var(--orange); margin:0 10px;
+  vertical-align:middle; background:rgba(245,158,11,0.1); border-radius:8px;
+}
+
+.answers-grid{
+  display:flex; gap:15px; justify-content:center; margin-top:auto; flex-wrap:wrap;
+}
+.answer-btn{
+  flex:1; padding:15px 10px; border-radius:12px; font-size:1.3rem; font-weight:800; 
+  background:linear-gradient(145deg, #1e293b, #0f172a); border:2px solid #334155; color:var(--cyan);
+  transition:0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.3); font-family:Consolas, monospace;
+}
+.answer-btn:hover:not(:disabled){
+  transform:translateY(-3px); border-color:var(--cyan); background:linear-gradient(145deg, #1e293b, #1e3a5f);
+}
+.answer-btn.selected-correct { background:var(--green); color:white; border-color:white; }
+.answer-btn.selected-wrong { background:var(--red); color:white; border-color:white; }
+
+/* Status / Feedback Sidebar */
+.status-sidebar{
+  flex:0 0 400px; display:flex; flex-direction:column; gap:20px;
+}
+.status-box{
+  background:var(--panel); border:2px solid var(--border); border-radius:20px; padding:20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align:center;
+}
+.status-box h3{margin:0 0 10px; font-size:1.3rem; color:var(--muted); text-transform:uppercase;}
+.score-display{font-size:3.5rem; font-weight:900; color:var(--green); margin:0; text-shadow:var(--glow-green);}
+
+.feedback-msg{
+  flex:1; background:#020617; border:2px solid #334155; border-radius:20px; padding:25px;
+  display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;
+}
+.feedback-msg p{font-size:1.3rem; line-height:1.4; color:var(--text); margin:0;}
+.feedback-msg .icon{font-size:3.5rem; margin-bottom:10px;}
+
+/* ============ THEORY MODAL ============ */
+.modal-overlay{
+  position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px);
+  z-index:100; display:flex; justify-content:center; align-items:center;
+  opacity:0; pointer-events:none; transition:0.3s;
+}
+.modal-overlay.show{opacity:1; pointer-events:auto;}
+.modal-content{
+  width:1300px; max-height:90vh; background:var(--panel); border:3px solid var(--cyan);
+  border-radius:24px; padding:35px; box-shadow:var(--glow-cyan); overflow-y:auto;
+}
+.modal-header{display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;}
+.modal-header h2{margin:0; font-size:2.2rem; color:var(--cyan);}
+.close-btn{background:var(--red); color:white; padding:8px 16px; border-radius:10px; font-size:1.3rem; font-weight:bold;}
+
+.theory-grid{display:grid; grid-template-columns:1fr 1fr; gap:25px;}
+.theory-card{background:#0f172a; border:2px solid #334155; border-radius:16px; padding:20px;}
+.theory-card h3{margin:0 0 12px; color:var(--gold); font-size:1.4rem; border-bottom:1px solid #334155; padding-bottom:8px;}
+.theory-card p, .theory-card li{font-size:1.15rem; line-height:1.5; margin-bottom:8px;}
+table{width:100%; border-collapse:collapse; margin-top:10px; font-size:1.1rem;}
+th, td{border:1px solid #334155; padding:10px; text-align:center;}
+th{background:#1e293b; color:var(--text);}
+.t-true{color:var(--green); font-weight:bold;}
+.t-false{color:var(--red); font-weight:bold;}
+
+/* Victory Screen */
+.victory-screen{
+  position:absolute; inset:0; background:rgba(7, 11, 25, 0.95); z-index:50;
+  display:flex; flex-direction:column; justify-content:center; align-items:center;
+  opacity:0; pointer-events:none; transition:0.5s; text-align:center;
+}
+.victory-screen.show{opacity:1; pointer-events:auto;}
+.victory-screen h1{font-size:4.5rem; color:var(--cyan); margin:0; text-shadow:var(--glow-cyan);}
+.victory-screen p{font-size:1.8rem; color:var(--text); margin:15px 0;}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <div class="brand">
+      <h1>ALGO CITY</h1>
+      <p>Τομέας Ελέγχου: Τελωνείο Λογικής</p>
+    </div>
+    <div class="header-btns">
+      <button class="btn-glass" id="soundBtn" onclick="toggleSound()">🔊 Ήχος: ON</button>
+      <button class="btn-glass" onclick="openTheory()">📚 Εγχειρίδιο Θεωρίας</button>
+    </div>
+  </header>
+
+  <div class="main-area">
+    <div class="stage" id="stage">
+      <div class="city-bg"></div>
+      <div class="gate scanning" id="gate">
+        <div class="gate-pillar"></div>
+        <div class="gate-laser"></div>
+        <div class="gate-pillar"></div>
+      </div>
+      <div class="drone-container" id="droneContainer">
+        <div class="drone">
+          <div class="drone-propellers"><div class="prop"></div><div class="prop"></div></div>
+          <div class="drone-icon" id="droneIcon">👤</div>
+          <div class="drone-data" id="droneData">ΦΟΡΤΩΣΗ...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="control-panel">
+      <div class="mission-box">
+        <div class="mission-header">
+          <span class="mission-badge" id="levelBadge">Επίπεδο 1/5</span>
+          <h2 class="mission-title" id="missionTitle">Τίτλος Αποστολής</h2>
+        </div>
+        <p class="mission-desc" id="missionDesc">Περιγραφή</p>
+        <div class="code-area" id="codeArea"></div>
+        <div class="answers-grid" id="answersGrid"></div>
+      </div>
+
+      <div class="status-sidebar">
+        <div class="status-box">
+          <h3>Επιτυχείς Ελεγχοι</h3>
+          <p class="score-display" id="scoreDisplay">0</p>
+        </div>
+        <div class="feedback-msg" id="feedbackBox">
+          <div class="icon">📡</div>
+          <p id="feedbackText">Το σύστημα αναμένει την εντολή σου για να ελέγξει το drone.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="victory-screen" id="victoryScreen">
+    <h1>ΑΝΑΦΟΡΑ ΒΑΡΔΙΑΣ: ΑΡΙΣΤΑ</h1>
+    <p>Ολοκλήρωσες επιτυχώς τους ελέγχους. Η Λογική της ALGO CITY είναι ασφαλής.</p>
+    <button class="btn-glass" style="margin-top:25px; font-size:1.3rem;" onclick="initGame()">🔄 Νέα Βάρδια (Τυχαίες Αποστολές)</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="theoryModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>📚 Εγχειρίδιο: Λογικές Πράξεις &amp; Διαστήματα</h2>
+      <button class="close-btn" onclick="closeTheory()">X</button>
+    </div>
+    
+    <div class="theory-grid">
+      <div class="theory-card">
+        <h3>Οι 3 Βασικοί Τελεστές</h3>
+        <p><b style="color:var(--blue)">Ή (Διάζευξη):</b> ΑΛΗΘΗΣ όταν <i>τουλάχιστον μία</i> συνθήκη είναι Αληθής.</p>
+        <p><b style="color:var(--orange)">ΚΑΙ (Σύζευξη):</b> ΑΛΗΘΗΣ <i>μόνο όταν ΚΑΙ ΟΙ ΔΥΟ</i> συνθήκες είναι Αληθείς.</p>
+        <p><b style="color:var(--violet)">ΟΧΙ (Άρνηση):</b> Αντιστρέφει τη λογική τιμή (Το Αληθές γίνεται Ψευδές).</p>
+      </div>
+
+      <div class="theory-card">
+        <h3>Διαστήματα στη ΓΛΩΣΣΑ</h3>
+        <p>Ο υπολογιστής θέλει 2 ξεχωριστές συγκρίσεις:</p>
+        <ul>
+          <li><b>Εντός διαστήματος [a, b]:</b><br> <code>(X >= a) ΚΑΙ (X <= b)</code></li>
+          <li><b>Εκτός διαστήματος:</b><br> <code>(X < a) Ή (X > b)</code></li>
+        </ul>
+      </div>
+
+      <div class="theory-card">
+        <h3>Πίνακας Αλήθειας</h3>
+        <table>
+          <tr><th>Α</th><th>Β</th><th>Α Ή Β</th><th>Α ΚΑΙ Β</th></tr>
+          <tr><td class="t-true">ΑΛΗΘΗΣ</td><td class="t-true">ΑΛΗΘΗΣ</td><td class="t-true">ΑΛΗΘΗΣ</td><td class="t-true">ΑΛΗΘΗΣ</td></tr>
+          <tr><td class="t-true">ΑΛΗΘΗΣ</td><td class="t-false">ΨΕΥΔΗΣ</td><td class="t-true">ΑΛΗΘΗΣ</td><td class="t-false">ΨΕΥΔΗΣ</td></tr>
+          <tr><td class="t-false">ΨΕΥΔΗΣ</td><td class="t-true">ΑΛΗΘΗΣ</td><td class="t-true">ΑΛΗΘΗΣ</td><td class="t-false">ΨΕΥΔΗΣ</td></tr>
+          <tr><td class="t-false">ΨΕΥΔΗΣ</td><td class="t-false">ΨΕΥΔΗΣ</td><td class="t-false">ΨΕΥΔΗΣ</td><td class="t-false">ΨΕΥΔΗΣ</td></tr>
+        </table>
+      </div>
+
+      <div class="theory-card">
+        <h3>Χρήσιμες Ταυτότητες (Iοί)</h3>
+        <ul>
+          <li><code>A Ή ΟΧΙ(A)</code> &rarr; <b class="t-true">Πάντα ΑΛΗΘΗΣ</b></li>
+          <li><code>A ΚΑΙ ΟΧΙ(A)</code> &rarr; <b class="t-false">Πάντα ΨΕΥΔΗΣ</b></li>
+        </ul>
+        <p><b>Κανόνας De Morgan:</b> Όταν βγάζουμε μια παρένθεση με ΟΧΙ, το ΚΑΙ γίνεται Ή, το &gt; γίνεται &le; κ.ο.κ.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==========================================
+// SCALING LOGIC (100% Fit No Scroll)
+// ==========================================
+function fitApp(){
+  const app = document.getElementById("app");
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const scale = Math.min(w / 1920, h / 1080) * 0.98;
+  app.style.transform = `scale(${scale})`;
+  app.style.transformOrigin = "top left";
+  const scaledWidth = 1920 * scale;
+  const scaledHeight = 1080 * scale;
+  app.style.left = `${(w - scaledWidth) / 2}px`;
+  app.style.top = `${(h - scaledHeight) / 2}px`;
+}
+window.addEventListener("resize", fitApp);
+fitApp();
+
+// ==========================================
+// AUDIO SYSTEM
+// ==========================================
+let audioCtx = null;
+let soundEnabled = true;
+function initAudio(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if(audioCtx.state === "suspended") audioCtx.resume();
+}
+function tone(f, d=0.1, type="sine", v=0.05, delay=0){
+  if(!soundEnabled) return;
+  initAudio();
+  const s = audioCtx.currentTime + delay, o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, s);
+  g.gain.setValueAtTime(0.001, s); g.gain.linearRampToValueAtTime(v, s+0.02); g.gain.exponentialRampToValueAtTime(0.001, s+d);
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start(s); o.stop(s+d+0.1);
+}
+function playSuccess() { tone(523,0.1); tone(659,0.1,"sine",0.05,0.1); tone(784,0.2,"triangle",0.05,0.2); }
+function playFail() { tone(200,0.15,"sawtooth"); tone(150,0.3,"sawtooth",0.05,0.15); }
+function playFly() { tone(100, 1.5, "triangle", 0.02); } 
+function toggleSound(){
+  soundEnabled = !soundEnabled;
+  document.getElementById("soundBtn").textContent = soundEnabled ? "🔊 Ήχος: ON" : "🔇 Ήχος: OFF";
+  if(soundEnabled){ initAudio(); tone(660,0.1); }
+}
+
+// ==========================================
+// KNOWLEDGE BASE (21 Missions)
+// ==========================================
+const knowledgeBase = [
+  // Καθημερινότητα (Ή / ΚΑΙ)
+  {
+    title: "Καθημερινότητα: Σινεμά", desc: "Έκπτωση αν είναι κάτω των 18 ΕΙΤΕ αν έχει φοιτητικό πάσο.",
+    codeHTML: `Ηλικία &lt; 18 <span class="code-gap" id="theGap">?</span> Πάσο = ΑΛΗΘΗΣ`, options: ["ΚΑΙ", "Ή", "ΟΧΙ"], correct: "Ή",
+    droneIcon: "🍿", droneData: "Ηλικία: 20\nΠάσο: ΝΑΙ", pass: true,
+    hintFail: "Αρκεί ΜΟΝΟ ΕΝΑ από τα δύο για να πάρει έκπτωση (Διάζευξη)."
+  },
+  {
+    title: "Καθημερινότητα: Δίπλωμα", desc: "Για δίπλωμα: Άνω των 18 ΚΑΙ να πέρασε εξετάσεις.",
+    codeHTML: `Ηλικία &gt;= 18 <span class="code-gap" id="theGap">?</span> Εξετάσεις = ΑΛΗΘΗΣ`, options: ["ΚΑΙ", "Ή", "ΟΧΙ"], correct: "ΚΑΙ",
+    droneIcon: "🚗", droneData: "Ηλικία: 17\nΕξετάσεις: ΝΑΙ", pass: false,
+    hintFail: "Πρέπει υποχρεωτικά να ισχύουν αμφότερες οι συνθήκες (Σύζευξη)."
+  },
+  {
+    title: "Καθημερινότητα: Αιμοδοσία", desc: "Απαιτείται βάρος 50+ ΚΑΙ ηλικία 18+.",
+    codeHTML: `Βάρος &gt;= 50 <span class="code-gap" id="theGap">?</span> Ηλικία &gt;= 18`, options: ["ΚΑΙ", "Ή", "ΟΧΙ"], correct: "ΚΑΙ",
+    droneIcon: "🩸", droneData: "Βάρος: 55\nΗλικία: 22", pass: true,
+    hintFail: "Δεν γίνεται να ισχύει μόνο το ένα. Απαιτούνται και τα δύο."
+  },
+  {
+    title: "E-shop: Δωρεάν Μεταφορικά", desc: "Δωρεάν αν παραγγελία >= 50€ Ή αν είναι VIP μέλος.",
+    codeHTML: `Ποσό &gt;= 50 <span class="code-gap" id="theGap">?</span> VIP = ΑΛΗΘΗΣ`, options: ["ΚΑΙ", "Ή", "ΟΧΙ"], correct: "Ή",
+    droneIcon: "📦", droneData: "Ποσό: 20\nVIP: ΝΑΙ", pass: true,
+    hintFail: "Αν είναι VIP παίρνει έκπτωση ανεξαρτήτως ποσού. Αρκεί το ένα (Ή)."
+  },
+  {
+    title: "Λούνα Παρκ: Ασφάλεια", desc: "Απαιτείται Ύψος >= 1.20 ΚΑΙ η συνθήκη Καρδιά_ΟΚ να είναι ΑΛΗΘΗΣ.",
+    codeHTML: `Ύψος &gt;= 1.20 <span class="code-gap" id="theGap">?</span> Καρδιά_ΟΚ = ΑΛΗΘΗΣ`, options: ["ΚΑΙ", "Ή", "ΟΧΙ"], correct: "ΚΑΙ",
+    droneIcon: "🎢", droneData: "Ύψος: 1.30\nΚαρδιά_ΟΚ: ΟΧΙ", pass: false,
+    hintFail: "Τα θέματα ασφαλείας είναι αυστηρά. Πρέπει να ισχύουν και τα δύο."
+  },
+  {
+    title: "Σχολείο: Υποτροφία", desc: "Υποτροφία αν ο Μέσος Όρος > 18.5 ΚΑΙ απουσίες = 0.",
+    codeHTML: `ΜΟ &gt; 18.5 <span class="code-gap" id="theGap">?</span> Απουσίες = 0`, options: ["ΚΑΙ", "Ή", "ΟΧΙ"], correct: "ΚΑΙ",
+    droneIcon: "🎓", droneData: "ΜΟ: 19\nΑπουσίες: 0", pass: true,
+    hintFail: "Απαιτούνται αυστηρά και οι δύο προϋποθέσεις."
+  },
+  {
+    title: "Εκλογές: Δικαίωμα Ψήφου", desc: "Πρέπει να είναι άνω των 17 ΚΑΙ να είναι εγγεγραμμένος.",
+    codeHTML: `Ηλικία &gt;= 17 <span class="code-gap" id="theGap">?</span> Εγγεγραμμένος = ΑΛΗΘΗΣ`, options: ["ΚΑΙ", "Ή", "ΟΧΙ"], correct: "ΚΑΙ",
+    droneIcon: "🗳️", droneData: "Ηλικία: 18\nΕγγεγραμμένος: ΝΑΙ", pass: true,
+    hintFail: "Χρειάζεται σύζευξη, δεν αρκεί μόνο η ηλικία."
+  },
+  {
+    title: "Συναγερμός: Πυρκαγιά", desc: "Χτυπάει αν υπάρχει καπνός Ή αν θερμοκρασία > 70.",
+    codeHTML: `Καπνός = ΑΛΗΘΗΣ <span class="code-gap" id="theGap">?</span> Θερμοκρασία &gt; 70`, options: ["ΚΑΙ", "Ή", "ΟΧΙ"], correct: "Ή",
+    droneIcon: "🔥", droneData: "Καπνός: ΝΑΙ\nΘερμοκρασία: 40", pass: true,
+    hintFail: "Για ασφάλεια, αρκεί μία από τις δύο ενδείξεις."
+  },
+
+  // Διαστήματα
+  {
+    title: "Διάστημα: Εντός [10, 20]", desc: "Έλεγχος αν το X ανήκει στο διάστημα 10 <= X <= 20.",
+    codeHTML: `(X &gt;= 10) <span class="code-gap" id="theGap">?</span> (X &lt;= 20)`, options: ["ΚΑΙ", "Ή", "ΟΧΙ"], correct: "ΚΑΙ",
+    droneIcon: "🚁", droneData: "X = 15", pass: true,
+    hintFail: "Για να είναι ένας αριθμός ΜΕΣΑ σε διάστημα, πρέπει να ικανοποιεί ΤΑΥΤΟΧΡΟΝΑ και τα δύο όρια."
+  },
+  {
+    title: "Διάστημα: Εκτός [10, 20]", desc: "Έλεγχος αν το X βρίσκεται ΕΚΤΟΣ του διαστήματος [10, 20].",
+    codeHTML: `(X &lt; 10) <span class="code-gap" id="theGap">?</span> (X &gt; 20)`, options: ["ΚΑΙ", "Ή", "ΟΧΙ"], correct: "Ή",
+    droneIcon: "⚠️", droneData: "X = 8", pass: true,
+    hintFail: "Δεν γίνεται αριθμός να είναι ταυτόχρονα και <10 και >20! Αρκεί να ισχύει ΕΝΑ από τα δύο."
+  },
+  {
+    title: "Έλεγχος: Έγκυρος Βαθμός", desc: "Ο βαθμός Β πρέπει να είναι στο [0, 20].",
+    codeHTML: `(Β &gt;= 0) <span class="code-gap" id="theGap">?</span> (Β &lt;= 20)`, options: ["ΚΑΙ", "Ή", "ΟΧΙ"], correct: "ΚΑΙ",
+    droneIcon: "📝", droneData: "B = 18", pass: true,
+    hintFail: "Το διάστημα απαιτεί τη χρήση ΚΑΙ (Σύζευξη)."
+  },
+  {
+    title: "Έλεγχος: Λάθος Βαθμός", desc: "Εντοπισμός βαθμού εκτός ορίων [0, 20].",
+    codeHTML: `(Β &lt; 0) <span class="code-gap" id="theGap">?</span> (Β &gt; 20)`, options: ["ΚΑΙ", "Ή", "ΟΧΙ"], correct: "Ή",
+    droneIcon: "🛑", droneData: "B = 25", pass: true,
+    hintFail: "Για τα άκρα (εκτός διαστήματος) χρησιμοποιούμε Ή."
+  },
+
+  // De Morgan & Αρνήσεις
+  {
+    title: "Hack: Νόμος De Morgan (1)", desc: "Απλοποίησε τον κώδικα του hacker: ΟΧΙ ( X >= 10 ΚΑΙ X <= 20 )",
+    codeHTML: `Ισοδυναμεί με:`, options: ["(X < 10) Ή (X > 20)", "(X <= 10) Ή (X >= 20)", "(X < 10) ΚΑΙ (X > 20)"], correct: "(X < 10) Ή (X > 20)",
+    droneIcon: "🥷", droneData: "De Morgan\nRule", pass: true,
+    hintFail: "Το >= γίνεται <, το <= γίνεται >, και το ΚΑΙ γίνεται Ή."
+  },
+  {
+    title: "Hack: Νόμος De Morgan (2)", desc: "Απλοποίησε την άρνηση: ΟΧΙ ( Α = 0 Ή Β = 0 )",
+    codeHTML: `Ισοδυναμεί με:`, options: ["Α &lt;&gt; 0 ΚΑΙ Β &lt;&gt; 0", "Α &lt;&gt; 0 Ή Β &lt;&gt; 0", "Α &gt; 0 ΚΑΙ Β &gt; 0"], correct: "Α <> 0 ΚΑΙ Β <> 0",
+    droneIcon: "🥷", droneData: "De Morgan\nRule", pass: true,
+    hintFail: "Το = γίνεται <> (διάφορο) και το Ή γίνεται ΚΑΙ."
+  },
+  {
+    title: "Hack: Απλή Άρνηση", desc: "Απλοποίησε την άρνηση: ΟΧΙ ( Βαθμός < 10 )",
+    codeHTML: `Ισοδυναμεί με:`, options: ["Βαθμός &gt; 10", "Βαθμός &gt;= 10", "Βαθμός = 10"], correct: "Βαθμός >= 10",
+    droneIcon: "🥷", droneData: "Logic\nFlip", pass: true,
+    hintFail: "Το αντίθετο του 'Μικρότερο' είναι το 'Μεγαλύτερο Ή Ίσο'."
+  },
+  {
+    title: "Hack: Σύνθετη Άρνηση", desc: "Απλοποίησε: ΟΧΙ ( X > 5 Ή Y < 10 )",
+    codeHTML: `Ισοδυναμεί με:`, options: ["(X &lt;= 5) ΚΑΙ (Y &gt;= 10)", "(X &lt; 5) ΚΑΙ (Y &gt; 10)", "(X &lt;= 5) Ή (Y &gt;= 10)"], correct: "(X <= 5) ΚΑΙ (Y >= 10)",
+    droneIcon: "🥷", droneData: "Complex\nFlip", pass: true,
+    hintFail: "Το > γίνεται <=, το < γίνεται >= και το Ή γίνεται ΚΑΙ."
+  },
+
+  // Λογικές Ταυτότητες (Glitches)
+  {
+    title: "Ιός: Λογική Ταυτότητα 1", desc: "Ένας ιός τρέχει την εντολή: ( A ΚΑΙ ΟΧΙ(A) ). Τι θα βγάλει;",
+    codeHTML: `Αποτέλεσμα:`, options: ["ΠΑΝΤΑ ΑΛΗΘΗΣ", "ΠΑΝΤΑ ΨΕΥΔΗΣ", "ΕΞΑΡΤΑΤΑΙ"], correct: "ΠΑΝΤΑ ΨΕΥΔΗΣ",
+    droneIcon: "🦠", droneData: "System\nGlitch", pass: false,
+    hintFail: "Μπορεί κάτι να είναι ταυτόχρονα και Αληθές ΚΑΙ Ψευδές; Φυσικά όχι!"
+  },
+  {
+    title: "Ιός: Λογική Ταυτότητα 2", desc: "Ο ιός τρέχει την εντολή: ( A Ή ΟΧΙ(A) ). Τι θα βγάλει;",
+    codeHTML: `Αποτέλεσμα:`, options: ["ΠΑΝΤΑ ΑΛΗΘΗΣ", "ΠΑΝΤΑ ΨΕΥΔΗΣ", "ΕΞΑΡΤΑΤΑΙ"], correct: "ΠΑΝΤΑ ΑΛΗΘΗΣ",
+    droneIcon: "🦠", droneData: "System\nGlitch", pass: true,
+    hintFail: "Επειδή έχουμε Ή, αρκεί το ένα να είναι αληθές. Και ένα από τα δύο (το Α ή το αντίθετό του) σίγουρα θα είναι!"
+  },
+  {
+    title: "Ιός: Λογική Ταυτότητα 3", desc: "Ο ιός τρέχει την εντολή: ( A ΚΑΙ ΨΕΥΔΗΣ ). Τι θα βγάλει;",
+    codeHTML: `Αποτέλεσμα:`, options: ["ΠΑΝΤΑ ΑΛΗΘΗΣ", "ΠΑΝΤΑ ΨΕΥΔΗΣ", "ΕΞΑΡΤΑΤΑΙ"], correct: "ΠΑΝΤΑ ΨΕΥΔΗΣ",
+    droneIcon: "🦠", droneData: "System\nGlitch", pass: false,
+    hintFail: "Στο ΚΑΙ υπερισχύει πάντα η τιμή ΨΕΥΔΗΣ. Αν υπάρχει έστω ένα, όλα γίνονται Ψευδή."
+  },
+  {
+    title: "Ιός: Λογική Ταυτότητα 4", desc: "Ο ιός τρέχει την εντολή: ( A Ή ΑΛΗΘΗΣ ). Τι θα βγάλει;",
+    codeHTML: `Αποτέλεσμα:`, options: ["ΠΑΝΤΑ ΑΛΗΘΗΣ", "ΠΑΝΤΑ ΨΕΥΔΗΣ", "ΕΞΑΡΤΑΤΑΙ"], correct: "ΠΑΝΤΑ ΑΛΗΘΗΣ",
+    droneIcon: "🦠", droneData: "System\nGlitch", pass: true,
+    hintFail: "Στο Ή αρκεί ένα ΑΛΗΘΗΣ. Εδώ το έχουμε ήδη δεδομένο!"
+  },
+  {
+    title: "Πρόσβαση Συστήματος", desc: "Επιτρέπεται η είσοδος αν είναι Admin ΕΙΤΕ αν ΔΕΝ είναι Banned.",
+    codeHTML: `Admin=ΑΛΗΘΗΣ <span class='code-gap' id='theGap'>?</span> Banned=ΨΕΥΔΗΣ`, options: ["ΚΑΙ", "Ή", "ΟΧΙ"], correct: "Ή",
+    droneIcon: "🔑", droneData: "Admin: ΟΧΙ\nBanned: ΟΧΙ", pass: true,
+    hintFail: "Η λέξη 'ΕΙΤΕ' φανερώνει Διάζευξη (Ή)."
+  }
+];
+
+// ==========================================
+// GAME ENGINE
+// ==========================================
+let activeMissions = [];
+let currentIndex = 0;
+let score = 0;
+let isAnimating = false;
+
+function shuffle(array) {
+  let currentIndex = array.length, randomIndex;
+  while (currentIndex !== 0) {
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+    [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+  }
+  return array;
+}
+
+function initGame() {
+  document.getElementById("victoryScreen").classList.remove("show");
+  
+  // Pick 5 random missions from the knowledge base
+  const shuffledBase = shuffle([...knowledgeBase]);
+  activeMissions = shuffledBase.slice(0, 5).map((m, i) => ({ ...m, level: i + 1 }));
+  
+  currentIndex = 0;
+  score = 0;
+  document.getElementById("scoreDisplay").innerText = "0";
+  
+  loadMission();
+}
+
+const stage = document.getElementById("stage");
+const gate = document.getElementById("gate");
+const droneContainer = document.getElementById("droneContainer");
+const droneIcon = document.getElementById("droneIcon");
+const droneData = document.getElementById("droneData");
+const levelBadge = document.getElementById("levelBadge");
+const missionTitle = document.getElementById("missionTitle");
+const missionDesc = document.getElementById("missionDesc");
+const codeArea = document.getElementById("codeArea");
+const answersGrid = document.getElementById("answersGrid");
+const feedbackBox = document.getElementById("feedbackBox");
+const feedbackText = document.getElementById("feedbackText");
+const scoreDisplay = document.getElementById("scoreDisplay");
+
+function loadMission() {
+  if(currentIndex >= activeMissions.length) {
+    document.getElementById("victoryScreen").classList.add("show");
+    playSuccess();
+    return;
+  }
+
+  isAnimating = true;
+  const m = activeMissions[currentIndex];
+  
+  levelBadge.innerText = `Αποστολή ${m.level} / 5`;
+  missionTitle.innerText = m.title;
+  missionDesc.innerText = m.desc;
+  codeArea.innerHTML = m.codeHTML;
+  
+  droneIcon.innerText = m.droneIcon;
+  droneData.innerHTML = m.droneData;
+  droneContainer.className = "drone-container"; 
+  gate.className = "gate scanning";
+  
+  feedbackBox.style.background = "#020617";
+  feedbackBox.style.borderColor = "#334155";
+  feedbackBox.querySelector('.icon').innerText = "📡";
+  feedbackText.innerText = "Αναμονή ελέγχου... Επίλεξε τον σωστό κώδικα.";
+  
+  answersGrid.innerHTML = "";
+  m.options.forEach(opt => {
+    const btn = document.createElement("button");
+    btn.className = "answer-btn";
+    btn.innerHTML = opt; 
+    btn.onclick = () => handleAnswer(opt, btn);
+    answersGrid.appendChild(btn);
+  });
+
+  playFly();
+  droneContainer.classList.add("fly-in");
+  
+  setTimeout(() => { isAnimating = false; }, 2000);
+}
+
+function handleAnswer(selectedOpt, btnElement) {
+  if(isAnimating) return;
+  isAnimating = true;
+  
+  document.querySelectorAll(".answer-btn").forEach(b => b.disabled = true);
+  
+  const m = activeMissions[currentIndex];
+  const gap = document.getElementById("theGap");
+  if(gap) gap.innerHTML = selectedOpt; 
+  
+  // Use textContent for comparison in case of HTML entities like &lt; vs <
+  const div = document.createElement('div');
+  div.innerHTML = selectedOpt;
+  const decodedSelection = div.textContent;
+  
+  div.innerHTML = m.correct;
+  const decodedCorrect = div.textContent;
+  
+  if(decodedSelection === decodedCorrect) {
+    btnElement.classList.add("selected-correct");
+    score++;
+    scoreDisplay.innerText = score;
+    
+    if(m.pass) {
+      gate.className = "gate success";
+      feedbackBox.style.borderColor = "var(--green)";
+      feedbackBox.querySelector('.icon').innerText = "✅";
+      feedbackText.innerText = "ΣΩΣΤΟ! Η συνθήκη είναι ΑΛΗΘΗΣ. Το Drone περνάει.";
+      playSuccess();
+      droneContainer.classList.remove("fly-in");
+      droneContainer.classList.add("fly-out-success");
+    } else {
+      gate.className = "gate fail";
+      feedbackBox.style.borderColor = "var(--red)";
+      feedbackBox.querySelector('.icon').innerText = "❌";
+      feedbackText.innerText = "ΣΩΣΤΟ! Η συνθήκη είναι ΨΕΥΔΗΣ. Το Drone απορρίπτεται.";
+      playSuccess(); 
+      droneContainer.classList.remove("fly-in");
+      droneContainer.classList.add("fly-out-fail");
+    }
+    
+    setTimeout(() => {
+      currentIndex++;
+      loadMission();
+    }, 2500);
+
+  } else {
+    btnElement.classList.add("selected-wrong");
+    playFail();
+    feedbackBox.style.borderColor = "var(--orange)";
+    feedbackBox.querySelector('.icon').innerText = "💡";
+    feedbackText.innerText = m.hintFail;
+    
+    setTimeout(() => {
+      document.querySelectorAll(".answer-btn").forEach(b => {
+        if(!b.classList.contains("selected-wrong")) b.disabled = false;
+      });
+      if(gap) gap.innerHTML = "?";
+      isAnimating = false;
+    }, 1200);
+  }
+}
+
+function openTheory() { document.getElementById("theoryModal").classList.add("show"); }
+function closeTheory() { document.getElementById("theoryModal").classList.remove("show"); }
+
+// Start Engine
+initGame();
+</script>
+</body>
+</html>
