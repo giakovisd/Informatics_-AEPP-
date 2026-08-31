@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Σύγκριση Χαρακτήρων - Σαρωτής Λέξεων</title>
+    <style>
+        :root {
+            --bg: #eef3f8; --panel: #ffffff; --panel-2: #f7fafc; --text: #172033;
+            --muted: #64748b; --line: #cbd5e1; --primary: #2563eb; --primary-2: #1d4ed8;
+            --success: #059669; --warning: #f59e0b; --danger: #dc2626; --highlight: #fef08a;
+            --var: #111827; --soft-green: #dcfce7; --soft-blue: #dbeafe; --soft-red: #fee2e2;
+        }
+
+        body.dark {
+            --bg: #09111f; --panel: #111827; --panel-2: #0f172a; --text: #f8fafc;
+            --muted: #94a3b8; --line: #334155; --highlight: #92400e;
+            --soft-green: #052e22; --soft-blue: #172554; --soft-red: #450a0a; --var: #f8fafc;
+        }
+
+        * { box-sizing: border-box; } html, body { height: 100%; }
+        body { margin: 0; overflow: hidden; display: flex; flex-direction: column; background: var(--bg); color: var(--text); font-family: "Segoe UI", Tahoma, Arial, sans-serif; }
+
+        .tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px 0; background: var(--panel); border-bottom: 2px solid var(--primary); }
+        .tab { border: 1px solid var(--line); border-bottom: 0; background: #e2e8f0; color: #475569; padding: 8px 14px; border-radius: 6px 6px 0 0; font-size: 0.8rem; font-weight: 800; cursor: pointer; flex-grow: 1; text-align: center; white-space: nowrap;}
+        .tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        header { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 9px 14px; background: var(--panel); border-bottom: 1px solid var(--line); }
+        h1 { margin: 0; font-size: 1rem; color: var(--primary); white-space: nowrap; }
+        .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+
+        button { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 5px; min-height: 32px; padding: 6px 11px; font-size: 0.78rem; font-weight: 800; cursor: pointer; }
+        button.action { border: 2px solid var(--primary); color: var(--primary); background: transparent; }
+        button.action:hover:not(:disabled), button.active { background: var(--primary); color: white; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.55); } 70% { box-shadow: 0 0 0 7px rgba(37, 99, 235, 0); } 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); } }
+        .pulse { animation: pulse 1.3s infinite; background: var(--soft-blue) !important; color: var(--primary) !important; }
+        .speed { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 0.76rem; font-weight: 700; }
+        .speed input { width: 82px; }
+
+        .layout { flex: 1; display: grid; grid-template-columns: 280px minmax(0, 1fr) 280px; gap: 10px; min-height: 0; padding: 10px; }
+        .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.07); min-height: 0; overflow: hidden; }
+
+        .left { display: flex; flex-direction: column; }
+        .lesson { display: none; flex: 1; min-height: 0; flex-direction: column; }
+        .lesson.active { display: flex; }
+        .lesson-title { padding: 10px 12px; border-bottom: 2px solid var(--primary); color: var(--primary); background: rgba(37, 99, 235, 0.08); font-size: 0.86rem; font-weight: 900; flex-shrink: 0;}
+        .prompt { padding: 12px; overflow: auto; line-height: 1.48; font-size: 0.84rem; flex-shrink: 0;}
+        .prompt b { color: var(--primary); }
+        .method { margin: 0 12px 12px; padding: 10px; border: 1px solid #fcd34d; border-left: 4px solid var(--warning); background: #fffbeb; color: #854d0e; border-radius: 6px; font-size: 0.76rem; line-height: 1.42; flex-shrink: 0;}
+        body.dark .method { background: #422006; color: #fde68a; border-color: #b45309; }
+
+        /* Πλαίσιο γενικών κανόνων */
+        .global-rules {
+            margin: 0 12px 12px 12px;
+            padding: 12px;
+            background: #f8fafc;
+            border: 2px dashed #94a3b8;
+            border-radius: 8px;
+            font-size: 0.76rem;
+            color: #475569;
+            flex-shrink: 0;
+        }
+        body.dark .global-rules {
+            background: #0f172a;
+            border-color: #475569;
+            color: #94a3b8;
+        }
+        .global-rules-title {
+            font-weight: 900;
+            color: var(--primary);
+            margin-bottom: 8px;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+        .global-rules ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .global-rules li {
+            margin-bottom: 6px;
+            line-height: 1.35;
+        }
+
+        .middle { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+        .viz-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.07); overflow: hidden; }
+        
+        .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; background: var(--panel-2); border-bottom: 1px solid var(--line); font-size: 0.8rem; font-weight: 900; }
+        .badge { display: inline-flex; align-items: center; min-height: 24px; padding: 3px 8px; border-radius: 5px; background: var(--warning); color: #111827; font-size: 0.7rem; font-weight: 900; }
+
+        .inputs { flex: 0 0 auto; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: center; padding: 10px; border-bottom: 1px solid var(--line); background: var(--panel-2); }
+        .input-card { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 92px; }
+        .input-card label { color: var(--muted); font-size: 0.76rem; font-weight: 900; }
+        .input-card input, .input-card select { width: 140px; border: 1px solid #94a3b8; border-radius: 5px; padding: 5px 6px; text-align: center; font-size: 0.95rem; font-weight: bold; background: var(--panel); color: var(--text); }
+
+        .stage { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 20px; background-image: radial-gradient(rgba(100, 116, 139, 0.23) 1px, transparent 1px); background-size: 28px 28px; overflow: auto; }
+        
+        /* --- ΠΙΝΑΚΑΣ ΕΠΕΞΗΓΗΣΕΩΝ --- */
+        .expl-banner { width: 90%; max-width: 600px; padding: 15px; border-radius: 10px; background: white; border: 2px solid var(--primary); color: var(--text); font-size: 1.05rem; text-align: center; font-weight: bold; box-shadow: 0 5px 15px rgba(37,99,235,0.15); opacity: 0; transform: translateY(-10px); transition: all 0.4s; min-height: 50px; display: flex; align-items: center; justify-content: center;}
+        .expl-banner.visible { opacity: 1; transform: translateY(0); }
+        body.dark .expl-banner { background: #0f172a; border-color: #3b82f6; color: white;}
+        .expl-hl { color: var(--danger); font-size: 1.2rem; margin: 0 4px; font-family: Consolas, monospace;}
+        
+        /* --- ΣΑΡΩΤΗΣ ΓΡΑΜΜΑΤΩΝ --- */
+        .scanner-container { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; background: var(--panel); padding: 15px 25px; border-radius: 12px; border: 2px solid var(--line); box-shadow: 0 10px 25px rgba(0,0,0,0.05);}
+        .word-row { display: flex; gap: 4px; align-items: center; }
+        .word-label { font-weight: bold; font-size: 0.9rem; width: 60px; color: var(--muted); text-align: right; padding-right: 10px;}
+        .char-box { width: 40px; height: 45px; border: 2px solid #cbd5e1; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 900; background: #f8fafc; transition: all 0.3s; position: relative;}
+        
+        .char-box.scanning { border-color: var(--warning); background: #fef08a; box-shadow: 0 0 12px var(--warning); transform: scale(1.15); z-index: 10; color: black;}
+        .char-box.match { border-color: var(--success); background: #dcfce7; color: #065f46; transform: scale(1); }
+        .char-box.diff { border-color: var(--danger); background: #fee2e2; color: #991b1b; transform: scale(1.15); animation: shake 0.4s; z-index: 10; box-shadow: 0 0 12px var(--danger);}
+        .char-box.empty { background: repeating-linear-gradient(45deg, #e2e8f0, #e2e8f0 5px, #f8fafc 5px, #f8fafc 10px); color: #94a3b8; font-size: 0.85rem;}
+
+        @keyframes shake { 0%, 100% {transform: scale(1.15) translateX(0);} 25% {transform: scale(1.15) translateX(-4px);} 75% {transform: scale(1.15) translateX(4px);} }
+
+        /* --- ΑΛΦΑΒΗΤΙΚΗ ΜΠΑΡΑ --- */
+        .alpha-board { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 10px; opacity: 0; transform: translateY(20px); transition: all 0.5s; padding: 15px; border-radius: 8px; background: var(--panel-2); border: 2px dashed var(--line);}
+        .alpha-board.visible { opacity: 1; transform: translateY(0); }
+        .alpha-title { font-weight: bold; color: var(--primary); font-size: 0.85rem;}
+        .alpha-line { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
+        .alpha-letter { width: 28px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: bold; color: var(--muted); border-bottom: 2px solid var(--line); transition: all 0.4s;}
+        .alpha-letter.active { background: var(--primary); color: white; border-bottom: 4px solid var(--primary-2); transform: scale(1.4); border-radius: 4px; z-index: 5; box-shadow: 0 4px 10px rgba(0,0,0,0.2);}
+        .alpha-letter.empty-mark { width: 45px; font-size: 0.75rem; font-style: italic;}
+        
+        .result-banner { font-size: 1.8rem; font-weight: 900; color: var(--danger); font-family: Consolas, monospace; background: white; padding: 10px 20px; border-radius: 8px; border: 2px solid var(--danger); animation: popin 0.5s;}
+
+        .logic-warning { display: flex; flex-direction: column; align-items: center; gap: 15px; text-align: center; opacity: 0; transition: 0.5s; }
+        .logic-warning.visible { opacity: 1; }
+        .warn-icon { font-size: 4rem; animation: shake 1s infinite; }
+
+        /* ΑΥΞΗΘΗΚΕ ΤΟ ΥΨΟΣ ΤΗΣ ΟΘΟΝΗΣ ΣΤΑ 260px (περίπου +120%) */
+        .right { display: grid; grid-template-rows: 1fr 260px; gap: 10px; min-height: 0; }
+        .trace, .console { display: flex; flex-direction: column; min-height: 0; }
+        .trace-scroll { flex: 1; overflow: auto; padding: 6px; }
+
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; font-family: Consolas, "Courier New", monospace; font-size: 0.85rem; text-align: center; }
+        th { padding: 7px 3px; border-bottom: 2px solid var(--line); color: var(--primary); }
+        td { height: 30px; padding: 6px 3px; border-bottom: 1px dashed var(--line); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        td.new { color: var(--primary); background: rgba(37, 99, 235, 0.12); font-weight: 900; }
+
+        .console-log { flex: 1; overflow: auto; padding: 8px; font-family: Consolas, "Courier New", monospace; font-size: 0.85rem; line-height: 1.45; }
+        
+        @keyframes popin { 0% { opacity: 0; transform: scale(0.5); } 100% { opacity: 1; transform: scale(1); } }
+
+        @media (max-width: 1180px) { body { overflow: auto; } .layout { grid-template-columns: 1fr; grid-auto-rows: auto; overflow: visible; } .middle { grid-template-columns: 1fr; } .left, .viz-panel, .right { min-height: 360px; } .right { grid-template-rows: 280px 200px; } }
+    </style>
+</head>
+<body>
+    <div class="tabs">
+        <button class="tab active" id="tab-1" onclick="switchTab(1)">1. Διαφορά στο 1ο Γράμμα</button>
+        <button class="tab" id="tab-2" onclick="switchTab(2)">2. Ισοπαλία στην Αρχή</button>
+        <button class="tab" id="tab-3" onclick="switchTab(3)">3. Διαφορά Μήκους</button>
+        <button class="tab" id="tab-4" onclick="switchTab(4)">4. Λογικές Τιμές</button>
+    </div>
+
+    <header>
+        <h1>Σύγκριση Αλφαριθμητικών & Λογικών Τιμών</h1>
+        <div class="toolbar">
+            <button onclick="init()">Αρχή</button>
+            <button class="action" id="btnAuto" onclick="playAuto()">Αυτόματα</button>
+            <button class="action" id="btnStep" onclick="playStep()">Βήμα</button>
+            <label class="speed">Ταχύτητα <input id="speedSlider" type="range" min="250" max="2300" value="1100"></label>
+            <button onclick="document.body.classList.toggle('dark')">Σκούρο</button>
+        </div>
+    </header>
+
+    <main class="layout">
+        <section class="panel left">
+            <div class="lesson active" id="lesson-1">
+                <div class="lesson-title">Περίπτωση 1: Άμεση Διαφορά</div>
+                <div class="prompt">Σύγκριση των λέξεων <b>'ΑΛΕΞΑΝΔΡΟΣ'</b> και <b>'ΤΑΣΟΣ'</b>.</div>
+                <div class="method">
+                    Εδώ, ήδη από το 1ο γράμμα το 'Τ' είναι αλφαβητικά "μεγαλύτερο" (πιο δεξιά) από το 'Α'. Η σύγκριση σταματάει αμέσως.
+                </div>
+            </div>
+
+            <div class="lesson" id="lesson-2">
+                <div class="lesson-title">Περίπτωση 2: Ίδιο Πρόθεμα</div>
+                <div class="prompt">Σύγκριση των λέξεων <b>'ΑΕΛ'</b> και <b>'ΑΕΚ'</b>.</div>
+                <div class="method">
+                    Όταν τα πρώτα γράμματα είναι ίδια (Α=Α, Ε=Ε), ο "σαρωτής" προχωράει αγνοώντας τα, μέχρι να βρει την πρώτη διαφορά.<br><br>
+                    Στο 3ο γράμμα το 'Λ' είναι μεγαλύτερο από το 'Κ'. Άρα 'ΑΕΛ' > 'ΑΕΚ'.
+                </div>
+            </div>
+
+            <div class="lesson" id="lesson-3">
+                <div class="lesson-title">Περίπτωση 3: Διαφορά Μήκους</div>
+                <div class="prompt">Σύγκριση των λέξεων <b>'ΓΑΤΑ'</b> και <b>'ΓΑΤΑΚΙ'</b>.</div>
+                <div class="method">
+                    Τα πρώτα 4 γράμματα είναι ίδια. Η λέξη 'ΓΑΤΑ' τελειώνει, οπότε "συγκρίνει" το κενό με το γράμμα 'Κ'. <br><br>
+                    Το κενό είναι <b>πάντα μικρότερο</b> από οποιοδήποτε γράμμα.
+                </div>
+            </div>
+
+            <div class="lesson" id="lesson-4">
+                <div class="lesson-title">Περίπτωση 4: Λογικές Τιμές</div>
+                <div class="prompt">Προσπάθεια σύγκρισης (π.χ. με < ή >) μεταξύ <b>ΑΛΗΘΗΣ</b> και <b>ΨΕΥΔΗΣ</b>.</div>
+                <div class="method" style="background:#fee2e2; border-color:#dc2626; color:#991b1b;">
+                    <b>ΠΡΟΣΟΧΗ:</b> Το να ρωτάμε αν το ΑΛΗΘΗΣ είναι μεγαλύτερο ή μικρότερο από το ΨΕΥΔΗΣ <b>δεν έχει κανένα νόημα</b>. Επιτρέπονται μόνο οι πράξεις ισότητας (=) και ανισότητας (<>).
+                </div>
+            </div>
+
+            <div class="global-rules">
+                <div class="global-rules-title">Βασικοι Κανονες Αλφαριθμητικων</div>
+                <ul>
+                    <li><b>Κανόνας 1:</b> Συγκρίνουμε από αριστερά προς δεξιά.</li>
+                    <li><b>Κανόνας 2:</b> Το πρώτο διαφορετικό γράμμα αποφασίζει.</li>
+                    <li><b>Κανόνας 3:</b> Αν όλα ίδια, μεγαλύτερη είναι η λέξη με τα περισσότερα γράμματα.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="middle">
+            <section class="panel viz-panel">
+                <div class="panel-head">
+                    <span>Οπτικοποίηση & Επεξηγήσεις Βήμα-Βήμα</span>
+                    <span class="badge" id="phaseBadge">Αναμονή</span>
+                </div>
+                <div class="inputs" id="inputBar"></div>
+                <div class="stage" id="visualStage">
+                    <div class="expl-banner" id="explBanner">Αναμονή εκκίνησης...</div>
+                    <div id="scannerAreaHolder" style="width:100%; display:flex; flex-direction:column; align-items:center;"></div>
+                </div>
+            </section>
+        </section>
+
+        <aside class="right">
+            <section class="panel trace">
+                <div class="panel-head">
+                    <span>Μνήμη RAM</span>
+                </div>
+                <div class="trace-scroll">
+                    <table>
+                        <thead id="traceHead"></thead>
+                        <tbody id="traceBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="panel console">
+                <div class="panel-head">Οθόνη εξόδου</div>
+                <div class="console-log" id="outputLog"></div>
+            </section>
+        </aside>
+    </main>
+
+    <script>
+        const ALPHABET = ['(κενό)', 'Α','Β','Γ','Δ','Ε','Ζ','Η','Θ','Ι','Κ','Λ','Μ','Ν','Ξ','Ο','Π','Ρ','Σ','Τ','Υ','Φ','Χ','Ψ','Ω'];
+
+        const scenarios = {
+            1: { inputs: [ { id: "w1", label: "Λέξη 1", value: "ΑΛΕΞΑΝΔΡΟΣ", type: "text" }, { id: "w2", label: "Λέξη 2", value: "ΤΑΣΟΣ", type: "text" } ], trace: ["λεξη1", "λεξη2"] },
+            2: { inputs: [ { id: "w1", label: "Ομάδα 1", value: "ΑΕΛ", type: "text" }, { id: "w2", label: "Ομάδα 2", value: "ΑΕΚ", type: "text" } ], trace: ["ομ1", "ομ2"] },
+            3: { inputs: [ { id: "w1", label: "Ζώο 1", value: "ΓΑΤΑ", type: "text" }, { id: "w2", label: "Ζώο 2", value: "ΓΑΤΑΚΙ", type: "text" } ], trace: ["ζωο1", "ζωο2"] },
+            4: { inputs: [ { id: "b1", label: "Λογική 1", value: "ΑΛΗΘΗΣ", type: "select" }, { id: "b2", label: "Λογική 2", value: "ΨΕΥΔΗΣ", type: "select" } ], trace: ["λογ1", "λογ2"] }
+        };
+
+        let currentTab = 1; let isRunning = false; let runMode = "auto"; let runId = 0; let speed = 1200;
+        let stepResolve = null; let traceRows = []; let currentRow = null;
+        const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+        function updateSpeed() { speed = 2550 - Number(document.getElementById("speedSlider").value); }
+        function getInput(id) { return document.getElementById(`in-${id}`); }
+        function log(message) { let out = document.getElementById("outputLog"); out.insertAdjacentHTML('beforeend', `<div>${message}</div>`); out.scrollTop = out.scrollHeight; }
+
+        function switchTab(num) {
+            if (isRunning) return; currentTab = num;
+            document.querySelectorAll(".tab").forEach((tab, index) => tab.classList.toggle("active", index + 1 === num));
+            document.querySelectorAll(".lesson").forEach((lesson, index) => lesson.classList.toggle("active", index + 1 === num));
+            init();
+        }
+
+        function renderInputs() {
+            let bar = document.getElementById("inputBar"); bar.innerHTML = "";
+            scenarios[currentTab].inputs.forEach(inp => {
+                let wrap = document.createElement("div"); wrap.className = "input-card";
+                let field = inp.type === "select" 
+                    ? `<select id="in-${inp.id}" disabled><option value="ΑΛΗΘΗΣ" ${inp.value==="ΑΛΗΘΗΣ"?"selected":""}>ΑΛΗΘΗΣ</option><option value="ΨΕΥΔΗΣ" ${inp.value==="ΨΕΥΔΗΣ"?"selected":""}>ΨΕΥΔΗΣ</option></select>`
+                    : `<input id="in-${inp.id}" type="text" value="${inp.value}" readonly>`;
+                wrap.innerHTML = `<label for="in-${inp.id}">${inp.label}</label>${field}`;
+                bar.appendChild(wrap);
+            });
+        }
+
+        function renderTraceHead() {
+            let headers = scenarios[currentTab].trace.map(h => `<th>${h}</th>`).join("");
+            document.getElementById("traceHead").innerHTML = `<tr>${headers}</tr>`;
+        }
+
+        // --- DYNAMIC EXPLANATION SYSTEM ---
+        function setExpl(text) {
+            let banner = document.getElementById("explBanner");
+            // Η χρήση ενός εσωτερικού span αποτρέπει το flexbox από το να "καταπιεί" τα κενά
+            banner.innerHTML = `<span>${text}</span>`;
+            banner.classList.add("visible");
+        }
+
+        function init() {
+            runId++; releaseStep(); isRunning = false; traceRows = []; currentRow = null;
+            renderInputs(); renderTraceHead();
+            document.getElementById("traceBody").innerHTML = ""; document.getElementById("outputLog").innerHTML = "";
+            document.getElementById("scannerAreaHolder").innerHTML = "";
+            document.getElementById("explBanner").classList.remove("visible");
+            document.getElementById("phaseBadge").textContent = "Αναμονή"; document.getElementById("phaseBadge").style.background = "var(--warning)"; document.getElementById("phaseBadge").style.color = "#111827";
+            document.getElementById("btnAuto").disabled = false; document.getElementById("btnStep").disabled = false;
+            document.getElementById("btnAuto").classList.remove("active"); document.getElementById("btnStep").classList.remove("pulse");
+        }
+
+        async function waitStep(ms, myId) {
+            if (myId !== runId) throw new Error("Interrupted");
+            if (runMode === "auto") { await sleep(ms); } 
+            else {
+                document.getElementById("btnStep").classList.add("pulse"); document.getElementById("btnStep").disabled = false;
+                await new Promise(resolve => stepResolve = resolve);
+                if (myId !== runId) throw new Error("Interrupted");
+                document.getElementById("btnStep").classList.remove("pulse");
+            }
+        }
+
+        function releaseStep() { if (stepResolve) { let res = stepResolve; stepResolve = null; res(); } }
+        function playStep() { runMode = "step"; document.getElementById("btnAuto").classList.remove("active"); if (!isRunning) startExecution(); else releaseStep(); }
+        function playAuto() { runMode = "auto"; document.getElementById("btnAuto").classList.add("active"); document.getElementById("btnStep").classList.remove("pulse"); document.getElementById("btnStep").disabled = true; if (!isRunning) startExecution(); else releaseStep(); }
+
+        function startTraceRow() {
+            currentRow = document.createElement("tr");
+            scenarios[currentTab].trace.forEach((_, i) => { let td = document.createElement("td"); td.id = `cell-${traceRows.length}-${i}`; currentRow.appendChild(td); });
+            document.getElementById("traceBody").appendChild(currentRow); traceRows.push(currentRow);
+        }
+        function addTrace(index, value) {
+            if (!currentRow) startTraceRow(); let td = document.getElementById(`cell-${traceRows.length - 1}-${index}`);
+            if (!td) return; td.textContent = value; td.classList.add("new");
+            document.querySelector(".trace-scroll").scrollTop = document.querySelector(".trace-scroll").scrollHeight;
+        }
+
+        // --- VISUAL COMPONENTS ---
+        function buildScannerHTML(w1, w2) {
+            let len = Math.max(w1.length, w2.length);
+            let html1 = '', html2 = '';
+            for(let i=0; i<len; i++) {
+                let c1 = i < w1.length ? w1[i] : '';
+                let cl1 = i >= w1.length ? 'empty' : '';
+                let txt1 = i >= w1.length ? 'κενό' : c1;
+                html1 += `<div class="char-box r1-c${i} ${cl1}">${txt1}</div>`;
+                
+                let c2 = i < w2.length ? w2[i] : '';
+                let cl2 = i >= w2.length ? 'empty' : '';
+                let txt2 = i >= w2.length ? 'κενό' : c2;
+                html2 += `<div class="char-box r2-c${i} ${cl2}">${txt2}</div>`;
+            }
+            return `
+                <div class="scanner-container" id="scannerArea">
+                    <div class="word-row"><div class="word-label">Λέξη 1:</div>${html1}</div>
+                    <div class="word-row"><div class="word-label">Λέξη 2:</div>${html2}</div>
+                </div>
+                <div class="alpha-board" id="alphaBoard">
+                    <div class="alpha-title">Αλφαβητική Μπάρα (Διάταξη)</div>
+                    <div class="alpha-line">
+                        ${ALPHABET.map((char, i) => `<div class="alpha-letter ${i===0?'empty-mark':''}" id="alpha-${i}">${char}</div>`).join('')}
+                    </div>
+                </div>
+                <div id="scanResult" class="result-banner" style="display:none; margin-top:20px;"></div>
+            `;
+        }
+
+        async function executeScanner(w1, w2, myId) {
+            let len = Math.max(w1.length, w2.length);
+            for(let i=0; i<len; i++) {
+                let c1 = i < w1.length ? w1[i] : '';
+                let c2 = i < w2.length ? w2[i] : '';
+                
+                let b1 = document.querySelector(`.r1-c${i}`); let b2 = document.querySelector(`.r2-c${i}`);
+                
+                // Scan phase
+                b1.classList.add('scanning'); b2.classList.add('scanning');
+                setExpl(`Συγκρίνουμε τον <b>${i+1}ο χαρακτήρα</b>: το <span class="expl-hl">'${c1===''?'κενό':c1}'</span> με το <span class="expl-hl">'${c2===''?'κενό':c2}'</span>`);
+                await waitStep(speed * 1.5, myId);
+                
+                if(c1 === c2) {
+                    // Match
+                    b1.classList.replace('scanning', 'match'); b2.classList.replace('scanning', 'match');
+                    setExpl(`Είναι ακριβώς <b>ίδια</b>! Ο υπολογιστής προχωράει στον επόμενο χαρακτήρα...`);
+                    await waitStep(speed * 1.2, myId);
+                } else {
+                    // Diff
+                    b1.classList.replace('scanning', 'diff'); b2.classList.replace('scanning', 'diff');
+                    setExpl(`Βρέθηκε <b>διαφορά</b>! Σταματάμε τη σάρωση. Πάμε να ελέγξουμε το Αλφάβητο.`);
+                    await waitStep(speed * 1.5, myId);
+                    
+                    // Show Alphabet Board
+                    let ab = document.getElementById('alphaBoard'); ab.classList.add('visible');
+                    
+                    let p1 = c1 === '' ? 0 : ALPHABET.indexOf(c1);
+                    let p2 = c2 === '' ? 0 : ALPHABET.indexOf(c2);
+                    
+                    let a1 = document.getElementById(`alpha-${p1}`); let a2 = document.getElementById(`alpha-${p2}`);
+                    a1.classList.add('active'); a2.classList.add('active');
+                    
+                    if (c1 === '' || c2 === '') {
+                        setExpl(`ΠΡΟΣΟΧΗ: Το <b>(κενό)</b> δεν είναι γράμμα και είναι <b>ΠΑΝΤΑ μικρότερο</b> από οποιοδήποτε γράμμα!`);
+                    } else {
+                        let isP1First = p1 < p2;
+                        setExpl(`Στο αλφάβητο, το <b>'${c1}'</b> βρίσκεται <b>${isP1First?'πριν':'μετά'}</b> από το <b>'${c2}'</b>.`);
+                    }
+                    await waitStep(speed * 2.0, myId);
+                    
+                    let symb = p1 < p2 ? '<' : '>';
+                    let resBox = document.getElementById('scanResult');
+                    resBox.innerHTML = `'${c1 === '' ? 'κενό' : c1}' ${symb} '${c2 === '' ? 'κενό' : c2}'`;
+                    resBox.style.display = 'block';
+                    
+                    await waitStep(speed * 1.5, myId);
+                    return p1 < p2 ? -1 : 1;
+                }
+            }
+            return 0; // Exactly identical
+        }
+
+        function startExecution() {
+            if (isRunning) return; isRunning = true; updateSpeed();
+            let myId = runId;
+            let pBadge = document.getElementById("phaseBadge");
+            pBadge.textContent = "Εκτέλεση & Μνήμη"; pBadge.style.background = "var(--success)"; pBadge.style.color = "white";
+
+            let executionPromise;
+            if (currentTab === 1) executionPromise = runTab1(myId);
+            else if (currentTab === 2) executionPromise = runTab2(myId);
+            else if (currentTab === 3) executionPromise = runTab3(myId);
+            else executionPromise = runTab4(myId);
+
+            executionPromise.then(() => {
+                pBadge.textContent = "Ολοκληρώθηκε";
+            }).catch(err => { 
+                if (err.message !== "Interrupted") { console.error(err); log(`<span style="color:var(--danger)">Σφάλμα: ${err.message}</span>`); } 
+            }).finally(() => {
+                if (myId === runId) {
+                    isRunning = false; 
+                    document.getElementById("btnAuto").disabled = false; document.getElementById("btnStep").disabled = false;
+                    document.getElementById("btnAuto").classList.remove("active"); document.getElementById("btnStep").classList.remove("pulse");
+                }
+            });
+        }
+
+        // TAB 1 Execution
+        async function runTab1(myId) {
+            let stageHolder = document.getElementById('scannerAreaHolder'); stageHolder.innerHTML = "";
+            let w1 = getInput('w1').value; let w2 = getInput('w2').value;
+            
+            setExpl(`Αποθηκεύουμε τις λέξεις <b>'${w1}'</b> και <b>'${w2}'</b> στη Μνήμη RAM.`);
+            startTraceRow(); addTrace(0, `'${w1}'`); addTrace(1, `'${w2}'`);
+            log(`> Μνήμη: λεξη1 = '${w1}', λεξη2 = '${w2}'`);
+            await waitStep(speed * 1.5, myId);
+
+            stageHolder.innerHTML = buildScannerHTML(w1, w2);
+            setExpl(`Ξεκινάει ο έλεγχος της συνθήκης ( <span class="expl-hl">λεξη1 &lt; λεξη2</span> )`);
+            await waitStep(speed * 1.5, myId);
+
+            let compRes = await executeScanner(w1, w2, myId);
+            
+            if(compRes === -1) {
+                setExpl(`Συνεπώς η λέξη <b>'${w1}'</b> θεωρείται μικρότερη από τη <b>'${w2}'</b>. Η συνθήκη είναι ΑΛΗΘΗΣ!`);
+                log(`> Εμφάνιση: <b style="color:var(--primary)">${w1} &lt; ${w2}</b>`);
+            }
+            await waitStep(speed * 1.0, myId); log(`<span style="color:var(--success)">✓ Ολοκληρώθηκε.</span>`);
+        }
+
+        // TAB 2 Execution
+        async function runTab2(myId) {
+            let stageHolder = document.getElementById('scannerAreaHolder'); stageHolder.innerHTML = "";
+            let w1 = getInput('w1').value; let w2 = getInput('w2').value;
+            
+            setExpl(`Αποθηκεύουμε τις λέξεις <b>'${w1}'</b> και <b>'${w2}'</b> στη Μνήμη.`);
+            startTraceRow(); addTrace(0, `'${w1}'`); addTrace(1, `'${w2}'`);
+            log(`> Μνήμη: ομ1 = '${w1}', ομ2 = '${w2}'`);
+            await waitStep(speed * 1.5, myId);
+
+            stageHolder.innerHTML = buildScannerHTML(w1, w2);
+            setExpl(`Εκτελείται η σύγκριση για να δούμε αν η πρώτη ομάδα είναι αλφαβητικά "μεγαλύτερη".`);
+            await waitStep(speed * 1.5, myId);
+
+            let compRes = await executeScanner(w1, w2, myId);
+            
+            if(compRes === 1) { 
+                setExpl(`Το 'Λ' είναι μετά το 'Κ'. Συνεπώς η λέξη <b>'${w1}'</b> είναι μεγαλύτερη. Τυπώνεται στην οθόνη!`);
+                log(`> Εμφάνιση: <b style="color:var(--primary)">${w1} &gt; ${w2}</b>`);
+            }
+            await waitStep(speed * 1.0, myId); log(`<span style="color:var(--success)">✓ Ολοκληρώθηκε.</span>`);
+        }
+
+        // TAB 3 Execution
+        async function runTab3(myId) {
+            let stageHolder = document.getElementById('scannerAreaHolder'); stageHolder.innerHTML = "";
+            let w1 = getInput('w1').value; let w2 = getInput('w2').value;
+            
+            setExpl(`Αποθηκεύουμε τα strings <b>'${w1}'</b> και <b>'${w2}'</b> στη Μνήμη RAM.`);
+            startTraceRow(); addTrace(0, `'${w1}'`); addTrace(1, `'${w2}'`);
+            log(`> Μνήμη: ζωο1 = '${w1}', ζωο2 = '${w2}'`);
+            await waitStep(speed * 1.5, myId);
+
+            stageHolder.innerHTML = buildScannerHTML(w1, w2);
+            setExpl(`Ξεκινάει ο σαρωτής γραμμάτων... Τι γίνεται αν η μία λέξη είναι μικρότερη σε μήκος;`);
+            await waitStep(speed * 1.5, myId);
+
+            let compRes = await executeScanner(w1, w2, myId);
+            
+            if(compRes === -1) { 
+                setExpl(`Η λέξη με τους περισσότερους χαρακτήρες κερδίζει όταν τα πρώτα γράμματα είναι ίδια!`);
+                log(`> Εμφάνιση: <b style="color:var(--primary)">${w1} &lt; ${w2}</b>`);
+            }
+            await waitStep(speed * 1.0, myId); log(`<span style="color:var(--success)">✓ Ολοκληρώθηκε.</span>`);
+        }
+
+        // TAB 4 Execution (Logicals)
+        async function runTab4(myId) {
+            let stageHolder = document.getElementById('scannerAreaHolder'); stageHolder.innerHTML = "";
+            let v1 = getInput('b1').value; let v2 = getInput('b2').value;
+            
+            setExpl(`Αποθηκεύουμε τις ΛΟΓΙΚΕΣ τιμές <b>${v1}</b> και <b>${v2}</b> στη μνήμη. Δεν έχουν εισαγωγικά, δεν είναι λέξεις!`);
+            startTraceRow(); addTrace(0, v1); addTrace(1, v2);
+            log(`> Μνήμη: λογ1 = ${v1}, λογ2 = ${v2}`);
+            await waitStep(speed * 2.0, myId);
+
+            setExpl(`Το πρόγραμμα προσπαθεί να εκτελέσει τη συνθήκη: <span class="expl-hl">λογ1 &lt; λογ2</span>`);
+            await waitStep(speed * 1.5, myId);
+
+            stageHolder.innerHTML = `
+                <div class="logic-warning" id="logWarn">
+                    <div class="warn-icon">⚠️</div>
+                    <div class="result-banner" style="text-decoration: line-through; display:block;">${v1} &lt; ${v2}</div>
+                    <div style="font-weight:bold; color:var(--danger); max-width: 400px; font-size:1.1rem; line-height:1.4;">ΣΦΑΛΜΑ ΣΥΝΤΑΞΗΣ: Δεν ορίζεται διάταξη ( &lt; ή &gt; ) στις λογικές τιμές!<br>Μπορούμε μόνο να ελέγξουμε αν είναι ίσες (=) ή διάφορες (&lt;&gt;).</div>
+                </div>
+            `;
+            await sleep(50); document.getElementById('logWarn').classList.add('visible');
+            
+            setExpl(`Το πρόγραμμα έχει συντακτικό λάθος. Η σύγκριση λογικών τιμών έχει νόημα, μόνο στο ίσο (=) και διάφορο (<>).`);
+            await waitStep(speed * 2.0, myId);
+
+            log(`> Εμφάνιση: <b style="color:var(--danger)">Αδύνατο - Σφάλμα εκτέλεσης</b>`);
+            await waitStep(speed * 0.8, myId); log(`<span style="color:var(--danger)">❌ Τερματισμός με Σφάλμα.</span>`);
+        }
+
+        init();
+    </script>
+</body>
+</html>
