@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>Πτήση Εκφράσεων (ΓΛΩΣΣΑ) - Standard UI</title>
+    <style>
+        :root {
+            --bg-color: #f1f5f9; --text-color: #1e293b; --panel-bg: #ffffff; --highlight-line: #fde047;
+            --primary: #3b82f6; --success: #10b981; --warning: #f59e0b; --danger: #ef4444; --border-color: #cbd5e1;
+            --code-kw: #0000CD; --code-var: #000000; --code-str: #800080;
+        }
+        body.dark-mode { --bg-color: #020617; --panel-bg: #1e293b; --text-color: #f8fafc; --border-color: #334155; }
+        body.dark-mode .input-group input { background: #0f172a; color: white; border-color: #64748b; }
+        body.dark-mode .expression { background: #0f172a; border-color: #334155; color: white; }
+        body.dark-mode .rule-box { background: #0f172a; border-color: #334155; color: #cbd5e1;}
+        body.dark-mode .rule-box code { color: #818cf8; }
+        body.dark-mode .stat-card { background: #0f172a; border-color: #334155; }
+        body.dark-mode .fly { color: rgba(255, 255, 255, 0.08); text-shadow: 0 0 10px rgba(255,255,255,0.1); }
+        body.dark-mode .feedback.ok { background: rgba(16, 185, 129, 0.1); color: #34d399; }
+        body.dark-mode .feedback.bad { background: rgba(239, 68, 68, 0.1); color: #f87171; }
+        body.dark-mode .feedback.hint { background: rgba(245, 158, 11, 0.1); color: #fbbf24; }
+        body.dark-mode .solution { background: #0f172a; border-color: #475569; color: #94a3b8; }
+        body.dark-mode .keyboard-shortcut { background: #334155; color: #cbd5e1; border-color: #475569;}
+
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s; }
+
+        /* HEADER */
+        header { background-color: var(--panel-bg); border-bottom: 1px solid var(--border-color); padding: 8px 15px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; z-index: 100; transition: 0.3s; }
+        .header-title h1 { margin: 0; font-size: 1rem; color: var(--primary); white-space: nowrap; margin-right: 15px;}
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: nowrap;}
+        button { padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem; background-color: var(--panel-bg); color: var(--text-color); transition: 0.2s;}
+        button.action-btn { border: 2px solid var(--primary); color: var(--primary); background: transparent;}
+        button.action-btn:hover:not(:disabled) { background-color: var(--primary); color: white; }
+        button.primary-btn { background-color: var(--primary); color: white; border: none; }
+        button.primary-btn:hover:not(:disabled) { background-color: #2563eb; transform: translateY(-1px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important;}
+
+        /* MAIN LAYOUT */
+        .main-container { display: flex; flex: 1; padding: 10px; gap: 10px; overflow: hidden; max-width: 100vw; box-sizing: border-box; }
+        .col { display: flex; flex-direction: column; overflow: hidden; }
+
+        /* LEFT (Rules & Stats) */
+        .col-left { flex: 0 0 320px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+        .theory-card { background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; transition: 0.3s;}
+        .theory-title { font-size: 0.85rem; font-weight: bold; padding: 8px 10px; background: rgba(59, 130, 246, 0.1); border-bottom: 2px solid var(--primary); color: var(--primary); flex-shrink: 0;}
+        .theory-text { padding: 10px; font-size: 0.75rem; line-height: 1.4; overflow-y: auto;}
+
+        /* Stats Grid */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 5px; }
+        .stat-card { background: #f8fafc; border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; text-align: center; }
+        .stat-card b { display: block; font-size: 1.5rem; color: var(--primary); }
+        .stat-card span { font-size: 0.7rem; color: #64748b; font-weight: bold; text-transform: uppercase; }
+
+        /* Rules */
+        .rule-box { background: #f8fafc; border: 1px solid var(--border-color); padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 0.75rem;}
+        .rule-box code { color: #6d28d9; font-weight: bold; font-size: 0.8rem;}
+        .keyboard-shortcut { display: inline-block; padding: 2px 6px; background: #e2e8f0; border: 1px solid #cbd5e1; border-radius: 4px; font-family: monospace; font-size: 0.7rem; font-weight: bold;}
+
+        /* MID (Game Area) */
+        .col-mid { flex: 1; background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: 0.3s; overflow: hidden;}
+        
+        /* Sky Background (Contained in col-mid) */
+        .sky { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+        .fly { position: absolute; left: -18vw; white-space: nowrap; font-family: Consolas, monospace; color: rgba(59, 130, 246, 0.1); font-weight: 800; text-shadow: 0 0 10px rgba(59, 130, 246, 0.15); animation: flyAcross linear infinite; }
+        @keyframes flyAcross { 0% { transform: translate3d(-10vw, 0, 0) rotate(-6deg); opacity: 0; } 8% { opacity: 1; } 92% { opacity: 1; } 100% { transform: translate3d(100vw, -14vh, 0) rotate(6deg); opacity: 0; } }
+
+        /* Progress Bar */
+        .progress-shell { height: 6px; width: 100%; background: var(--border-color); z-index: 2; position: relative;}
+        .progress-bar { height: 100%; width: 0; background: linear-gradient(90deg, #3b82f6, #8b5cf6, #f59e0b); transition: width 0.4s ease; }
+
+        /* Game Interface */
+        .game-interface { position: relative; z-index: 2; padding: 20px; display: flex; flex-direction: column; hieght: 100%; flex: 1; overflow-y: auto;}
+        .topline { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .badge { padding: 4px 10px; border-radius: 999px; background: #e0f2fe; color: #075985; font-weight: bold; font-size: 0.75rem; }
+        .question-no { color: #64748b; font-weight: bold; font-size: 0.85rem; }
+        .prompt { margin-bottom: 10px; font-weight: bold; color: var(--text-color); font-size: 0.9rem;}
+
+        /* Expression Box & Plane */
+        .expression-shell { position: relative; width: 100%; display: flex; justify-content: center; margin-bottom: 25px; margin-top: 10px;}
+        .expression { width: 90%; max-width: 700px; min-height: 120px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; border-radius: 12px; background: linear-gradient(135deg, #eff6ff, #f8fafc); border: 2px solid #dbeafe; font-family: Georgia, serif; font-size: clamp(1.8rem, 3vw, 3rem); box-shadow: 0 10px 25px rgba(0,0,0,0.05); transition: 0.3s;}
+        .expression math { font-size: clamp(1.5rem, 2.5vw, 2.5rem); font-family: "Cambria Math", "STIX Two Math", "Times New Roman", serif; }
+        
+        .question-flight { position: absolute; top: -15px; left: -90px; z-index: 5; display: flex; align-items: center; gap: 7px; color: var(--primary); font-weight: 900; font-size: 0.85rem; opacity: 0; pointer-events: none; filter: drop-shadow(0 4px 5px rgba(37,99,235,0.22)); }
+        .question-flight.launch { animation: missionFly 3.8s cubic-bezier(0.22, 0.75, 0.32, 1) 1; }
+        .question-flight .mini-plane { font-size: 1.5rem; display: inline-block; transform: rotate(7deg); }
+        .question-flight .vapour { width: 50px; height: 3px; border-radius: 999px; background: linear-gradient(90deg, transparent, #60a5fa); box-shadow: -15px 5px 0 -1px rgba(96,165,250,0.4); }
+        @keyframes missionFly { 0% { left: -100px; top: 8px; opacity: 0; transform: translateY(10px) scale(0.82); } 8% { opacity: 1; } 45% { top: -8px; } 90% { opacity: 1; } 100% { left: calc(100% + 30px); top: 5px; opacity: 0; transform: translateY(-8px) scale(1.05); } }
+
+        /* Input Area */
+        .answer-wrap { margin-top: 10px; display: flex; flex-direction: column; align-items: center; width: 100%;}
+        .answer-line { display: flex; gap: 10px; width: 90%; max-width: 700px; }
+        .answer-line input { flex: 1; padding: 12px 15px; border: 2px solid var(--border-color); border-radius: 8px; font-family: Consolas, monospace; font-size: 1.1rem; outline: none; transition: 0.2s;}
+        .answer-line input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(59,130,246,0.15); }
+
+        /* Feedback & Solution */
+        .feedback { display: none; width: 90%; max-width: 700px; margin: 15px auto 0; padding: 12px 15px; border-radius: 8px; border-left: 6px solid; font-size: 0.9rem; font-weight: bold; line-height: 1.4; animation: fadeIn 0.3s;}
+        .feedback.show { display: block; }
+        .feedback.ok { background: #f0fdf4; border-color: var(--success); color: #166534; }
+        .feedback.bad { background: #fef2f2; border-color: var(--danger); color: #991b1b; }
+        .feedback.hint { background: #fffbeb; border-color: var(--warning); color: #854d0e; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .solution { display: none; width: 90%; max-width: 700px; margin: 10px auto 0; padding: 12px; border-radius: 8px; background: #f1f5f9; border: 1px dashed #94a3b8; font-family: Consolas, monospace; font-size: 0.9rem;}
+        .solution.show { display: block; }
+
+        /* Action Buttons */
+        .actions { display: flex; width: 90%; max-width: 700px; justify-content: space-between; align-items: center; margin: 20px auto 0; flex-wrap: wrap; gap: 10px;}
+        .tools { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        /* Sparks for correct answer */
+        .spark { position: absolute; width: 10px; height: 10px; border-radius: 50%; pointer-events: none; animation: burst 0.8s ease-out forwards; z-index: 10;}
+        @keyframes burst { to { transform: translate(var(--x), var(--y)) scale(0); opacity: 0; } }
+
+        /* Completion Screen */
+        .complete { display: none; text-align: center; padding: 50px 20px; position: relative; z-index: 2; flex-direction: column; align-items: center; justify-content: center; height: 100%;}
+        .complete.show { display: flex; }
+        .complete h2 { font-size: 2rem; color: var(--primary); margin: 10px 0;}
+        .medal { font-size: 5rem; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+<header class="toolbar">
+    <div class="header-title"><h1>✈️ Πτήση Εκφράσεων (ΓΛΩΣΣΑ)</h1></div>
+    <div class="controls-area">
+        <button class="tool-btn" onclick="restart()">🔄 Επανεκκίνηση</button>
+        <button class="tool-btn" onclick="document.body.classList.toggle('dark-mode')">🌙</button>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <!-- LEFT PANEL: Rules & Stats -->
+    <div class="col col-left">
+        <div class="theory-card">
+            <div class="theory-title">Στατιστικά Πτήσης</div>
+            <div class="theory-text">
+                <div class="stats-grid">
+                    <div class="stat-card"><b id="score">0</b><span>ΒΑΘΜΟΙ</span></div>
+                    <div class="stat-card"><b id="streak">0</b><span>ΣΕΡΙ</span></div>
+                    <div class="stat-card" style="grid-column: span 2;"><b id="mistakes" style="color: var(--danger);">0</b><span>ΛΑΘΗ</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="theory-card" style="flex: 1;">
+            <div class="theory-title">Πίνακας Πλοήγησης (Κανόνες)</div>
+            <div class="theory-text">
+                <div class="rule-box"><b>Πολλαπλασιασμός:</b> γράφουμε πάντα <code>*</code>.</div>
+                <div class="rule-box"><b>Διαίρεση:</b> χρησιμοποιούμε <code>/</code> και παρενθέσεις όπου χρειάζονται.</div>
+                <div class="rule-box"><b>Δύναμη:</b> χρησιμοποιούμε <code>^</code>.</div>
+                <div class="rule-box"><b>Τετραγωνική ρίζα:</b> <code>Τ_Ρ(παράσταση)</code>.</div>
+                <div class="rule-box"><b>Απόλυτη τιμή:</b> <code>Α_Τ(παράσταση)</code>.</div>
+                <div class="rule-box"><b>Ημίτονο:</b> <code>ΗΜ(γωνία)</code>. Δεκτό και το <code>HM</code> (Λατινικά).</div>
+                <div class="rule-box"><b>Εκθετική:</b> γράφεται <code>Ε(x)</code> ή <code>ε(x)</code>.</div>
+                <div class="rule-box">
+                    <b>Συντομεύσεις:</b><br><br>
+                    <span class="keyboard-shortcut">Enter</span> : Έλεγχος / Επόμενο<br><br>
+                    <span class="keyboard-shortcut">Ctrl + H</span> : Υπόδειξη
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MID PANEL: Game Area -->
+    <div class="col col-mid" id="midContainer">
+        <!-- Progress Bar -->
+        <div class="progress-shell"><div class="progress-bar" id="progress"></div></div>
+        
+        <!-- Animated Sky Background -->
+        <div class="sky" id="sky"></div>
+
+        <!-- The Game Interface -->
+        <div class="game-interface" id="game">
+            <div class="topline">
+                <span class="badge" id="difficulty"></span>
+                <span class="question-no" id="questionNo"></span>
+            </div>
+            <div class="prompt">Να μετατραπεί σε σωστή έκφραση της ΓΛΩΣΣΑΣ:</div>
+            
+            <div class="expression-shell">
+                <div class="question-flight" id="questionFlight">
+                    <span class="vapour"></span><span class="mini-plane">✈️</span><span>Νέα αποστολή</span>
+                </div>
+                <div class="expression" id="expression"></div>
+            </div>
+
+            <div class="answer-wrap">
+                <div class="answer-line">
+                    <input id="answer" autocomplete="off" spellcheck="false" placeholder="π.χ. (x+3*y)*(x-5*y)">
+                    <button class="primary-btn" id="checkBtn" onclick="checkAnswer()">Έλεγχος ✨</button>
+                </div>
+            </div>
+
+            <div class="feedback" id="feedback"></div>
+            <div class="solution" id="solution"></div>
+            
+            <div class="actions">
+                <div class="tools">
+                    <button class="tool-btn" onclick="giveHint()">💡 Υπόδειξη</button>
+                    <button class="tool-btn" onclick="showRule()">📘 Κανόνας</button>
+                    <button class="tool-btn" id="showSolutionBtn" onclick="showSolution()" disabled style="color:var(--danger); border-color:var(--danger);">👁 Λύση</button>
+                </div>
+                <button class="action-btn" id="nextBtn" onclick="nextQuestion()" disabled>Επόμενη πτήση ➜</button>
+            </div>
+        </div>
+
+        <!-- Completion Screen -->
+        <div class="complete" id="complete">
+            <div class="medal">🏆</div>
+            <h2>Η αποστολή ολοκληρώθηκε</h2>
+            <p id="finalText" style="font-size: 1.1rem; margin-bottom: 20px;"></p>
+            <button class="primary-btn" onclick="restart()" style="padding: 10px 20px; font-size: 1rem;">Νέα προσπάθεια</button>
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+    const exerciseBank = [
+        {level:"Πανελλαδικές 2018", html:`<math display="block" aria-label="τετραγωνική ρίζα του κλάσματος x στο τετράγωνο συν 5 προς 3, συν απόλυτη τιμή του α συν β"><mrow><msqrt><mfrac><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>5</mn></mrow><mn>3</mn></mfrac></msqrt><mo>+</mo><mrow><mo stretchy="false">|</mo><mi>α</mi><mo>+</mo><mi>β</mi><mo stretchy="false">|</mo></mrow></mrow></math>`, answers:['Τ_Ρ((x^2+5)/3)+Α_Τ(α+β)','T_P((x^2+5)/3)+A_T(α+β)','((x^2+5)/3)^(1/2)+A_T(α+β)','((x^2+5)/3)^(1/2)+Α_Τ(α+β)','((x^2+5)/3)^0.5+A_T(α+β)','((x^2+5)/3)^0.5+Α_Τ(α+β)'], hints:['Η ρίζα περιλαμβάνει ολόκληρο το κλάσμα. Μπορείς να χρησιμοποιήσεις Τ_Ρ(...) ή δύναμη 1/2.','Η απόλυτη τιμή γράφεται Α_Τ(...) ή A_T(...).','Δεκτές μορφές: Τ_Ρ((x^2+5)/3)+Α_Τ(α+β) ή ((x^2+5)/3)^(1/2)+A_T(α+β).'], rule:'Η τετραγωνική ρίζα μπορεί να γραφεί είτε ως Τ_Ρ(παράσταση) είτε ισοδύναμα ως (παράσταση)^(1/2).'},
+        {level:"Πανελλαδικές 2018", html:`<math display="block"><mrow><mo>(</mo><mi>x</mi><mo>+</mo><mn>3</mn><mi>y</mi><mo>)</mo><mo>&#x2062;</mo><mo>(</mo><mi>x</mi><mo>−</mo><mn>5</mn><mi>y</mi><mo>)</mo></mrow></math>`, answers:['(x+3*y)*(x-5*y)'], hints:['Ανάμεσα στις παρενθέσεις υπάρχει πολλαπλασιασμός.','Τα 3y και 5y χρειάζονται *.','Κράτησε και τις δύο παρενθέσεις.'], rule:'Ο πολλαπλασιασμός δεν παραλείπεται ποτέ.'},
+        {level:"Πανελλαδικές 2018", html:`<math display="block"><mrow><mfrac><mn>10</mn><mn>20</mn></mfrac><mo>−</mo><mfrac><mn>5</mn><mrow><mn>7</mn><msup><mi>ω</mi><mn>3</mn></msup></mrow></mfrac></mrow></math>`, answers:['10/20-5/(7*ω^3)','10/20-5/(7*w^3)'], hints:['Ο δεύτερος παρονομαστής είναι ολόκληρο το 7ω³.','Χρειάζονται παρενθέσεις στον δεύτερο παρονομαστή.','Το 7ω³ γράφεται 7*ω^3.'], rule:'Σύνθετος παρονομαστής σημαίνει παρενθέσεις.'},
+        {level:"Πανελλαδικές 2018", html:`<math display="block"><mrow><mn>30,5</mn><mi>x</mi><mo>+</mo><mi>γ</mi><mi>δ</mi><mo>+</mo><mi>ω</mi><mi>x</mi></mrow></math>`, answers:['30.5*x+γ*δ+ω*x','30,5*x+γ*δ+ω*x'], hints:['Κάθε γινόμενο χρειάζεται *.','Υπάρχουν τρία γινόμενα.','Γράψε 30.5*x, γ*δ και ω*x.'], rule:'Η παράθεση αριθμού ή μεταβλητών σημαίνει πολλαπλασιασμό.'},
+        {level:"Πανελλαδικές 2018", html:`<math display="block"><mrow><msup><mi>y</mi><mn>5</mn></msup><mo>−</mo><mi>z</mi><msup><mrow><mo>(</mo><mi>μ</mi><mo>−</mo><mi>γ</mi><mo>)</mo></mrow><mn>2</mn></msup></mrow></math>`, answers:['y^5-z*(μ-γ)^2'], hints:['Το z πολλαπλασιάζει ολόκληρο το τετράγωνο.','Μετά το z χρειάζεται *.','Η δύναμη εφαρμόζεται στην παρένθεση.'], rule:'Η δύναμη σύνθετης παράστασης απαιτεί παρενθέσεις.'},
+        {level:"Πανελλαδικές 2018", html:`<math display="block"><msqrt><mrow><mi>ω</mi><mo>−</mo><msup><mi>x</mi><mn>2</mn></msup></mrow></msqrt></math>`, answers:['Τ_Ρ(ω-x^2)','T_P(ω-x^2)','(ω-x^2)^(1/2)','(w-x^2)^(1/2)'], hints:['Όλη η παράσταση είναι κάτω από τη ρίζα.','Χρησιμοποίησε Τ_Ρ(...) ή δύναμη 1/2.','Μέσα γράψε ω-x^2.'], rule:'Η ρίζα γράφεται Τ_Ρ(παράσταση) ή ισοδύναμα (παράσταση)^(1/2).'},
+        {level:"Δική μας άσκηση", html:`<math display="block"><mfrac><mrow><mo stretchy="false">|</mo><mn>3</mn><mi>x</mi><mo>−</mo><mn>2</mn><mi>y</mi><mo stretchy="false">|</mo></mrow><mrow><mi>α</mi><mo>+</mo><mn>1</mn></mrow></mfrac></math>`, answers:['Α_Τ(3*x-2*y)/(α+1)','A_T(3*x-2*y)/(α+1)'], hints:['Η απόλυτη τιμή είναι ο αριθμητής.','Τα 3x και 2y είναι γινόμενα.','Ο παρονομαστής χρειάζεται παρενθέσεις.'], rule:'Σύνθετος αριθμητής ή παρονομαστής θέλει παρενθέσεις.'},
+        {level:"Δική μας άσκηση", html:`<math display="block"><mfrac><msup><mrow><mo>(</mo><mi>α</mi><mo>+</mo><mi>β</mi><mo>)</mo></mrow><mn>3</mn></msup><msqrt><mrow><mi>x</mi><mo>+</mo><mn>4</mn></mrow></msqrt></mfrac></math>`, answers:['(α+β)^3/Τ_Ρ(x+4)','(α+β)^3/T_P(x+4)','(α+β)^3/(x+4)^(1/2)'], hints:['Ο αριθμητής είναι δύναμη παρένθεσης.','Ο παρονομαστής είναι ρίζα.','Συνδύασέ τα με /.'], rule:'Η δύναμη εφαρμόζεται στην παρένθεση και η ρίζα γράφεται ως Τ_Ρ ή δύναμη 1/2.'},
+        {level:"Δική μας άσκηση", html:`<math display="block"><mrow><mn>2</mn><msup><mi>x</mi><mn>2</mn></msup><mo>−</mo><mfrac><mrow><mn>3</mn><mi>y</mi><mo>+</mo><mn>1</mn></mrow><mn>5</mn></mfrac></mrow></math>`, answers:['2*x^2-(3*y+1)/5'], hints:['Το 2x² χρειάζεται *.','Το 3y+1 είναι ολόκληρος αριθμητής.','Κράτησε την παρένθεση.'], rule:'Οι παρενθέσεις κρατούν μαζί τον αριθμητή.'},
+        {level:"Δική μας άσκηση", html:`<math display="block"><msqrt><mrow><mo stretchy="false">|</mo><mi>x</mi><mo>−</mo><mi>y</mi><mo stretchy="false">|</mo><mo>+</mo><msup><mi>z</mi><mn>2</mn></msup></mrow></msqrt></math>`, answers:['Τ_Ρ(Α_Τ(x-y)+z^2)','T_P(A_T(x-y)+z^2)','Τ_Ρ(A_T(x-y)+z^2)','T_P(Α_Τ(x-y)+z^2)','(A_T(x-y)+z^2)^(1/2)','(Α_Τ(x-y)+z^2)^(1/2)'], hints:['Υπάρχει μία συνάρτηση μέσα σε άλλη.','Πρώτα γράψε Α_Τ(x-y).','Μετά βάλε όλο το άθροισμα στην Τ_Ρ ή ύψωσέ το στη δύναμη 1/2.'], rule:'Οι εμφωλευμένες συναρτήσεις γράφονται από μέσα προς τα έξω.'},
+        {level:"Πρόκληση", html:`<math display="block"><mrow><mfrac><mrow><mi>x</mi><mo>+</mo><mn>1</mn></mrow><mrow><mi>y</mi><mo>−</mo><mn>2</mn></mrow></mfrac><mo>+</mo><mfrac><mrow><mi>y</mi><mo>−</mo><mn>2</mn></mrow><mrow><mi>x</mi><mo>+</mo><mn>1</mn></mrow></mfrac></mrow></math>`, answers:['(x+1)/(y-2)+(y-2)/(x+1)'], hints:['Υπάρχουν δύο κλάσματα.','Κάθε αριθμητής και παρονομαστής είναι σύνθετος.','Χρειάζονται τέσσερις παρενθέσεις.'], rule:'Κάθε κλάσμα γράφεται ανεξάρτητα με καθαρές παρενθέσεις.'},
+        {level:"Πρόκληση", html:`<math display="block"><mrow><mo stretchy="false">|</mo><msup><mi>x</mi><mn>2</mn></msup><mo>−</mo><mn>4</mn><mo stretchy="false">|</mo><mo>+</mo><msqrt><mfrac><mrow><mi>α</mi><mo>+</mo><mi>β</mi></mrow><mn>2</mn></mfrac></msqrt></mrow></math>`, answers:['Α_Τ(x^2-4)+Τ_Ρ((α+β)/2)','A_T(x^2-4)+T_P((α+β)/2)','Α_Τ(x^2-4)+T_P((α+β)/2)','A_T(x^2-4)+Τ_Ρ((α+β)/2)','A_T(x^2-4)+((α+β)/2)^(1/2)','Α_Τ(x^2-4)+((α+β)/2)^(1/2)'], hints:['Η πρώτη είναι απόλυτη τιμή.','Η δεύτερη είναι ρίζα κλάσματος.','Μέσα στη ρίζα γράψε (α+β)/2.'], rule:'Κράτησε χωριστά τα ορίσματα των Α_Τ και Τ_Ρ.'},
+        {level:"Νέα άσκηση", html:`<math display="block" aria-label="δύο x συν το κλάσμα τρία επί x συν ένα προς y στο τετράγωνο συν ένα, μείον εκθετική του x"><mrow><mn>2</mn><mi>x</mi><mo>+</mo><mfrac><mrow><mn>3</mn><mo>(</mo><mi>x</mi><mo>+</mo><mn>1</mn><mo>)</mo></mrow><mrow><msup><mi>y</mi><mn>2</mn></msup><mo>+</mo><mn>1</mn></mrow></mfrac><mo>−</mo><msup><mi>e</mi><mi>x</mi></msup></mrow></math>`, answers:['2*x+3*(x+1)/(y^2+1)-Ε(x)','2*x+3*(x+1)/(y^2+1)-ε(x)','2*x+3*(x+1)/(y^2+1)-E(x)','2*x+(3*(x+1))/(y^2+1)-Ε(x)','2*x+(3*(x+1))/(y^2+1)-ε(x)','2*x+(3*(x+1))/(y^2+1)-E(x)','2*x+(3*(x+1)/(y^2+1))-Ε(x)','2*x+(3*(x+1)/(y^2+1))-ε(x)','2*x+(3*(x+1)/(y^2+1))-E(x)'], hints:['Το 2x είναι γινόμενο και χρειάζεται *.','Ολόκληρο το 3(x+1) είναι αριθμητής και το y^2+1 παρονομαστής.','Η εκθετική συνάρτηση γράφεται Ε(x) ή ε(x). Επιτρέπεται και το λατινικό κεφαλαίο E, αλλά όχι το λατινικό πεζό e.'], rule:'Σε σύνθετο κλάσμα κρατάμε καθαρά τον αριθμητή και τον παρονομαστή με παρενθέσεις. Η εκθετική συνάρτηση γράφεται Ε(x) ή ε(x).'},
+        {level:"Νέα άσκηση", html:`<math display="block" aria-label="κλάσμα με αριθμητή απόλυτη τιμή x μείον ημίτονο θ και παρονομαστή τετραγωνική ρίζα x στο τετράγωνο συν πέντε"><mfrac><mrow><mo stretchy="false">|</mo><mi>x</mi><mo stretchy="false">|</mo><mo>−</mo><mi mathvariant="normal">ημ</mi><mi>θ</mi></mrow><msqrt><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>5</mn></mrow></msqrt></mfrac></math>`, answers:['(Α_Τ(x)-ΗΜ(θ))/Τ_Ρ(x^2+5)','(A_T(x)-HM(θ))/T_P(x^2+5)','(Α_Τ(x)-HM(θ))/Τ_Ρ(x^2+5)','(A_T(x)-ΗΜ(θ))/T_P(x^2+5)','(Α_Τ(x)-ΗΜ(θ))/(x^2+5)^(1/2)','(A_T(x)-HM(θ))/(x^2+5)^(1/2)','(Α_Τ(x)-ΗΜ(θ))/((x^2+5)^(1/2))','(A_T(x)-HM(θ))/((x^2+5)^(1/2))'], hints:['Ο αριθμητής είναι η απόλυτη τιμή του x μείον το ημίτονο της γωνίας θ.','Το ημθ στα Μαθηματικά γράφεται ΗΜ(θ) στη ΓΛΩΣΣΑ. Γίνονται δεκτοί και λατινικοί χαρακτήρες: HM(θ).','Ο παρονομαστής είναι Τ_Ρ(x^2+5) ή ισοδύναμα (x^2+5)^(1/2).'], rule:'Στη ΓΛΩΣΣΑ το ημίτονο γράφεται ΗΜ(θ). Η απόλυτη τιμή γράφεται Α_Τ(...) και η ρίζα Τ_Ρ(...) ή ως δύναμη 1/2.'}
+    ];
+
+    function shuffledCopy(items) {
+        const a = [...items];
+        for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+        return a;
+    }
+
+    let exercises = shuffledCopy(exerciseBank);
+    let index = 0, score = 0, streak = 0, mistakes = 0, tries = 0, solved = false;
+
+    // Normalization core function (Handles greek/latin substitutions)
+    function norm(s) {
+        let t = s.trim().replace(/[ΕεE](?=\s*\()/g, 'EXP');
+        return t.toLowerCase()
+            .replace(/\s+/g, '').replace(/,/g, '.').replace(/[−–—]/g, '-')
+            .replace(/[τt]_[ρp]/g, 't_p').replace(/[αa]_[τt]/g, 'a_t')
+            .replace(/[ηh][μm](?=\()/g, 'hm')
+            .replace(/[χx]/g, 'x').replace(/[υy]/g, 'y').replace(/[ζz]/g, 'z').replace(/[ωw]/g, 'w')
+            .replace(/×|·/g, '*');
+    }
+
+    // UI Updates
+    function updateStats() {
+        document.getElementById('score').textContent = score;
+        document.getElementById('streak').textContent = streak;
+        document.getElementById('mistakes').textContent = mistakes;
+        document.getElementById('progress').style.width = `${(index / exercises.length) * 100}%`;
+    }
+
+    function render() {
+        const q = exercises[index];
+        document.getElementById('difficulty').textContent = q.level;
+        document.getElementById('questionNo').textContent = `${index + 1} / ${exercises.length}`;
+        document.getElementById('expression').innerHTML = q.html;
+        
+        const flight = document.getElementById('questionFlight');
+        flight.classList.remove('launch'); void flight.offsetWidth; flight.classList.add('launch');
+        
+        const answerInput = document.getElementById('answer');
+        answerInput.value = ''; answerInput.disabled = false;
+        
+        document.getElementById('checkBtn').disabled = false;
+        document.getElementById('nextBtn').disabled = true;
+        document.getElementById('nextBtn').classList.remove('pulse');
+        document.getElementById('showSolutionBtn').disabled = true;
+        
+        document.getElementById('feedback').className = 'feedback';
+        document.getElementById('solution').className = 'solution';
+        
+        tries = 0; solved = false;
+        updateStats();
+        answerInput.focus();
+    }
+
+    function checkAnswer() {
+        if (solved) return;
+        const raw = document.getElementById('answer').value;
+        
+        if (!raw.trim()) { showFeedback('bad', 'Γράψε πρώτα μία απάντηση.'); return; }
+        
+        // --- ΝΕΟ: ΕΛΕΓΧΟΣ ΓΙΑ ΤΟ ΣΥΜΒΟΛΟ ΤΗΣ ΑΠΟΛΥΤΗΣ ΤΙΜΗΣ ---
+        if (raw.includes('|')) {
+            showFeedback('hint', 'Μην ξεχνάς! Στη ΓΛΩΣΣΑ <b>δεν χρησιμοποιούμε κάθετες γραμμές ( | )</b>, αλλά τη συνάρτηση <code>Α_Τ()</code>.');
+            return;
+        }
+        
+        const q = exercises[index];
+        const correct = q.answers.some(a => norm(a) === norm(raw));
+        
+        if (correct) {
+            solved = true;
+            const bonus = Math.max(4, 10 - tries * 2);
+            score += bonus; streak++;
+            showFeedback('ok', `Σωστά! Κέρδισες ${bonus} βαθμούς. Πάτα Enter για συνέχεια.`);
+            
+            document.getElementById('nextBtn').disabled = false;
+            document.getElementById('nextBtn').classList.add('pulse');
+            document.getElementById('answer').disabled = true;
+            document.getElementById('checkBtn').disabled = true;
+            
+            burst();
+        } else {
+            tries++; mistakes++; streak = 0;
+            const hint = q.hints[Math.min(tries - 1, q.hints.length - 1)];
+            showFeedback('bad', `Δεν είναι ακόμη σωστό. ${hint}`);
+            if (tries >= 3) document.getElementById('showSolutionBtn').disabled = false;
+        }
+        updateStats();
+    }
+
+    function giveHint() { const q = exercises[index]; showFeedback('hint', '💡 ' + q.hints[Math.min(tries, q.hints.length - 1)]); }
+    function showRule() { showFeedback('hint', '📘 ' + exercises[index].rule); }
+    function showSolution() { const sol = document.getElementById('solution'); sol.innerHTML = '<b>Ενδεικτική λύση:</b> ' + exercises[index].answers[0]; sol.classList.add('show'); }
+    function showFeedback(type, msg) { const fb = document.getElementById('feedback'); fb.className = 'feedback show ' + type; fb.innerHTML = msg; }
+    
+    function nextQuestion() {
+        if (!solved) return;
+        index++;
+        if (index >= exercises.length) { finish(); return; }
+        render();
+    }
+
+    function finish() {
+        document.getElementById('game').style.display = 'none';
+        const comp = document.getElementById('complete');
+        comp.classList.add('show');
+        document.getElementById('progress').style.width = '100%';
+        const max = exercises.length * 10;
+        const pct = Math.round(score / max * 100);
+        document.getElementById('finalText').innerHTML = `Βαθμολογία: <b>${score}/${max}</b> (${pct}%).`;
+        for (let i = 0; i < 4; i++) setTimeout(burst, i * 220);
+    }
+
+    function restart() {
+        exercises = shuffledCopy(exerciseBank);
+        index = score = streak = mistakes = tries = 0; solved = false;
+        document.getElementById('game').style.display = 'flex';
+        document.getElementById('complete').classList.remove('show');
+        render();
+    }
+
+    // Spark Burst effect targeting col-mid explicitly
+    function burst() {
+        const midContainer = document.getElementById('midContainer');
+        for (let i = 0; i < 32; i++) {
+            const s = document.createElement('i');
+            s.className = 'spark';
+            s.style.left = '50%'; s.style.top = '45%';
+            s.style.background = ['#06b6d4', '#2563eb', '#7c3aed', '#f59e0b', '#16a34a'][i % 5];
+            s.style.setProperty('--x', (Math.random() * 520 - 260) + 'px');
+            s.style.setProperty('--y', (Math.random() * 360 - 180) + 'px');
+            midContainer.appendChild(s);
+            setTimeout(() => s.remove(), 900);
+        }
+    }
+
+    // Flying background texts
+    function createSky() {
+        const sky = document.getElementById('sky');
+        const tokens = ['Τ_Ρ(x)', 'Α_Τ(y)', 'x^2', '(α+β)', '3*(x+1)', 'Ε(x)', 'ΗΜ(θ)', '/', '^', 'ΓΛΩΣΣΑ', '30.5*x', '✈'];
+        for (let i = 0; i < 24; i++) {
+            const d = document.createElement('div');
+            d.className = 'fly';
+            d.textContent = tokens[i % tokens.length];
+            d.style.top = Math.random() * 95 + '%';
+            d.style.fontSize = 18 + Math.random() * 34 + 'px';
+            d.style.animationDuration = 12 + Math.random() * 20 + 's';
+            d.style.animationDelay = -Math.random() * 25 + 's';
+            sky.appendChild(d);
+        }
+    }
+
+    // Input Key Listeners (Enter for Check/Next)
+    document.getElementById('answer').addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            if (solved) nextQuestion(); 
+            else checkAnswer();
+        }
+        if (e.ctrlKey && e.key.toLowerCase() === 'h') {
+            e.preventDefault();
+            giveHint();
+        }
+    });
+
+    // Initialize
+    createSky();
+    render();
+</script>
+</body>
+</html>
