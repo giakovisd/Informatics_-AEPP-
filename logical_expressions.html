@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>Logic Lab - Αποκωδικοποίηση Εκφράσεων</title>
+    <style>
+        :root {
+            --bg-color: #f1f5f9; --text-color: #1e293b; --panel-bg: #ffffff; --highlight-line: #fde047;
+            --primary: #3b82f6; --success: #10b981; --warning: #f59e0b; --danger: #ef4444; --border-color: #cbd5e1;
+            --code-kw: #0000CD; --code-var: #000000; --code-str: #800080;
+        }
+        body.dark-mode { --bg-color: #020617; --panel-bg: #1e293b; --text-color: #f8fafc; --border-color: #334155; }
+        body.dark-mode .input-group input { background: #0f172a; color: white; border-color: #64748b; }
+        body.dark-mode .expression-box { background: #0f172a; border-color: #334155; color: white; }
+        body.dark-mode .rule-box { background: #0f172a; border-color: #334155; color: #cbd5e1;}
+        body.dark-mode .rule-box code { color: #818cf8; }
+        body.dark-mode .feedback.ok { background: rgba(16, 185, 129, 0.1); color: #34d399; }
+        body.dark-mode .feedback.bad { background: rgba(239, 68, 68, 0.1); color: #f87171; }
+        body.dark-mode .feedback.hint { background: rgba(245, 158, 11, 0.1); color: #fbbf24; }
+        body.dark-mode .mission-step { background: #0f172a; border-color: #334155; color: #94a3b8; }
+        body.dark-mode .mission-step.active { background: rgba(59, 130, 246, 0.2); border-color: var(--primary); color: #60a5fa; }
+        body.dark-mode .mission-step.done { background: rgba(16, 185, 129, 0.1); border-color: var(--success); color: #34d399; }
+        body.dark-mode .hist-item { background: #0f172a; border-color: #334155; color: #e2e8f0;}
+        body.dark-mode .trace-header { background: #1e293b; border-bottom: 1px solid #334155; color: white; }
+        body.dark-mode .stream { color: rgba(255, 255, 255, 0.08); text-shadow: 0 0 15px rgba(6, 182, 212, 0.4), 0 0 25px rgba(124, 58, 237, 0.2); }
+        body.dark-mode .hist-item .step-expr::-webkit-scrollbar-thumb { background: #475569; }
+        body.dark-mode .card { background: #1e293b; border-color: #334155; }
+        body.dark-mode .top-stat-card { background: #0f172a; border-color: #334155; }
+
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s; }
+
+        /* HEADER & TABS WRAPPER (Stats moved here) */
+        .main-tabs-wrapper { display: flex; justify-content: space-between; align-items: flex-end; background: var(--panel-bg); border-bottom: 2px solid var(--primary); padding-top: 8px; flex-shrink: 0;}
+        .main-tabs { display: flex; padding-left: 15px; overflow-x: auto; gap: 5px; flex: 1;}
+        .m-tab { padding: 8px 15px; cursor: pointer; font-weight: bold; font-size: 0.85rem; border-radius: 6px 6px 0 0; background: #e2e8f0; color: #64748b; transition: 0.2s; white-space: nowrap;}
+        .m-tab.active { background: var(--primary); color: white; }
+        .m-tab.done::after { content: " ✓"; color: var(--success); font-weight: 900;}
+        
+        .top-stats { display: flex; gap: 10px; padding-right: 15px; padding-bottom: 6px; flex-shrink: 0;}
+        .top-stat-card { background: #f8fafc; border: 1px solid var(--border-color); padding: 4px 12px; border-radius: 6px; display: flex; align-items: baseline; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
+        .top-stat-card b { font-size: 1.15rem; color: var(--primary); }
+        .top-stat-card span { font-size: 0.7rem; color: #64748b; font-weight: bold; text-transform: uppercase; }
+
+        @media (max-width: 768px) {
+            .main-tabs-wrapper { flex-direction: column; align-items: stretch; gap: 10px;}
+            .top-stats { padding-left: 15px; padding-bottom: 10px; justify-content: flex-start;}
+        }
+
+        /* TOOLBAR */
+        header.toolbar { background-color: var(--panel-bg); border-bottom: 1px solid var(--border-color); padding: 8px 15px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; z-index: 100; transition: 0.3s; }
+        .header-title h1 { margin: 0; font-size: 1rem; color: var(--primary); white-space: nowrap; margin-right: 15px;}
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: nowrap;}
+        button { padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem; background-color: var(--panel-bg); color: var(--text-color); transition: 0.2s;}
+        button.action-btn { border: 2px solid var(--primary); color: var(--primary); background: transparent;}
+        button.action-btn:hover:not(:disabled) { background-color: var(--primary); color: white; }
+        button.primary-btn { background-color: var(--primary); color: white; border: none; }
+        button.primary-btn:hover:not(:disabled) { background-color: #2563eb; transform: translateY(-1px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important;}
+        @keyframes pulse-btn { 0% { box-shadow: 0 0 0 0 rgba(59,130,246,0.7); } 70% { box-shadow: 0 0 0 6px rgba(59,130,246,0); } 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); } }
+        .pulse { animation: pulse-btn 1.5s infinite; }
+
+        /* MAIN LAYOUT */
+        .main-container { display: flex; flex: 1; padding: 10px; gap: 10px; overflow: hidden; max-width: 100vw; box-sizing: border-box; }
+        .col { display: flex; flex-direction: column; overflow: hidden; }
+
+        /* LEFT (Reactor & Rules) */
+        .col-left { flex: 0 0 300px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+        .theory-card { background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; transition: 0.3s;}
+        .theory-title { font-size: 0.85rem; font-weight: bold; padding: 8px 10px; background: rgba(59, 130, 246, 0.1); border-bottom: 2px solid var(--primary); color: var(--primary); flex-shrink: 0;}
+        .theory-text { padding: 10px; font-size: 0.75rem; line-height: 1.4; overflow-y: auto;}
+
+        /* LOGIC REACTOR */
+        .reactor-container { padding: 15px 0; display: flex; justify-content: center; background: #0f172a; border-radius: 8px; margin-bottom: 5px; overflow: hidden; border: 1px solid #334155; }
+        .reactor { position: relative; width: 140px; height: 80px; display: grid; place-items: center; }
+        .ring { position: absolute; border-radius: 50%; border: 2px solid; animation: spin linear infinite; }
+        .r1 { width: 120px; height: 50px; border-color: rgba(34, 211, 238, 0.72); animation-duration: 5s }
+        .r2 { width: 80px; height: 70px; border-color: rgba(167, 139, 250, 0.72); animation-duration: 7s; animation-direction: reverse }
+        .r3 { width: 55px; height: 55px; border-color: rgba(244, 114, 182, 0.72); animation-duration: 4s }
+        @keyframes spin { to { transform: rotate(360deg) } }
+        .core { width: 45px; height: 45px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, #fff, #67e8f9 20%, #2563eb 58%, #312e81); box-shadow: 0 0 15px #22d3ee, 0 0 30px rgba(37, 99, 235, 0.85); font-family: Consolas, monospace; font-weight: 1000; font-size: 0.9rem; color: white; animation: coreBeat 1.6s ease-in-out infinite; z-index: 2;}
+        @keyframes coreBeat { 0%, 100% { transform: scale(0.94); filter: brightness(0.9) } 50% { transform: scale(1.08); filter: brightness(1.2) } }
+        .orbit-token { position: absolute; font-family: Consolas, monospace; font-weight: 1000; color: #fff; font-size: 0.7rem; text-shadow: 0 0 8px #22d3ee; animation: floatToken 2.4s ease-in-out infinite; z-index: 3;}
+        .ot1 { left: -10px; top: 10px; } .ot2 { right: -15px; top: 15px; animation-delay: 0.7s; } .ot3 { right: 10px; bottom: -5px; animation-delay: 1.2s; }
+        @keyframes floatToken { 50% { transform: translateY(-5px) scale(1.1) } }
+
+        .vars-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        .var-chip { padding: 8px; border-radius: 6px; text-align: center; font-family: Consolas, monospace; background: rgba(59, 130, 246, 0.1); border: 1px solid var(--primary); font-weight: bold; color: var(--primary); font-size: 0.85rem;}
+        .rule-box { background: #f8fafc; border: 1px solid var(--border-color); padding: 8px; border-radius: 6px; margin-bottom: 6px; font-size: 0.75rem; transition: 0.2s;}
+        .rule-box code { color: #6d28d9; font-weight: bold; font-size: 0.8rem;}
+        .rule-box b { color: var(--primary); }
+
+        /* MID (Game Area with Animations) */
+        .col-mid { 
+    flex: 1; 
+    background: var(--panel-bg); 
+    border-radius: 8px; 
+    border: 1px solid var(--border-color); 
+    display: flex; 
+    flex-direction: column; 
+    position: relative; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+    transition: 0.3s; 
+    overflow: hidden; /* <--- ΕΔΩ ΕΙΝΑΙ Η ΔΙΟΡΘΩΣΗ */
+    padding: 20px;
+}
+        
+        /* Animated Background inside col-mid */
+        .logic-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+        .stream { position: absolute; left: -20%; white-space: nowrap; font-family: Consolas, "Courier New", monospace; font-weight: 900; color: rgba(59, 130, 246, 0.12); text-shadow: 0 0 10px rgba(59, 130, 246, 0.2); animation: streamMove linear infinite; }
+        @keyframes streamMove { 0% { transform: translate3d(-10%, 0, 0) scale(0.85); opacity: 0; } 10% { opacity: 1; } 88% { opacity: 1; } 100% { transform: translate3d(120vw, -10%, 0) scale(1.15); opacity: 0; } }
+        .node { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: #67e8f9; box-shadow: 0 0 10px #67e8f9, 0 0 20px #2563eb; animation: nodePulse 2.2s ease-in-out infinite; opacity: 0.5; }
+        @keyframes nodePulse { 0%, 100% { transform: scale(0.65); opacity: 0.2; } 50% { transform: scale(1.5); opacity: 0.6; } }
+        .scanline { position: absolute; left: 0; right: 0; height: 2px; top: -10px; z-index: 1; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.4), transparent); box-shadow: 0 0 10px rgba(34, 211, 238, 0.3); animation: scan 6s linear infinite; }
+        @keyframes scan { to { transform: translateY(1000px); } }
+
+        /* Ensure all content stays above the animations */
+        .lesson-head, .mission, .expression-box, .card { position: relative; z-index: 2; }
+
+        .lesson-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;}
+        .kicker { font-size: 0.8rem; font-weight: bold; color: #0369a1; background: #e0f2fe; border-radius: 999px; padding: 6px 12px; }
+        .step-progress { font-size: 0.8rem; color: #64748b; font-weight: bold; }
+
+        .mission { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;}
+        .mission-step { padding: 10px; border-radius: 8px; background: #f8fafc; border: 1px solid var(--border-color); text-align: center; color: #64748b; font-size: 0.75rem; font-weight: bold; transition: 0.3s; display: flex; flex-direction: column; gap: 4px;}
+        .mission-step.active { background: #eff6ff; color: var(--primary); border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.15); transform: translateY(-2px);}
+        .mission-step.done { background: #dcfce7; color: var(--success); border-color: var(--success); }
+
+        .expression-box { margin-bottom: 20px; padding: 15px; border-radius: 12px; background: linear-gradient(135deg, #eff6ff, #f8fafc); border: 2px solid #dbeafe; }
+        .expr-label { font-size: 0.75rem; color: #475569; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
+        .expr-value { font-family: Consolas, monospace; font-size: 1.15rem; font-weight: bold; color: var(--primary); overflow-wrap: anywhere; line-height: 1.5;}
+
+        .card { padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--panel-bg); }
+        .card h3 { margin: 0 0 10px; font-size: 1rem; color: var(--text-color); }
+        .card p { margin: 0 0 15px; color: #64748b; font-size: 0.85rem; line-height: 1.4;}
+
+        .answer-line { display: flex; gap: 10px; width: 100%; margin-bottom: 15px;}
+        .answer-line input { flex: 1; padding: 14px 15px; border: 2px solid var(--border-color); border-radius: 8px; font-family: Consolas, monospace; font-size: 1.05rem; outline: none; transition: 0.2s;}
+        .answer-line input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(59,130,246,0.15); }
+
+        .feedback { display: none; margin-bottom: 15px; padding: 12px 15px; border-radius: 8px; border-left: 6px solid; font-size: 0.85rem; font-weight: bold; line-height: 1.4; animation: fadeIn 0.3s;}
+        .feedback.show { display: block; }
+        .feedback.ok { background: #f0fdf4; border-color: var(--success); color: #166534; }
+        .feedback.bad { background: #fef2f2; border-color: var(--danger); color: #991b1b; }
+        .feedback.hint { background: #fffbeb; border-color: var(--warning); color: #854d0e; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .actions { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;}
+        .tools { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        /* RIGHT (History) - Wider to fit expressions */
+        .col-right { flex: 0 0 480px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+        .trace-container { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; display: flex; flex-direction: column; flex: 1; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .trace-header { background: #f1f5f9; padding: 8px; font-weight: bold; border-bottom: 2px solid var(--primary); color: var(--primary); font-size: 0.85rem; text-align: center; flex-shrink: 0;}
+        .trace-scroll { flex: 1; overflow-y: auto; padding: 15px; display:flex; flex-direction:column; gap:12px; scroll-behavior: smooth;}
+        
+        .hist-item { background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; animation: slideIn 0.3s ease;}
+        .hist-item .step-label { color: #64748b; font-weight: bold; font-size: 0.75rem; text-transform: uppercase;}
+        
+        /* Updated step-expr to NEVER wrap, adding horizontal scroll if needed */
+        .hist-item .step-expr { 
+            font-family: Consolas, monospace; 
+            color: var(--text-color); 
+            font-weight: bold; 
+            font-size: 0.95rem; 
+            white-space: nowrap; 
+            overflow-x: auto; 
+            padding-bottom: 4px; 
+        }
+        .hist-item .step-expr::-webkit-scrollbar { height: 4px; }
+        .hist-item .step-expr::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+
+        .spark { position: absolute; width: 10px; height: 10px; border-radius: 50%; pointer-events: none; animation: burst 0.8s ease-out forwards; z-index: 10;}
+        @keyframes burst { to { transform: translate(var(--x), var(--y)) scale(0); opacity: 0; } }
+
+        .finish-box { display: none; text-align: center; padding: 40px 20px; position: absolute; inset: 0; background: var(--panel-bg); z-index: 20; flex-direction: column; align-items: center; justify-content: center;}
+        .finish-box.show { display: flex; }
+        .finish-box h2 { font-size: 2rem; color: var(--success); margin: 10px 0;}
+        .finish-box p { font-size: 1.1rem; color: var(--text-color); margin-bottom: 20px;}
+        .medal { font-size: 5rem; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+
+        /* Responsive Layout */
+        @media (max-width: 1300px) {
+            .col-right { flex: 0 0 400px; }
+        }
+        @media (max-width: 1050px) {
+            .main-container { flex-direction: column; overflow: visible; height: auto;}
+            .col-left, .col-mid, .col-right { flex: none; width: 100%; height: auto; min-height: 400px;}
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-tabs-wrapper">
+    <div class="main-tabs" id="tabsArea"></div>
+    <div class="top-stats">
+        <div class="top-stat-card"><b id="score">0</b><span>ΒΑΘΜΟΙ</span></div>
+        <div class="top-stat-card"><b id="streak">0</b><span>ΣΕΡΙ</span></div>
+        <div class="top-stat-card"><b id="errors" style="color: var(--danger);">0</b><span>ΛΑΘΗ</span></div>
+    </div>
+</div>
+
+<header class="toolbar">
+    <div class="header-title"><h1>🧠 Logic Lab - Αποκωδικοποίηση Εκφράσεων</h1></div>
+    <div class="controls-area">
+        <button class="tool-btn" onclick="document.body.classList.toggle('dark-mode')">🌙</button>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <!-- LEFT PANEL -->
+    <div class="col col-left">
+        <!-- THE REACTOR -->
+        <div class="reactor-container">
+            <div class="reactor" aria-hidden="true">
+                <div class="ring r1"></div>
+                <div class="ring r2"></div>
+                <div class="ring r3"></div>
+                <div class="core">¬ ∧ ∨</div>
+                <span class="orbit-token ot1">MOD</span>
+                <span class="orbit-token ot2">DIV</span>
+                <span class="orbit-token ot3">TRUE</span>
+            </div>
+        </div>
+
+        <div class="theory-card" style="flex: 1;">
+            <div class="theory-title">Δεδομένα & Προτεραιότητα</div>
+            <div class="theory-text">
+                <div class="expr-label" style="margin-bottom: 8px;">Τιμες Μεταβλητων</div>
+                <div class="vars-grid" id="varsGrid"></div>
+
+                <div class="expr-label" style="margin-top: 15px; margin-bottom: 8px;">Σειρα Εκτελεσης (Προτεραιοτητα)</div>
+                <div class="rule-box"><b>1.</b> Παρενθέσεις <code>( )</code></div>
+                <div class="rule-box"><b>2.</b> Δύναμη <code>^</code></div>
+                <div class="rule-box"><b>3.</b> <code>*</code>, <code>/</code>, <code>DIV</code>, <code>MOD</code></div>
+                <div class="rule-box"><b>4.</b> <code>+</code>, <code>-</code></div>
+                <div class="rule-box"><b>5.</b> Συγκρίσεις <code>=, <, >, <=, >=, <></code></div>
+                <div class="rule-box"><b>6.</b> Λογικές: <code>ΟΧΙ</code> ➔ <code>ΚΑΙ</code> ➔ <code>Ή</code></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MID PANEL -->
+    <div class="col col-mid" id="midContainer">
+        
+        <!-- Animated Background & Scanline -->
+        <div class="logic-bg" id="logicBg"></div>
+        <div class="scanline"></div>
+
+        <div class="lesson-head">
+            <span class="kicker" id="exerciseTitle"></span>
+            <span class="step-progress" id="stepProgress"></span>
+        </div>
+
+        <div class="mission" id="missionSteps"></div>
+
+        <div class="expression-box">
+            <div class="expr-label">Τρεχουσα Εκφραση</div>
+            <div class="expr-value" id="workingBase"></div>
+        </div>
+
+        <div class="card">
+            <h3 id="stepTitle"></h3>
+            <p id="stepInstruction"></p>
+
+            <div class="answer-line">
+                <input type="text" id="answer" autocomplete="off" spellcheck="false" placeholder="Τροποποίησε την έκφραση και πάτα Enter...">
+                <button class="primary-btn" id="checkBtn" onclick="checkAnswer()">Έλεγχος ✨</button>
+            </div>
+
+            <div class="feedback" id="feedback"></div>
+
+            <div class="actions">
+                <div class="tools">
+                    <button class="tool-btn" onclick="giveHint()">💡 Υπόδειξη</button>
+                    <button class="tool-btn" onclick="showRule()">📘 Κανόνας</button>
+                    <button class="tool-btn" id="showAnswerBtn" onclick="showCurrentAnswer()" disabled style="color:var(--danger); border-color:var(--danger);">👁 Λύση Βήματος</button>
+                </div>
+                <button class="action-btn" id="nextBtn" onclick="nextStep()" disabled>Επόμενο Βήμα ➜</button>
+            </div>
+        </div>
+
+        <!-- Finish Screen Overlay -->
+        <div class="finish-box" id="finishBox">
+            <div class="medal">🏆</div>
+            <h2>Άσκηση Ολοκληρώθηκε!</h2>
+            <p id="finalText"></p>
+            <button class="primary-btn" onclick="goToNextExercise()" id="nextExBtn" style="padding: 10px 20px; font-size: 1rem;">Επόμενη Άσκηση ➔</button>
+        </div>
+
+    </div>
+
+    <!-- RIGHT PANEL (History - Wider for Expressions) -->
+    <div class="col col-right">
+        <div class="trace-container">
+            <div class="trace-header">Ιστορικό Μετασχηματισμού</div>
+            <div class="trace-scroll" id="historyContainer">
+                <!-- History Items go here -->
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const exercises = [
+  {
+    title:"Άσκηση 1",
+    tab:"Άσκηση 1",
+    vars:{X:8, Ψ:4},
+    expression:'(ΟΧΙ (9 MOD 5 = 20-4*2^2)) Ή (X>Ψ ΚΑΙ "X">"Ψ")',
+    steps:[
+      {
+        title:"α. Αντικατάσταση μεταβλητών",
+        instruction:"Τροποποίησε την αρχική έκφραση: αντικατάστησε μόνο τις μεταβλητές X και Ψ με τις τιμές τους. Μην αλλάξεις ό,τι βρίσκεται μέσα στα εισαγωγικά.",
+        answers:['(ΟΧΙ(9MOD5=20-4*2^2))Ή(8>4ΚΑΙ"X">"Ψ")'],
+        hint:'Τα X και Ψ εκτός εισαγωγικών γίνονται 8 και 4. Τα "X" και "Ψ" παραμένουν συμβολοσειρές.',
+        rule:"Στο πρώτο στάδιο αλλάζουν μόνο οι μεταβλητές."
+      },
+      {
+        title:"β. Εκτέλεση αριθμητικών πράξεων",
+        instruction:"Πάνω στη σωστή έκφραση του προηγούμενου βήματος, υπολόγισε μόνο τις αριθμητικές πράξεις.",
+        answers:['(ΟΧΙ(4=4))Ή(8>4ΚΑΙ"X">"Ψ")'],
+        hint:"9 MOD 5 = 4 και 20-4*2^2 = 4.",
+        rule:"Πρώτα δύναμη, μετά πολλαπλασιασμός/MOD και στο τέλος αφαίρεση."
+      },
+      {
+        title:"γ. Αντικατάσταση συγκρίσεων",
+        instruction:"Πάνω στην προηγούμενη σωστή μορφή, αντικατάστησε κάθε σύγκριση με ΑΛΗΘΗΣ ή ΨΕΥΔΗΣ.",
+        answers:['(ΟΧΙ(ΑΛΗΘΗΣ))Ή(ΑΛΗΘΗΣΚΑΙΨΕΥΔΗΣ)', 'ΟΧΙ(ΑΛΗΘΗΣ)Ή(ΑΛΗΘΗΣΚΑΙΨΕΥΔΗΣ)'],
+        hint:'4=4 είναι ΑΛΗΘΗΣ, 8>4 είναι ΑΛΗΘΗΣ και "X">"Ψ" είναι ΨΕΥΔΗΣ.',
+        rule:"Κάθε σύγκριση μετατρέπεται ανεξάρτητα σε λογική τιμή."
+      },
+      {
+        title:"δ. Εκτέλεση λογικών πράξεων",
+        instruction:"Ολοκλήρωσε τον μετασχηματισμό εκτελώντας ΟΧΙ, ΚΑΙ και Ή.",
+        answers:['ΨΕΥΔΗΣΉΨΕΥΔΗΣ=ΨΕΥΔΗΣ','ΨΕΥΔΗΣ'],
+        hint:"ΟΧΙ ΑΛΗΘΗΣ = ΨΕΥΔΗΣ και ΑΛΗΘΗΣ ΚΑΙ ΨΕΥΔΗΣ = ΨΕΥΔΗΣ.",
+        rule:"Η σειρά είναι ΟΧΙ, μετά ΚΑΙ και τελευταία Ή."
+      }
+    ]
+  },
+  {
+    title:"Άσκηση 2",
+    tab:"Άσκηση 2",
+    vars:{Α:5, Β:3, Γ:4, Δ:2},
+    expression:'ΟΧΙ(Α+Β*3>15) Ή (Γ*4 MOD 2 = Β^(Γ-2) ΚΑΙ (Γ=8 DIV Δ))',
+    steps:[
+      {
+        title:"α. Αντικατάσταση μεταβλητών",
+        instruction:"Τροποποίησε την αρχική έκφραση αντικαθιστώντας τις Α, Β, Γ και Δ.",
+        answers:['ΟΧΙ(5+3*3>15)Ή(4*4MOD2=3^(4-2)ΚΑΙ(4=8DIV2))'],
+        hint:"Α=5, Β=3, Γ=4 και Δ=2.",
+        rule:"Σε αυτό το στάδιο αλλάζουν μόνο οι μεταβλητές."
+      },
+      {
+        title:"β. Εκτέλεση αριθμητικών πράξεων",
+        instruction:"Χρησιμοποίησε την προηγούμενη σωστή έκφραση και υπολόγισε όλες τις αριθμητικές πράξεις.",
+        answers:['ΟΧΙ(14>15)Ή(0=9ΚΑΙ(4=4))','ΟΧΙ(14>15)Ή(0=9ΚΑΙ4=4)'],
+        hint:"5+3*3=14, 4*4 MOD 2=0, 3^(4-2)=9 και 8 DIV 2=4.",
+        rule:"Η δύναμη προηγείται. Τα *, DIV και MOD εκτελούνται πριν από + και -."
+      },
+      {
+        title:"γ. Αντικατάσταση συγκρίσεων",
+        instruction:"Μετέτρεψε τώρα τις συγκρίσεις σε ΑΛΗΘΗΣ ή ΨΕΥΔΗΣ.",
+        answers:['ΟΧΙ(ΨΕΥΔΗΣ)Ή(ΨΕΥΔΗΣΚΑΙΑΛΗΘΗΣ)'],
+        hint:"14>15 είναι ΨΕΥΔΗΣ, 0=9 είναι ΨΕΥΔΗΣ και 4=4 είναι ΑΛΗΘΗΣ.",
+        rule:"Δεν εκτελούμε ακόμη ΟΧΙ, ΚΑΙ και Ή."
+      },
+      {
+        title:"δ. Εκτέλεση λογικών πράξεων",
+        instruction:"Ολοκλήρωσε τη λογική επεξεργασία.",
+        answers:['ΑΛΗΘΗΣΉΨΕΥΔΗΣ=ΑΛΗΘΗΣ','ΑΛΗΘΗΣ'],
+        hint:"ΟΧΙ ΨΕΥΔΗΣ = ΑΛΗΘΗΣ και ΨΕΥΔΗΣ ΚΑΙ ΑΛΗΘΗΣ = ΨΕΥΔΗΣ.",
+        rule:"Πρώτα ΟΧΙ, μετά ΚΑΙ και τελευταία Ή."
+      }
+    ]
+  },
+  {
+    title:"Άσκηση 3",
+    tab:"Άσκηση 3",
+    vars:{Α:3, Β:1, Γ:15},
+    expression:'(ΟΧΙ (Α+Β*3>10)) ΚΑΙ (Γ MOD (Α-Β)=1)',
+    steps:[
+      {
+        title:"α. Αντικατάσταση μεταβλητών",
+        instruction:"Τροποποίησε την αρχική έκφραση αντικαθιστώντας τις Α, Β και Γ.",
+        answers:['(ΟΧΙ(3+1*3>10))ΚΑΙ(15MOD(3-1)=1)'],
+        hint:"Α=3, Β=1 και Γ=15.",
+        rule:"Στο πρώτο στάδιο δεν εκτελούμε αριθμητικές πράξεις."
+      },
+      {
+        title:"β. Εκτέλεση αριθμητικών πράξεων",
+        instruction:"Πάνω στη σωστή μορφή του προηγούμενου βήματος, εκτέλεσε τις αριθμητικές πράξεις.",
+        answers:['(ΟΧΙ(6>10))ΚΑΙ(1=1)'],
+        hint:"3+1*3=6, 3-1=2 και 15 MOD 2=1.",
+        rule:"Πρώτα ο πολλαπλασιασμός, μετά η πρόσθεση/αφαίρεση και έπειτα το MOD."
+      },
+      {
+        title:"γ. Αντικατάσταση συγκρίσεων",
+        instruction:"Αντικατάστησε τις δύο συγκρίσεις με λογικές τιμές.",
+        answers:['(ΟΧΙ(ΨΕΥΔΗΣ))ΚΑΙΑΛΗΘΗΣ','ΟΧΙ(ΨΕΥΔΗΣ)ΚΑΙΑΛΗΘΗΣ'],
+        hint:"6>10 είναι ΨΕΥΔΗΣ και 1=1 είναι ΑΛΗΘΗΣ.",
+        rule:"Μην εκτελέσεις ακόμη τις λογικές πράξεις."
+      },
+      {
+        title:"δ. Εκτέλεση λογικών πράξεων",
+        instruction:"Ολοκλήρωσε την έκφραση.",
+        answers:['ΑΛΗΘΗΣΚΑΙΑΛΗΘΗΣ=ΑΛΗΘΗΣ','ΑΛΗΘΗΣ'],
+        hint:"ΟΧΙ ΨΕΥΔΗΣ = ΑΛΗΘΗΣ και ΑΛΗΘΗΣ ΚΑΙ ΑΛΗΘΗΣ = ΑΛΗΘΗΣ.",
+        rule:"Εκτελείται πρώτα το ΟΧΙ και μετά το ΚΑΙ."
+      }
+    ]
+  }
+];
+
+let currentExercise = 0;
+let currentStep = 0;
+let tries = 0;
+let score = 0;
+let streak = 0;
+let errors = 0;
+const completed = new Set();
+const solvedSteps = {0:[], 1:[], 2:[]};
+const stepNames = ['α. Μεταβλητές', 'β. Αριθμητικές Πράξεις', 'γ. Συγκρίσεις', 'δ. Λογικές Πράξεις'];
+
+function normalize(s){
+  return s.trim().toUpperCase()
+    .replace(/[“”«»]/g,'"')
+    .replace(/[−–—]/g,'-')
+    .replace(/\s+/g,'')
+    .replace(/\bOR\b/g,'Ή')
+    .replace(/\bAND\b/g,'ΚΑΙ')
+    .replace(/\bNOT\b/g,'ΟΧΙ')
+    .replace(/\bTRUE\b/g,'ΑΛΗΘΗΣ')
+    .replace(/\bFALSE\b/g,'ΨΕΥΔΗΣ')
+    .replace(/Η(?=\()/g,'Ή');
+}
+
+function canonicalAnswer(exIndex, stepIndex){
+  return exercises[exIndex].steps[stepIndex].answers[0];
+}
+
+function renderTabs(){
+  const tabsContainer = document.getElementById('tabsArea');
+  tabsContainer.innerHTML = exercises.map((e, i) => `
+    <div class="m-tab ${i === currentExercise ? 'active' : ''} ${completed.has(i) ? 'done' : ''}" onclick="switchExercise(${i})">
+      ${e.tab}
+    </div>`).join('');
+}
+
+function renderVars(){
+  const v = exercises[currentExercise].vars;
+  document.getElementById('varsGrid').innerHTML = Object.entries(v).map(([k, val]) => `<div class="var-chip">${k} = ${val}</div>`).join('');
+}
+
+function renderMission(){
+  document.getElementById('missionSteps').innerHTML = stepNames.map((name, i) => `
+    <div class="mission-step ${i === currentStep ? 'active' : ''} ${i < currentStep ? 'done' : ''}">
+      <span>${name.split('.')[0]}.</span>
+      <span>${name.split('.')[1]}</span>
+    </div>`).join('');
+}
+
+function renderHistory(){
+    const list = solvedSteps[currentExercise];
+    const initial = exercises[currentExercise].expression;
+    
+    let html = `
+        <div class="hist-item" style="border-left: 3px solid var(--border-color);">
+            <div class="step-label">Αρχική Έκφραση</div>
+            <div class="step-expr">${initial}</div>
+        </div>
+    `;
+    
+    list.forEach((item, i) => {
+        html += `
+            <div class="hist-item" style="border-left: 3px solid var(--success);">
+                <div class="step-label">${stepNames[i]}</div>
+                <div class="step-expr" style="color: var(--primary);">${item}</div>
+            </div>
+        `;
+    });
+    
+    document.getElementById('historyContainer').innerHTML = html;
+    
+    // Scroll to bottom safely
+    const hc = document.getElementById('historyContainer');
+    hc.scrollTop = hc.scrollHeight;
+}
+
+function getBaseExpression(){
+  if(currentStep === 0) return exercises[currentExercise].expression;
+  const solved = solvedSteps[currentExercise][currentStep - 1];
+  return solved || canonicalAnswer(currentExercise, currentStep - 1);
+}
+
+function renderStep(){
+  const ex = exercises[currentExercise];
+  const st = ex.steps[currentStep];
+
+  document.getElementById('exerciseTitle').textContent = ex.title;
+  document.getElementById('stepProgress').textContent = `Βήμα ${currentStep + 1} από 4`;
+  document.getElementById('stepTitle').textContent = st.title;
+  document.getElementById('stepInstruction').textContent = st.instruction;
+
+  renderVars();
+  renderMission();
+  renderHistory();
+  renderTabs();
+
+  const base = getBaseExpression();
+  document.getElementById('workingBase').textContent = base;
+
+  const answerInput = document.getElementById('answer');
+  answerInput.value = base;
+  answerInput.disabled = false;
+  
+  document.getElementById('checkBtn').disabled = false;
+  document.getElementById('nextBtn').disabled = true;
+  document.getElementById('nextBtn').classList.remove('pulse');
+  document.getElementById('nextBtn').textContent = currentStep === 3 ? 'Ολοκλήρωση Άσκησης ✓' : 'Επόμενο Βήμα ➜';
+  
+  document.getElementById('showAnswerBtn').disabled = true;
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('finishBox').classList.remove('show');
+  
+  tries = 0;
+
+  setTimeout(()=>{
+    answerInput.focus();
+    answerInput.setSelectionRange(answerInput.value.length, answerInput.value.length);
+  }, 80);
+}
+
+function switchExercise(i){
+  currentExercise = i;
+  currentStep = Math.min(solvedSteps[i].length, 3);
+  if(completed.has(i)) currentStep = 3; // Keep it at the end if already done
+  
+  if (completed.has(i) && solvedSteps[i].length === 4) {
+      // If returning to a fully completed exercise, show finish screen
+      renderStep();
+      showFinishScreen();
+  } else {
+      renderStep();
+  }
+}
+
+function checkAnswer(){
+  const raw = document.getElementById('answer').value;
+  if(!raw.trim()){
+    showFeedback('bad', 'Γράψε πρώτα την απάντησή σου.');
+    return;
+  }
+
+  const st = exercises[currentExercise].steps[currentStep];
+  const ok = st.answers.some(a => normalize(a) === normalize(raw));
+
+  if(ok){
+    const studentAnswer = raw.trim();
+    solvedSteps[currentExercise][currentStep] = studentAnswer;
+
+    const bonus = Math.max(4, 10 - tries * 2);
+    score += bonus;
+    streak++;
+
+    showFeedback('ok', `Σωστά! Η απάντηση μεταφέρθηκε στο Ιστορικό. Κέρδισες ${bonus} βαθμούς. Πάτα Enter για συνέχεια.`);
+    document.getElementById('answer').value = studentAnswer;
+    document.getElementById('answer').disabled = true;
+    document.getElementById('checkBtn').disabled = true;
+    
+    document.getElementById('nextBtn').disabled = false;
+    document.getElementById('nextBtn').classList.add('pulse');
+
+    renderHistory();
+    burst();
+    reactorFlash();
+  } else {
+    tries++;
+    errors++;
+    streak = 0;
+    const diagnostic = diagnose(raw, currentStep);
+    showFeedback('bad', `Δεν είναι ακόμη σωστό. ${diagnostic}<br><b>Κατεύθυνση:</b> ${st.hint}`);
+    if(tries >= 3) document.getElementById('showAnswerBtn').disabled = false;
+  }
+  updateStats();
+}
+
+function diagnose(raw, step){
+  const n = normalize(raw);
+  if(step === 0 && /[ΑΒΓΔXΨ]/.test(n.replace(/"[^"]*"/g,''))){
+    return 'Έχει μείνει κάποια μεταβλητή εκτός εισαγωγικών χωρίς να αντικατασταθεί.';
+  }
+  if(step === 1 && (n.includes('^') || /\d[+\-*]\d/.test(n) || /\dDIV\d/.test(n) || /\dMOD\d/.test(n))){
+    return 'Έχουν μείνει αριθμητικές πράξεις που πρέπει να υπολογιστούν.';
+  }
+  if(step === 2 && /[<>=]/.test(n)){
+    return 'Στο στάδιο γ δεν πρέπει να παραμένει καμία μαθηματική σύγκριση (όλα γίνονται ΑΛΗΘΗΣ/ΨΕΥΔΗΣ).';
+  }
+  if(step === 3 && (n.includes('ΟΧΙ') || n.includes('ΚΑΙ') || n.includes('Ή'))){
+    return 'Στο τελευταίο στάδιο πρέπει να εκτελεστούν όλες οι λογικές πράξεις (ΟΧΙ/ΚΑΙ/Η).';
+  }
+  return 'Έλεγξε τις παρενθέσεις, τη σειρά των πράξεων και ότι τροποποίησες μόνο ό,τι ζητά το συγκεκριμένο στάδιο.';
+}
+
+function giveHint(){ showFeedback('hint', '💡 ' + exercises[currentExercise].steps[currentStep].hint); }
+function showRule(){ showFeedback('hint', '📘 ' + exercises[currentExercise].steps[currentStep].rule); }
+function showCurrentAnswer(){ showFeedback('hint', 'Ενδεικτική απάντηση: <code>' + canonicalAnswer(currentExercise, currentStep) + '</code>'); }
+
+function nextStep(){
+  if(currentStep < 3){
+    currentStep++;
+    renderStep();
+    return;
+  }
+
+  completed.add(currentExercise);
+  renderTabs();
+  showFinishScreen();
+}
+
+function showFinishScreen() {
+    const box = document.getElementById('finishBox');
+    box.classList.add('show');
+    const finalValue = solvedSteps[currentExercise][3] || exercises[currentExercise].steps[3].answers.slice(-1)[0];
+    
+    let text = `Ο μετασχηματισμός ολοκληρώθηκε με επιτυχία.<br>Η τελική λογική τιμή είναι: <b>${finalValue}</b>.`;
+    
+    if(completed.size === exercises.length) {
+        text += '<br><br><span style="color:var(--primary); font-weight:bold;">Συγχαρητήρια! Ολοκλήρωσες όλες τις ασκήσεις.</span>';
+        document.getElementById('nextExBtn').style.display = 'none';
+        burst(); setTimeout(burst, 400); setTimeout(burst, 800);
+        setTimeout(reactorFlash, 200);
+    } else {
+        document.getElementById('nextExBtn').style.display = 'inline-block';
+        burst();
+        reactorFlash();
+    }
+    document.getElementById('finalText').innerHTML = text;
+}
+
+function goToNextExercise() {
+    for (let i = 0; i < exercises.length; i++) {
+        if (!completed.has(i)) {
+            switchExercise(i);
+            return;
+        }
+    }
+}
+
+function showFeedback(type, msg){
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback show ' + type;
+  fb.innerHTML = msg;
+}
+
+function updateStats(){
+  document.getElementById('score').textContent = score;
+  document.getElementById('streak').textContent = streak;
+  document.getElementById('errors').textContent = errors;
+}
+
+function burst(){
+  const container = document.getElementById('midContainer');
+  const colors = ['#06b6d4', '#2563eb', '#7c3aed', '#db2777', '#f59e0b', '#16a34a'];
+  for(let i=0; i<40; i++){
+    const s = document.createElement('i');
+    s.className = 'spark';
+    s.style.left = '50%';
+    s.style.top = '50%';
+    s.style.background = colors[i % colors.length];
+    s.style.setProperty('--x', (Math.random() * 600 - 300) + 'px');
+    s.style.setProperty('--y', (Math.random() * 400 - 200) + 'px');
+    container.appendChild(s);
+    setTimeout(() => s.remove(), 900);
+  }
+}
+
+function reactorFlash(){
+  const core = document.querySelector('.core');
+  if(core){
+    core.animate([
+      {transform:'scale(.95)', filter:'brightness(1)'},
+      {transform:'scale(1.35)', filter:'brightness(1.7)'},
+      {transform:'scale(.95)', filter:'brightness(1)'}
+    ], {duration:700, easing:'ease-out'});
+  }
+}
+
+// Background Flying Tokens Animation for Game Area
+function createBackground(){
+  const bg = document.getElementById('logicBg');
+  if(!bg) return;
+  bg.innerHTML = '';
+  const tokens=['ΟΧΙ','ΚΑΙ','Ή','ΑΛΗΘΗΣ','ΨΕΥΔΗΣ','MOD','DIV','>','=','^','¬','∧','∨','X=8','Γ=15'];
+  
+  for(let i=0; i<25; i++){
+    const d = document.createElement('div');
+    d.className = 'stream';
+    d.textContent = tokens[i % tokens.length];
+    d.style.top = (Math.random() * 95) + '%';
+    d.style.fontSize = (16 + Math.random() * 24) + 'px';
+    d.style.animationDuration = (12 + Math.random() * 15) + 's';
+    d.style.animationDelay = (-Math.random() * 20) + 's';
+    bg.appendChild(d);
+  }
+
+  for(let i=0; i<15; i++){
+    const n = document.createElement('div');
+    n.className = 'node';
+    n.style.left = (Math.random() * 100) + '%';
+    n.style.top = (Math.random() * 100) + '%';
+    n.style.animationDelay = (Math.random() * 2.2) + 's';
+    bg.appendChild(n);
+  }
+}
+
+// Enter Key Logic
+document.getElementById('answer').addEventListener('keydown', e => {
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    if (!document.getElementById('checkBtn').disabled) {
+        checkAnswer();
+    } else if (!document.getElementById('nextBtn').disabled) {
+        nextStep();
+    }
+  }
+});
+
+// Init
+createBackground();
+renderTabs();
+renderStep();
+updateStats();
+</script>
+</body>
+</html>
