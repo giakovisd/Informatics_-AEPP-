@@ -71,7 +71,7 @@
         .progress-bar { height: 100%; width: 0; background: linear-gradient(90deg, #3b82f6, #8b5cf6, #f59e0b); transition: width 0.4s ease; }
 
         /* Game Interface */
-        .game-interface { position: relative; z-index: 2; padding: 20px; display: flex; flex-direction: column; hieght: 100%; flex: 1; overflow-y: auto;}
+        .game-interface { position: relative; z-index: 2; padding: 20px; display: flex; flex-direction: column; height: 100%; flex: 1; overflow-y: auto;}
         .topline { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
         .badge { padding: 4px 10px; border-radius: 999px; background: #e0f2fe; color: #075985; font-weight: bold; font-size: 0.75rem; }
         .question-no { color: #64748b; font-weight: bold; font-size: 0.85rem; }
@@ -119,6 +119,22 @@
         .complete h2 { font-size: 2rem; color: var(--primary); margin: 10px 0;}
         .medal { font-size: 5rem; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+        .answer-line input { min-width: 0; }
+        @media (max-width: 800px) {
+            body { height: auto; min-height: 100vh; overflow: auto; }
+            header { flex-wrap: wrap; gap: 8px; }
+            .main-container { flex-direction: column; overflow: visible; }
+            .col-left { flex: auto; }
+            .col-mid { min-height: 550px; }
+            .theory-text { max-height: 280px; }
+            .game-interface { padding: 12px; }
+            .answer-line { width: 100%; flex-wrap: wrap; }
+            .answer-line input { width: 100%; }
+            .expression { width: 100%; overflow-x: auto; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; transition: none !important; }
+        }
     </style>
 </head>
 <body>
@@ -155,11 +171,14 @@
                 <div class="rule-box"><b>Τετραγωνική ρίζα:</b> <code>Τ_Ρ(παράσταση)</code>.</div>
                 <div class="rule-box"><b>Απόλυτη τιμή:</b> <code>Α_Τ(παράσταση)</code>.</div>
                 <div class="rule-box"><b>Ημίτονο:</b> <code>ΗΜ(γωνία)</code>. Δεκτό και το <code>HM</code> (Λατινικά).</div>
-                <div class="rule-box"><b>Εκθετική:</b> γράφεται <code>Ε(x)</code> ή <code>ε(x)</code>.</div>
+                <div class="rule-box"><b>Εκθετική:</b> <code>Ε(x)</code>, <code>ε(x)</code>, <code>E(x)</code> ή <code>e(x)</code>.</div>
+                <div class="rule-box"><b>Ελληνικά / Λατινικά:</b> α=a, β=b, γ=g, δ=d, θ=th, μ=m, ω=w, χ=x, υ=y, ζ=z. Δεκτά κεφαλαία και πεζά. Οι συναρτήσεις δέχονται και T_P, A_T, HM.</div>
+                <div class="rule-box"><b>Ισοδύναμες μορφές:</b> Δεκτές οι επιπλέον παρενθέσεις, οι αλλαγές σειράς σε αθροίσματα/γινόμενα και οι αλγεβρικά ισοδύναμες μορφές που επιβεβαιώνονται. Αν ο έλεγχος δεν μπορεί να αποφασίσει, δεν αφαιρούνται βαθμοί.</div>
+                <div class="rule-box"><b>Αριθμοί:</b> Δεκτή τελεία ή κόμμα στα δεκαδικά (0.5 ή 0,5). Όχι κενά μέσα σε αριθμούς ή ονόματα.</div>
                 <div class="rule-box">
                     <b>Συντομεύσεις:</b><br><br>
                     <span class="keyboard-shortcut">Enter</span> : Έλεγχος / Επόμενο<br><br>
-                    <span class="keyboard-shortcut">Ctrl + H</span> : Υπόδειξη
+                    <span class="keyboard-shortcut">Alt + H</span> : Υπόδειξη
                 </div>
             </div>
         </div>
@@ -190,12 +209,12 @@
 
             <div class="answer-wrap">
                 <div class="answer-line">
-                    <input id="answer" autocomplete="off" spellcheck="false" placeholder="π.χ. (x+3*y)*(x-5*y)">
+                    <input id="answer" aria-label="Η απάντησή σου σε ΓΛΩΣΣΑ" maxlength="600" autocomplete="off" spellcheck="false" placeholder="π.χ. (x+3*y)*(x-5*y)">
                     <button class="primary-btn" id="checkBtn" onclick="checkAnswer()">Έλεγχος ✨</button>
                 </div>
             </div>
 
-            <div class="feedback" id="feedback"></div>
+            <div class="feedback" id="feedback" role="status" aria-live="polite"></div>
             <div class="solution" id="solution"></div>
             
             <div class="actions">
@@ -228,13 +247,13 @@
         {level:"Πανελλαδικές 2018", html:`<math display="block"><mrow><mn>30,5</mn><mi>x</mi><mo>+</mo><mi>γ</mi><mi>δ</mi><mo>+</mo><mi>ω</mi><mi>x</mi></mrow></math>`, answers:['30.5*x+γ*δ+ω*x','30,5*x+γ*δ+ω*x'], hints:['Κάθε γινόμενο χρειάζεται *.','Υπάρχουν τρία γινόμενα.','Γράψε 30.5*x, γ*δ και ω*x.'], rule:'Η παράθεση αριθμού ή μεταβλητών σημαίνει πολλαπλασιασμό.'},
         {level:"Πανελλαδικές 2018", html:`<math display="block"><mrow><msup><mi>y</mi><mn>5</mn></msup><mo>−</mo><mi>z</mi><msup><mrow><mo>(</mo><mi>μ</mi><mo>−</mo><mi>γ</mi><mo>)</mo></mrow><mn>2</mn></msup></mrow></math>`, answers:['y^5-z*(μ-γ)^2'], hints:['Το z πολλαπλασιάζει ολόκληρο το τετράγωνο.','Μετά το z χρειάζεται *.','Η δύναμη εφαρμόζεται στην παρένθεση.'], rule:'Η δύναμη σύνθετης παράστασης απαιτεί παρενθέσεις.'},
         {level:"Πανελλαδικές 2018", html:`<math display="block"><msqrt><mrow><mi>ω</mi><mo>−</mo><msup><mi>x</mi><mn>2</mn></msup></mrow></msqrt></math>`, answers:['Τ_Ρ(ω-x^2)','T_P(ω-x^2)','(ω-x^2)^(1/2)','(w-x^2)^(1/2)'], hints:['Όλη η παράσταση είναι κάτω από τη ρίζα.','Χρησιμοποίησε Τ_Ρ(...) ή δύναμη 1/2.','Μέσα γράψε ω-x^2.'], rule:'Η ρίζα γράφεται Τ_Ρ(παράσταση) ή ισοδύναμα (παράσταση)^(1/2).'},
-        {level:"Δική μας άσκηση", html:`<math display="block"><mfrac><mrow><mo stretchy="false">|</mo><mn>3</mn><mi>x</mi><mo>−</mo><mn>2</mn><mi>y</mi><mo stretchy="false">|</mo></mrow><mrow><mi>α</mi><mo>+</mo><mn>1</mn></mrow></mfrac></math>`, answers:['Α_Τ(3*x-2*y)/(α+1)','A_T(3*x-2*y)/(α+1)'], hints:['Η απόλυτη τιμή είναι ο αριθμητής.','Τα 3x και 2y είναι γινόμενα.','Ο παρονομαστής χρειάζεται παρενθέσεις.'], rule:'Σύνθετος αριθμητής ή παρονομαστής θέλει παρενθέσεις.'},
+        {level:"Δική μας άσκηση", html:`<math display="block"><mfrac><mrow><mo stretchy="false">|</mo><mn>3</mn><mi>x</mi><mo>−</mo><mn>2</mn><mi>y</mi><mo stretchy="false">|</mo></mrow><mrow><mi>α</mi><mo>+</mo><mn>1</mn></mrow></mfrac></math>`, answers:['Α_Τ(3*x-2*y)/(α+1)','A_T(3*x-2*y)/(α+1)'], hints:['Η απόλυτη τιμή είναι ο αριθμητής.','Τα 3x και 2y είναι γινόμενα.','Ο παρονομαστής χρειάζεται παρενθέσεις.'], rule:'Άθροισμα ή διαφορά στον αριθμητή ή στον παρονομαστή χρειάζεται ομαδοποίηση με παρενθέσεις. Η Α_Τ(...) είναι ήδη ένας ενιαίος όρος.'},
         {level:"Δική μας άσκηση", html:`<math display="block"><mfrac><msup><mrow><mo>(</mo><mi>α</mi><mo>+</mo><mi>β</mi><mo>)</mo></mrow><mn>3</mn></msup><msqrt><mrow><mi>x</mi><mo>+</mo><mn>4</mn></mrow></msqrt></mfrac></math>`, answers:['(α+β)^3/Τ_Ρ(x+4)','(α+β)^3/T_P(x+4)','(α+β)^3/(x+4)^(1/2)'], hints:['Ο αριθμητής είναι δύναμη παρένθεσης.','Ο παρονομαστής είναι ρίζα.','Συνδύασέ τα με /.'], rule:'Η δύναμη εφαρμόζεται στην παρένθεση και η ρίζα γράφεται ως Τ_Ρ ή δύναμη 1/2.'},
         {level:"Δική μας άσκηση", html:`<math display="block"><mrow><mn>2</mn><msup><mi>x</mi><mn>2</mn></msup><mo>−</mo><mfrac><mrow><mn>3</mn><mi>y</mi><mo>+</mo><mn>1</mn></mrow><mn>5</mn></mfrac></mrow></math>`, answers:['2*x^2-(3*y+1)/5'], hints:['Το 2x² χρειάζεται *.','Το 3y+1 είναι ολόκληρος αριθμητής.','Κράτησε την παρένθεση.'], rule:'Οι παρενθέσεις κρατούν μαζί τον αριθμητή.'},
         {level:"Δική μας άσκηση", html:`<math display="block"><msqrt><mrow><mo stretchy="false">|</mo><mi>x</mi><mo>−</mo><mi>y</mi><mo stretchy="false">|</mo><mo>+</mo><msup><mi>z</mi><mn>2</mn></msup></mrow></msqrt></math>`, answers:['Τ_Ρ(Α_Τ(x-y)+z^2)','T_P(A_T(x-y)+z^2)','Τ_Ρ(A_T(x-y)+z^2)','T_P(Α_Τ(x-y)+z^2)','(A_T(x-y)+z^2)^(1/2)','(Α_Τ(x-y)+z^2)^(1/2)'], hints:['Υπάρχει μία συνάρτηση μέσα σε άλλη.','Πρώτα γράψε Α_Τ(x-y).','Μετά βάλε όλο το άθροισμα στην Τ_Ρ ή ύψωσέ το στη δύναμη 1/2.'], rule:'Οι εμφωλευμένες συναρτήσεις γράφονται από μέσα προς τα έξω.'},
         {level:"Πρόκληση", html:`<math display="block"><mrow><mfrac><mrow><mi>x</mi><mo>+</mo><mn>1</mn></mrow><mrow><mi>y</mi><mo>−</mo><mn>2</mn></mrow></mfrac><mo>+</mo><mfrac><mrow><mi>y</mi><mo>−</mo><mn>2</mn></mrow><mrow><mi>x</mi><mo>+</mo><mn>1</mn></mrow></mfrac></mrow></math>`, answers:['(x+1)/(y-2)+(y-2)/(x+1)'], hints:['Υπάρχουν δύο κλάσματα.','Κάθε αριθμητής και παρονομαστής είναι σύνθετος.','Χρειάζονται τέσσερις παρενθέσεις.'], rule:'Κάθε κλάσμα γράφεται ανεξάρτητα με καθαρές παρενθέσεις.'},
         {level:"Πρόκληση", html:`<math display="block"><mrow><mo stretchy="false">|</mo><msup><mi>x</mi><mn>2</mn></msup><mo>−</mo><mn>4</mn><mo stretchy="false">|</mo><mo>+</mo><msqrt><mfrac><mrow><mi>α</mi><mo>+</mo><mi>β</mi></mrow><mn>2</mn></mfrac></msqrt></mrow></math>`, answers:['Α_Τ(x^2-4)+Τ_Ρ((α+β)/2)','A_T(x^2-4)+T_P((α+β)/2)','Α_Τ(x^2-4)+T_P((α+β)/2)','A_T(x^2-4)+Τ_Ρ((α+β)/2)','A_T(x^2-4)+((α+β)/2)^(1/2)','Α_Τ(x^2-4)+((α+β)/2)^(1/2)'], hints:['Η πρώτη είναι απόλυτη τιμή.','Η δεύτερη είναι ρίζα κλάσματος.','Μέσα στη ρίζα γράψε (α+β)/2.'], rule:'Κράτησε χωριστά τα ορίσματα των Α_Τ και Τ_Ρ.'},
-        {level:"Νέα άσκηση", html:`<math display="block" aria-label="δύο x συν το κλάσμα τρία επί x συν ένα προς y στο τετράγωνο συν ένα, μείον εκθετική του x"><mrow><mn>2</mn><mi>x</mi><mo>+</mo><mfrac><mrow><mn>3</mn><mo>(</mo><mi>x</mi><mo>+</mo><mn>1</mn><mo>)</mo></mrow><mrow><msup><mi>y</mi><mn>2</mn></msup><mo>+</mo><mn>1</mn></mrow></mfrac><mo>−</mo><msup><mi>e</mi><mi>x</mi></msup></mrow></math>`, answers:['2*x+3*(x+1)/(y^2+1)-Ε(x)','2*x+3*(x+1)/(y^2+1)-ε(x)','2*x+3*(x+1)/(y^2+1)-E(x)','2*x+(3*(x+1))/(y^2+1)-Ε(x)','2*x+(3*(x+1))/(y^2+1)-ε(x)','2*x+(3*(x+1))/(y^2+1)-E(x)','2*x+(3*(x+1)/(y^2+1))-Ε(x)','2*x+(3*(x+1)/(y^2+1))-ε(x)','2*x+(3*(x+1)/(y^2+1))-E(x)'], hints:['Το 2x είναι γινόμενο και χρειάζεται *.','Ολόκληρο το 3(x+1) είναι αριθμητής και το y^2+1 παρονομαστής.','Η εκθετική συνάρτηση γράφεται Ε(x) ή ε(x). Επιτρέπεται και το λατινικό κεφαλαίο E, αλλά όχι το λατινικό πεζό e.'], rule:'Σε σύνθετο κλάσμα κρατάμε καθαρά τον αριθμητή και τον παρονομαστή με παρενθέσεις. Η εκθετική συνάρτηση γράφεται Ε(x) ή ε(x).'},
+        {level:"Νέα άσκηση", html:`<math display="block" aria-label="δύο x συν το κλάσμα τρία επί x συν ένα προς y στο τετράγωνο συν ένα, μείον εκθετική του x"><mrow><mn>2</mn><mi>x</mi><mo>+</mo><mfrac><mrow><mn>3</mn><mo>(</mo><mi>x</mi><mo>+</mo><mn>1</mn><mo>)</mo></mrow><mrow><msup><mi>y</mi><mn>2</mn></msup><mo>+</mo><mn>1</mn></mrow></mfrac><mo>−</mo><msup><mi>e</mi><mi>x</mi></msup></mrow></math>`, answers:['2*x+3*(x+1)/(y^2+1)-Ε(x)','2*x+3*(x+1)/(y^2+1)-ε(x)','2*x+3*(x+1)/(y^2+1)-E(x)','2*x+(3*(x+1))/(y^2+1)-Ε(x)','2*x+(3*(x+1))/(y^2+1)-ε(x)','2*x+(3*(x+1))/(y^2+1)-E(x)','2*x+(3*(x+1)/(y^2+1))-Ε(x)','2*x+(3*(x+1)/(y^2+1))-ε(x)','2*x+(3*(x+1)/(y^2+1))-E(x)'], hints:['Το 2x είναι γινόμενο και χρειάζεται *.','Ολόκληρο το 3(x+1) είναι αριθμητής και το y^2+1 παρονομαστής.','Η εκθετική συνάρτηση γράφεται Ε(x), ε(x), E(x) ή e(x). Επιτρέπεται και το λατινικό κεφαλαίο E, καθώς και το λατινικό πεζό e.'], rule:'Σε σύνθετο κλάσμα κρατάμε καθαρά τον αριθμητή και τον παρονομαστή με παρενθέσεις. Η εκθετική συνάρτηση γράφεται Ε(x), ε(x), E(x) ή e(x).'},
         {level:"Νέα άσκηση", html:`<math display="block" aria-label="κλάσμα με αριθμητή απόλυτη τιμή x μείον ημίτονο θ και παρονομαστή τετραγωνική ρίζα x στο τετράγωνο συν πέντε"><mfrac><mrow><mo stretchy="false">|</mo><mi>x</mi><mo stretchy="false">|</mo><mo>−</mo><mi mathvariant="normal">ημ</mi><mi>θ</mi></mrow><msqrt><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>5</mn></mrow></msqrt></mfrac></math>`, answers:['(Α_Τ(x)-ΗΜ(θ))/Τ_Ρ(x^2+5)','(A_T(x)-HM(θ))/T_P(x^2+5)','(Α_Τ(x)-HM(θ))/Τ_Ρ(x^2+5)','(A_T(x)-ΗΜ(θ))/T_P(x^2+5)','(Α_Τ(x)-ΗΜ(θ))/(x^2+5)^(1/2)','(A_T(x)-HM(θ))/(x^2+5)^(1/2)','(Α_Τ(x)-ΗΜ(θ))/((x^2+5)^(1/2))','(A_T(x)-HM(θ))/((x^2+5)^(1/2))'], hints:['Ο αριθμητής είναι η απόλυτη τιμή του x μείον το ημίτονο της γωνίας θ.','Το ημθ στα Μαθηματικά γράφεται ΗΜ(θ) στη ΓΛΩΣΣΑ. Γίνονται δεκτοί και λατινικοί χαρακτήρες: HM(θ).','Ο παρονομαστής είναι Τ_Ρ(x^2+5) ή ισοδύναμα (x^2+5)^(1/2).'], rule:'Στη ΓΛΩΣΣΑ το ημίτονο γράφεται ΗΜ(θ). Η απόλυτη τιμή γράφεται Α_Τ(...) και η ρίζα Τ_Ρ(...) ή ως δύναμη 1/2.'}
     ];
 
@@ -245,17 +264,90 @@
     }
 
     let exercises = shuffledCopy(exerciseBank);
-    let index = 0, score = 0, streak = 0, mistakes = 0, tries = 0, solved = false;
+    let index = 0, score = 0, streak = 0, mistakes = 0, tries = 0, solved = false, hintIndex = 0;
 
-    // Normalization core function (Handles greek/latin substitutions)
-    function norm(s) {
-        let t = s.trim().replace(/[ΕεE](?=\s*\()/g, 'EXP');
-        return t.toLowerCase()
-            .replace(/\s+/g, '').replace(/,/g, '.').replace(/[−–—]/g, '-')
-            .replace(/[τt]_[ρp]/g, 't_p').replace(/[αa]_[τt]/g, 'a_t')
-            .replace(/[ηh][μm](?=\()/g, 'hm')
-            .replace(/[χx]/g, 'x').replace(/[υy]/g, 'y').replace(/[ζz]/g, 'z').replace(/[ωw]/g, 'w')
-            .replace(/×|·/g, '*');
+    // Token-based parser and exact rational-polynomial comparison. No eval.
+    const aliases = {α:'a',β:'b',γ:'g',δ:'d',θ:'th',μ:'m',ω:'w',χ:'x',υ:'y',ζ:'z'};
+    function parseExpression(raw, allowed) {
+        if(raw.length>600) throw Error('Η έκφραση είναι υπερβολικά μεγάλη.');
+        const s=raw.normalize('NFC').toLowerCase().replace(/[−–—]/g,'-').replace(/,/g,'.');
+        const tokens=[]; let i=0;
+        while(i<s.length) {
+            if(/\s/.test(s[i])) {i++;continue;}
+            const tail=s.slice(i), num=tail.match(/^(?:\d+(?:\.\d+)?|\.\d+)/), id=tail.match(/^[a-zα-ω_][a-zα-ω_0-9]*/);
+            if(num) {tokens.push({type:'num',value:num[0]});i+=num[0].length;}
+            else if(id) {tokens.push({type:'id',value:id[0]});i+=id[0].length;}
+            else if('+-*/^()'.includes(s[i])) tokens.push({type:s[i],value:s[i++ ]});
+            else if('|×·'.includes(s[i])) throw Error(s[i]==='|'?'Για την απόλυτη τιμή χρησιμοποίησε Α_Τ(...).':'Για τον πολλαπλασιασμό χρησιμοποίησε το σύμβολο *.');
+            else throw Error('Υπάρχει μη υποστηριζόμενο σύμβολο. Χρησιμοποίησε +, -, *, /, ^ και παρενθέσεις.');
+        }
+        tokens.push({type:'end'}); let p=0;
+        const peek=()=>tokens[p].type, take=()=>tokens[p++];
+        function primary() {
+            if(peek()==='num') return {op:'num',v:take().value};
+            if(peek()==='(') {take();const n=add();if(peek()!==')') throw Error('Λείπει μια δεξιά παρένθεση ).');take();return n;}
+            if(peek()==='id') {
+                const name=take().value;
+                let fn=/^[τt]_[ρp]$/.test(name)?'sqrt':/^[αa]_[τt]$/.test(name)?'abs':/^[ηh][μm]$/.test(name)?'sin':/^[εe]$/.test(name)?'exp':null;
+                if(fn) {if(peek()!=='(') throw Error('Η συνάρτηση χρειάζεται όρισμα σε παρενθέσεις.');take();const n=add();if(peek()!==')') throw Error('Λείπει η δεξιά παρένθεση της συνάρτησης.');take();return {op:fn,a:n};}
+                const v=aliases[name]||name;
+                if(allowed&&!allowed.has(v)) throw Error('Χρησιμοποίησε μόνο τις μεταβλητές της εκφώνησης και τις συναρτήσεις Τ_Ρ, Α_Τ, ΗΜ, Ε.');
+                return {op:'var',v};
+            }
+            throw Error('Περίμενα αριθμό, μεταβλητή ή παρένθεση. Έλεγξε μήπως λείπει κάποιος όρος.');
+        }
+        function power(){let n=primary();if(peek()==='^'){take();n={op:'^',a:n,b:unary()};}return n;}
+        function unary(){if(peek()==='+'||peek()==='-'){const op=take().type;const n=unary();return op==='+'?n:{op:'neg',a:n};}return power();}
+        function mul(){let n=unary();while(peek()==='*'||peek()==='/'){const op=take().type;n={op,a:n,b:unary()};}return n;}
+        function add(){let n=mul();while(peek()==='+'||peek()==='-'){const op=take().type;n={op,a:n,b:mul()};}return n;}
+        const n=add();if(peek()!=='end') throw Error(peek()===')'?'Υπάρχει επιπλέον δεξιά παρένθεση ).':'Λείπει τελεστής ανάμεσα σε δύο όρους. Μην ενώνεις αριθμούς με κενά και γράφε * σε κάθε γινόμενο.');return n;
+    }
+    function variables(n,out=new Set()){if(n.op==='var')out.add(n.v);if(n.a)variables(n.a,out);if(n.b)variables(n.b,out);return out;}
+    function gcd(a,b){a=a<0n?-a:a;b=b<0n?-b:b;while(b){[a,b]=[b,a%b];}return a;}
+    function rat(a,b=1n){if(!b)throw Error('zero');if(b<0n){a=-a;b=-b;}const g=gcd(a,b);return [a/g,b/g];}
+    const ra=(a,b)=>rat(a[0]*b[1]+b[0]*a[1],a[1]*b[1]);
+    const rm=(a,b)=>rat(a[0]*b[0],a[1]*b[1]);
+    const rn=a=>[-a[0],a[1]];
+    function decimal(s){const [a,b='']=s.split('.');return rat(BigInt((a||'0')+b),10n**BigInt(b.length));}
+    const poly=c=>new Map(c[0]?[['[]',c]]:[]), one=()=>poly([1n,1n]);
+    function padd(a,b){const r=new Map(a);for(const [k,c]of b){const v=ra(r.get(k)||[0n,1n],c);if(v[0])r.set(k,v);else r.delete(k);}return r;}
+    const pneg=a=>new Map([...a].map(([k,c])=>[k,rn(c)]));
+    function pmul(a,b){if(a.size*b.size>12000)throw Error('complex');const r=new Map();for(const [ka,ca]of a)for(const[kb,cb]of b){const factors=[...JSON.parse(ka),...JSON.parse(kb)];if(factors.length>48)throw Error('complex');const k=JSON.stringify(factors.sort());const v=ra(r.get(k)||[0n,1n],rm(ca,cb));if(v[0])r.set(k,v);else r.delete(k);}if(r.size>600)throw Error('complex');return r;}
+    function pkey(p){return JSON.stringify([...p].sort(([a],[b])=>a.localeCompare(b)).map(([k,c])=>[k,c.map(String)]));}
+    function monic(p){if(!p.size)return p;const c=[...p].sort(([a],[b])=>a.localeCompare(b))[0][1];return new Map([...p].map(([k,v])=>[k,rm(v,rat(c[1],c[0]))]));}
+    const req=(a,b)=>pkey(pmul(a.n,b.d))===pkey(pmul(b.n,a.d));
+    function rkey(r){const c=[...r.d].sort(([a],[b])=>a.localeCompare(b))[0]?.[1];if(!c)throw Error('zero');const scale=p=>new Map([...p].map(([k,v])=>[k,rm(v,rat(c[1],c[0]))]));return pkey(scale(r.n))+'/'+pkey(scale(r.d));}
+    function constant(r){if([...r.n.keys(),...r.d.keys()].some(k=>k!=='[]'))return null;return rm(r.n.get('[]')||[0n,1n],rat((r.d.get('[]')||[0n,1n])[1],(r.d.get('[]')||[0n,1n])[0]));}
+    function symbolic(n,domains=new Set()) {
+        const atom=k=>{if(k.length>20000)throw Error('complex');return {n:new Map([[JSON.stringify([k]),[1n,1n]]]),d:one()};};
+        function nonzero(p){if(!p.size)throw Error('zero');if([...p.keys()].some(k=>k!=='[]'))domains.add('nz:'+pkey(monic(p)));}
+        function walk(t){
+            if(t.op==='num')return {n:poly(decimal(t.v)),d:one()};
+            if(t.op==='var')return atom('v:'+t.v);
+            let a=walk(t.a);if(t.op==='neg')return {n:pneg(a.n),d:a.d};
+            if(['sqrt','abs','sin','exp'].includes(t.op))return func(t.op,a);
+            const b=walk(t.b);
+            if(t.op==='+')return {n:padd(pmul(a.n,b.d),pmul(b.n,a.d)),d:pmul(a.d,b.d)};
+            if(t.op==='-')return {n:padd(pmul(a.n,b.d),pneg(pmul(b.n,a.d))),d:pmul(a.d,b.d)};
+            if(t.op==='*')return {n:pmul(a.n,b.n),d:pmul(a.d,b.d)};
+            if(t.op==='/'){nonzero(b.n);return {n:pmul(a.n,b.d),d:pmul(a.d,b.n)};}
+            const c=constant(b);
+            if(c&&c[0]===1n&&c[1]===2n)return func('sqrt',a);
+            if(c&&c[1]===1n&&c[0]>=-12n&&c[0]<=12n){let e=Number(c[0]);if(e<=0)nonzero(a.n);if(e<0){a={n:a.d,d:a.n};e=-e;}let r={n:one(),d:one()};for(let j=0;j<e;j++)r={n:pmul(r.n,a.n),d:pmul(r.d,a.d)};return r;}
+            throw Error('complex');
+        }
+        function func(op,a){let k=rkey(a);if(op==='abs'){const neg=rkey({n:pneg(a.n),d:a.d});k=k<neg?k:neg;}if(op==='sqrt')domains.add('sqrt:'+k);return atom(op+':'+k);}
+        return {value:walk(n),domains};
+    }
+    function evaluate(n,env){if(n.op==='num')return Number(n.v);if(n.op==='var')return env[n.v];const a=evaluate(n.a,env);if(n.op==='neg')return -a;if(n.op==='sqrt')return Math.sqrt(a);if(n.op==='abs')return Math.abs(a);if(n.op==='sin')return Math.sin(a);if(n.op==='exp')return Math.exp(a);const b=evaluate(n.b,env);return n.op==='+'?a+b:n.op==='-'?a-b:n.op==='*'?a*b:n.op==='/'?a/b:Math.pow(a,b);}
+    // Numerical samples can disprove an answer, but never establish correctness.
+    function counterexample(expected,student){const names=[...variables(expected)].sort();let seed=314159;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};for(let i=0;i<160;i++){const env={};for(const v of names)env[v]=i<9?[-3,-2,-1,0,0.5,1,2,3,5][i]:(rand()*12-6);const a=evaluate(expected,env),b=evaluate(student,env);if(Number.isFinite(a)&&(!Number.isFinite(b)||Math.abs(a-b)>1e-8*Math.max(1,Math.abs(a),Math.abs(b))))return true;}return false;}
+    function assess(raw,q){
+        const expected=parseExpression(q.answers[0]);let student;
+        try{student=parseExpression(raw,variables(expected));}catch(e){return {status:'wrong',message:e.message};}
+        try{const a=symbolic(expected),b=symbolic(student);if(req(a.value,b.value)&&[...a.domains].sort().join('\n')===[...b.domains].sort().join('\n'))return {status:'correct'};}catch(e){}
+        if(counterexample(expected,student))return {status:'wrong',message:'Η απάντηση δεν δίνει τις ίδιες τιμές με την εκφώνηση. Έλεγξε τα πρόσημα, τις δυνάμεις και ποιους όρους περιλαμβάνουν οι παρενθέσεις, οι ρίζες και τα κλάσματα.'};
+        return {status:'unknown',message:'Δεν μπορώ να επιβεβαιώσω αυτή τη μορφή με βεβαιότητα. Δεν χάνεις βαθμούς. Δοκίμασε μια μορφή πιο κοντά στην εκφώνηση ή συμβουλέψου την ενδεικτική λύση.'};
     }
 
     // UI Updates
@@ -286,7 +378,7 @@
         document.getElementById('feedback').className = 'feedback';
         document.getElementById('solution').className = 'solution';
         
-        tries = 0; solved = false;
+        tries = 0; solved = false; hintIndex = 0;
         updateStats();
         answerInput.focus();
     }
@@ -297,15 +389,15 @@
         
         if (!raw.trim()) { showFeedback('bad', 'Γράψε πρώτα μία απάντηση.'); return; }
         
-        // --- ΝΕΟ: ΕΛΕΓΧΟΣ ΓΙΑ ΤΟ ΣΥΜΒΟΛΟ ΤΗΣ ΑΠΟΛΥΤΗΣ ΤΙΜΗΣ ---
-        if (raw.includes('|')) {
-            showFeedback('hint', 'Μην ξεχνάς! Στη ΓΛΩΣΣΑ <b>δεν χρησιμοποιούμε κάθετες γραμμές ( | )</b>, αλλά τη συνάρτηση <code>Α_Τ()</code>.');
+        const q = exercises[index];
+        const result = assess(raw, q);
+        if (result.status === 'unknown') {
+            showFeedback('hint', result.message);
+            document.getElementById('showSolutionBtn').disabled = false;
             return;
         }
-        
-        const q = exercises[index];
-        const correct = q.answers.some(a => norm(a) === norm(raw));
-        
+        const correct = result.status === 'correct';
+
         if (correct) {
             solved = true;
             const bonus = Math.max(4, 10 - tries * 2);
@@ -317,17 +409,17 @@
             document.getElementById('answer').disabled = true;
             document.getElementById('checkBtn').disabled = true;
             
+            document.getElementById('nextBtn').focus();
             burst();
         } else {
             tries++; mistakes++; streak = 0;
-            const hint = q.hints[Math.min(tries - 1, q.hints.length - 1)];
-            showFeedback('bad', `Δεν είναι ακόμη σωστό. ${hint}`);
+            showFeedback('bad', result.message);
             if (tries >= 3) document.getElementById('showSolutionBtn').disabled = false;
         }
         updateStats();
     }
 
-    function giveHint() { const q = exercises[index]; showFeedback('hint', '💡 ' + q.hints[Math.min(tries, q.hints.length - 1)]); }
+    function giveHint() { const q = exercises[index]; if (!q) return; showFeedback('hint', '💡 ' + q.hints[Math.min(hintIndex++, q.hints.length - 1)]); }
     function showRule() { showFeedback('hint', '📘 ' + exercises[index].rule); }
     function showSolution() { const sol = document.getElementById('solution'); sol.innerHTML = '<b>Ενδεικτική λύση:</b> ' + exercises[index].answers[0]; sol.classList.add('show'); }
     function showFeedback(type, msg) { const fb = document.getElementById('feedback'); fb.className = 'feedback show ' + type; fb.innerHTML = msg; }
@@ -352,7 +444,7 @@
 
     function restart() {
         exercises = shuffledCopy(exerciseBank);
-        index = score = streak = mistakes = tries = 0; solved = false;
+        index = score = streak = mistakes = tries = 0; solved = false; hintIndex = 0;
         document.getElementById('game').style.display = 'flex';
         document.getElementById('complete').classList.remove('show');
         render();
@@ -389,15 +481,16 @@
         }
     }
 
-    // Input Key Listeners (Enter for Check/Next)
-    document.getElementById('answer').addEventListener('keydown', e => {
-        if (e.key === 'Enter') {
-            if (solved) nextQuestion(); 
-            else checkAnswer();
-        }
-        if (e.ctrlKey && e.key.toLowerCase() === 'h') {
+    // One listener handles Enter even after the answer field is disabled.
+    document.addEventListener('keydown', e => {
+        if (index >= exercises.length) return;
+        if (e.key === 'Enter' && !e.repeat && !e.isComposing &&
+            (e.target.id === 'answer' || (solved && e.target.id === 'nextBtn'))) {
             e.preventDefault();
-            giveHint();
+            if (solved) nextQuestion(); else checkAnswer();
+        }
+        if (e.altKey && e.key.toLowerCase() === 'h') {
+            e.preventDefault(); giveHint();
         }
     });
 
