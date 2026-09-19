@@ -31,7 +31,7 @@
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s; }
 
-        /* HEADER & TABS WRAPPER (Stats moved here) */
+        /* HEADER & TABS WRAPPER */
         .main-tabs-wrapper { display: flex; justify-content: space-between; align-items: flex-end; background: var(--panel-bg); border-bottom: 2px solid var(--primary); padding-top: 8px; flex-shrink: 0;}
         .main-tabs { display: flex; padding-left: 15px; overflow-x: auto; gap: 5px; flex: 1;}
         .m-tab { padding: 8px 15px; cursor: pointer; font-weight: bold; font-size: 0.85rem; border-radius: 6px 6px 0 0; background: #e2e8f0; color: #64748b; transition: 0.2s; white-space: nowrap;}
@@ -65,7 +65,7 @@
         .main-container { display: flex; flex: 1; padding: 10px; gap: 10px; overflow: hidden; max-width: 100vw; box-sizing: border-box; }
         .col { display: flex; flex-direction: column; overflow: hidden; }
 
-        /* LEFT (Reactor & Rules) */
+        /* LEFT */
         .col-left { flex: 0 0 300px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
         .theory-card { background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; transition: 0.3s;}
         .theory-title { font-size: 0.85rem; font-weight: bold; padding: 8px 10px; background: rgba(59, 130, 246, 0.1); border-bottom: 2px solid var(--primary); color: var(--primary); flex-shrink: 0;}
@@ -91,22 +91,9 @@
         .rule-box code { color: #6d28d9; font-weight: bold; font-size: 0.8rem;}
         .rule-box b { color: var(--primary); }
 
-        /* MID (Game Area with Animations) */
-        .col-mid { 
-    flex: 1; 
-    background: var(--panel-bg); 
-    border-radius: 8px; 
-    border: 1px solid var(--border-color); 
-    display: flex; 
-    flex-direction: column; 
-    position: relative; 
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
-    transition: 0.3s; 
-    overflow: hidden; /* <--- ΕΔΩ ΕΙΝΑΙ Η ΔΙΟΡΘΩΣΗ */
-    padding: 20px;
-}
+        /* MID */
+        .col-mid { flex: 1; background: var(--panel-bg); border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: 0.3s; overflow: hidden; padding: 20px;}
         
-        /* Animated Background inside col-mid */
         .logic-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
         .stream { position: absolute; left: -20%; white-space: nowrap; font-family: Consolas, "Courier New", monospace; font-weight: 900; color: rgba(59, 130, 246, 0.12); text-shadow: 0 0 10px rgba(59, 130, 246, 0.2); animation: streamMove linear infinite; }
         @keyframes streamMove { 0% { transform: translate3d(-10%, 0, 0) scale(0.85); opacity: 0; } 10% { opacity: 1; } 88% { opacity: 1; } 100% { transform: translate3d(120vw, -10%, 0) scale(1.15); opacity: 0; } }
@@ -115,7 +102,6 @@
         .scanline { position: absolute; left: 0; right: 0; height: 2px; top: -10px; z-index: 1; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.4), transparent); box-shadow: 0 0 10px rgba(34, 211, 238, 0.3); animation: scan 6s linear infinite; }
         @keyframes scan { to { transform: translateY(1000px); } }
 
-        /* Ensure all content stays above the animations */
         .lesson-head, .mission, .expression-box, .card { position: relative; z-index: 2; }
 
         .lesson-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;}
@@ -149,7 +135,7 @@
         .actions { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;}
         .tools { display: flex; gap: 8px; flex-wrap: wrap; }
 
-        /* RIGHT (History) - Wider to fit expressions */
+        /* RIGHT */
         .col-right { flex: 0 0 480px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
         .trace-container { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; display: flex; flex-direction: column; flex: 1; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .trace-header { background: #f1f5f9; padding: 8px; font-weight: bold; border-bottom: 2px solid var(--primary); color: var(--primary); font-size: 0.85rem; text-align: center; flex-shrink: 0;}
@@ -158,16 +144,7 @@
         .hist-item { background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; animation: slideIn 0.3s ease;}
         .hist-item .step-label { color: #64748b; font-weight: bold; font-size: 0.75rem; text-transform: uppercase;}
         
-        /* Updated step-expr to NEVER wrap, adding horizontal scroll if needed */
-        .hist-item .step-expr { 
-            font-family: Consolas, monospace; 
-            color: var(--text-color); 
-            font-weight: bold; 
-            font-size: 0.95rem; 
-            white-space: nowrap; 
-            overflow-x: auto; 
-            padding-bottom: 4px; 
-        }
+        .hist-item .step-expr { font-family: Consolas, monospace; color: var(--text-color); font-weight: bold; font-size: 0.95rem; white-space: nowrap; overflow-x: auto; padding-bottom: 4px; }
         .hist-item .step-expr::-webkit-scrollbar { height: 4px; }
         .hist-item .step-expr::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
@@ -183,9 +160,7 @@
         @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
 
         /* Responsive Layout */
-        @media (max-width: 1300px) {
-            .col-right { flex: 0 0 400px; }
-        }
+        @media (max-width: 1300px) { .col-right { flex: 0 0 400px; } }
         @media (max-width: 1050px) {
             .main-container { flex-direction: column; overflow: visible; height: auto;}
             .col-left, .col-mid, .col-right { flex: none; width: 100%; height: auto; min-height: 400px;}
@@ -294,7 +269,7 @@
 
     </div>
 
-    <!-- RIGHT PANEL (History - Wider for Expressions) -->
+    <!-- RIGHT PANEL (History) -->
     <div class="col col-right">
         <div class="trace-container">
             <div class="trace-header">Ιστορικό Μετασχηματισμού</div>
@@ -488,7 +463,6 @@ function renderHistory(){
     
     document.getElementById('historyContainer').innerHTML = html;
     
-    // Scroll to bottom safely
     const hc = document.getElementById('historyContainer');
     hc.scrollTop = hc.scrollHeight;
 }
@@ -540,10 +514,9 @@ function renderStep(){
 function switchExercise(i){
   currentExercise = i;
   currentStep = Math.min(solvedSteps[i].length, 3);
-  if(completed.has(i)) currentStep = 3; // Keep it at the end if already done
+  if(completed.has(i)) currentStep = 3; 
   
   if (completed.has(i) && solvedSteps[i].length === 4) {
-      // If returning to a fully completed exercise, show finish screen
       renderStep();
       showFinishScreen();
   } else {
@@ -559,7 +532,13 @@ function checkAnswer(){
   }
 
   const st = exercises[currentExercise].steps[currentStep];
-  const ok = st.answers.some(a => normalize(a) === normalize(raw));
+  
+  // Έλεγχος με ευελιξία στις παρενθέσεις
+  const ok = st.answers.some(a => {
+    const cleanA = normalize(a).replace(/[()]/g, '');
+    const cleanRaw = normalize(raw).replace(/[()]/g, '');
+    return cleanA === cleanRaw;
+  });
 
   if(ok){
     const studentAnswer = raw.trim();
@@ -593,19 +572,36 @@ function checkAnswer(){
 
 function diagnose(raw, step){
   const n = normalize(raw);
-  if(step === 0 && /[ΑΒΓΔXΨ]/.test(n.replace(/"[^"]*"/g,''))){
-    return 'Έχει μείνει κάποια μεταβλητή εκτός εισαγωγικών χωρίς να αντικατασταθεί.';
+  
+  if (step === 0) {
+    const varsLeft = n.replace(/"[^"]*"/g, '').match(/[ΑΒΓΔXΨ]/g);
+    if (varsLeft) {
+      const uniqueVars = [...new Set(varsLeft)].join(', ');
+      return `Ξέχασες να αντικαταστήσεις τις μεταβλητές: <b>${uniqueVars}</b>.`;
+    }
   }
-  if(step === 1 && (n.includes('^') || /\d[+\-*]\d/.test(n) || /\dDIV\d/.test(n) || /\dMOD\d/.test(n))){
-    return 'Έχουν μείνει αριθμητικές πράξεις που πρέπει να υπολογιστούν.';
+  
+  if (step === 1) {
+    if (n.includes('^')) return 'Ξέχασες να υπολογίσεις τις δυνάμεις (^).';
+    if (/\d+(DIV|MOD|\*|\/)\d+/.test(n)) return 'Πρέπει να εκτελέσεις πρώτα τους πολλαπλασιασμούς και τα DIV/MOD.';
+    if (/\d+[+\-]\d+/.test(n)) return 'Υπάρχουν ακόμα προσθέσεις ή αφαιρέσεις που πρέπει να υπολογιστούν.';
   }
-  if(step === 2 && /[<>=]/.test(n)){
-    return 'Στο στάδιο γ δεν πρέπει να παραμένει καμία μαθηματική σύγκριση (όλα γίνονται ΑΛΗΘΗΣ/ΨΕΥΔΗΣ).';
+  
+  if (step === 2) {
+    const comparisons = n.match(/[<>=]+/g);
+    if (comparisons) {
+      return `Ξέχασες να μετατρέψεις τις συγκρίσεις (π.χ. <b>${comparisons[0]}</b>) σε ΑΛΗΘΗΣ ή ΨΕΥΔΗΣ.`;
+    }
   }
-  if(step === 3 && (n.includes('ΟΧΙ') || n.includes('ΚΑΙ') || n.includes('Ή'))){
-    return 'Στο τελευταίο στάδιο πρέπει να εκτελεστούν όλες οι λογικές πράξεις (ΟΧΙ/ΚΑΙ/Η).';
+  
+  if (step === 3) {
+    const logicOps = n.match(/(ΟΧΙ|ΚΑΙ|Ή)/g);
+    if (logicOps) {
+      return `Δεν έχεις ολοκληρώσει τις λογικές πράξεις. Εκτέλεσε πρώτα: <b>${logicOps[0]}</b>.`;
+    }
   }
-  return 'Έλεγξε τις παρενθέσεις, τη σειρά των πράξεων και ότι τροποποίησες μόνο ό,τι ζητά το συγκεκριμένο στάδιο.';
+  
+  return 'Η δομή είναι σωστή, αλλά κάποιος υπολογισμός έχει γίνει λάθος. Δες προσεκτικά τους αριθμούς και τα σύμβολα.';
 }
 
 function giveHint(){ showFeedback('hint', '💡 ' + exercises[currentExercise].steps[currentStep].hint); }
@@ -692,7 +688,6 @@ function reactorFlash(){
   }
 }
 
-// Background Flying Tokens Animation for Game Area
 function createBackground(){
   const bg = document.getElementById('logicBg');
   if(!bg) return;
@@ -720,7 +715,6 @@ function createBackground(){
   }
 }
 
-// Enter Key Logic
 document.getElementById('answer').addEventListener('keydown', e => {
   if(e.key === 'Enter'){
     e.preventDefault();
@@ -732,7 +726,6 @@ document.getElementById('answer').addEventListener('keydown', e => {
   }
 });
 
-// Init
 createBackground();
 renderTabs();
 renderStep();
