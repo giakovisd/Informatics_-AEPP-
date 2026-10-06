@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Η Γεώτρηση - Συμπλήρωση Κενών & Έλεγχος</title>
+    <style>
+        :root {
+            --primary: #2563eb; --primary-hover: #1d4ed8;
+            --text-dark: #0f172a; --text-light: #64748b;
+            --bg-color: #f1f5f9; --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --success: #16a34a; --warning: #f59e0b; --danger: #ef4444;
+            --highlight: #fef08a; --code-bg: #f8fafc;
+            --soil-1: #8b4513; --soil-2: #5d2e0a; --sky: #bae6fd;
+            --screen-bg: #ffffff; --screen-text: #000000;
+        }
+
+        body.dark-mode {
+            --bg-color: #020617; --panel-bg: #1e293b;
+            --text-dark: #f8fafc; --text-light: #94a3b8;
+            --border-color: #334155; --code-bg: #0f172a;
+            --sky: #082f49; --screen-bg: #e2e8f0; --screen-text: #000000;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background-color: var(--bg-color); color: var(--text-dark); 
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s;
+        }
+
+        /* --- TOOLBAR --- */
+        .toolbar { 
+            background: var(--panel-bg); border-bottom: 1px solid var(--border-color); 
+            padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 100;
+        }
+        .toolbar-title { font-weight: 800; font-size: 1.1rem; color: var(--primary); display: flex; align-items: center; gap: 8px;}
+        .controls-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;}
+
+        .tool-btn { 
+            padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);
+            background: var(--panel-bg); color: var(--text-dark); cursor: pointer; font-weight: bold;
+            display: flex; align-items: center; gap: 5px; font-size: 0.85rem; transition: 0.2s;
+        }
+        .tool-btn:hover:not(:disabled) { background: var(--border-color); }
+        .tool-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-solution { background: var(--success); color: white; border: none; }
+        .btn-solution:hover:not(:disabled) { background: #15803d; }
+        .btn-execute { background: var(--warning); color: black; border: none; }
+        .btn-execute:hover:not(:disabled) { background: #d97706; color: white;}
+        .btn-run { background: var(--primary); color: white; border: none; }
+        .btn-step { background: var(--primary); color: white; border: none; }
+
+        .speed-control { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; font-weight: bold; margin-right: 10px;}
+        .speed-control input { cursor: pointer; width: 60px;}
+
+        /* --- MODAL ΡΥΘΜΙΣΕΩΝ --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .modal-box {
+            background: var(--panel-bg); padding: 20px; border-radius: 10px; width: 300px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 15px;
+        }
+        .modal-box h3 { color: var(--primary); border-bottom: 2px solid var(--border-color); padding-bottom: 5px;}
+        .modal-field { display: flex; justify-content: space-between; align-items: center;}
+        .modal-field input { width: 70px; padding: 5px; border: 1px solid var(--border-color); border-radius: 4px; font-weight: bold; text-align: center;}
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;}
+
+        /* --- MAIN LAYOUT --- */
+        .main-container { display: flex; flex: 1; padding: 15px; gap: 15px; overflow: hidden; }
+        .col { 
+            background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-color); 
+            display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        /* Left: Theory */
+        .col-left { flex: 0 0 280px; padding: 20px; overflow-y: auto; line-height: 1.5;}
+        .theory-title { font-size: 1.05rem; font-weight: bold; margin-bottom: 12px; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; }
+        .theory-text { font-size: 0.9rem; margin-bottom: 20px; }
+        .instructions { background: rgba(245, 158, 11, 0.1); padding: 15px; border-left: 4px solid var(--warning); border-radius: 4px; font-size: 0.85rem;}
+
+        /* Mid: Code & Animation (Split in 2) */
+        .col-mid { flex: 1; min-width: 0; display: flex; flex-direction: row; } 
+        
+        .code-area { 
+            flex: 0 0 580px; padding: 16px; background: var(--code-bg); 
+            border-right: 1px solid var(--border-color); 
+            font-family: 'Consolas', monospace; font-size: 0.85rem; line-height: 1.8;
+            display: flex; flex-direction: column; justify-content: flex-start; overflow: auto; min-width: 0;
+        }
+        .code-line { padding: 4px 8px; border-radius: 4px; transition: 0.2s; }
+        .code-line.active { background: var(--highlight); color: black; font-weight: bold; }
+        
+        .code-blank {
+            padding: 2px 5px; font-family: monospace; font-size: 0.85rem;
+            border: 2px dashed var(--primary); border-radius: 4px; text-align: center;
+            background: rgba(255, 255, 255, 0.9); color: #000; font-weight: bold; outline: none;
+        }
+        
+        /* Νέα Μεγέθη Κενών βάσει των απαιτήσεων */
+        .code-blank.small-blank { width: 50px; } 
+        .code-blank.medium-blank { width: 140px; } 
+        .code-blank.large-blank { width: 230px; } 
+        
+        /* Τα νέα ειδικά μεγέθη: */
+        .code-blank.oso-blank { width: 255px; } /* +10% από το 230px */
+        .code-blank.money-calc-blank { width: 210px; } /* +48% από το 140px */
+
+        .code-blank:focus { border-style: solid; background: #fff; box-shadow: 0 0 5px var(--primary); }
+        .code-blank.locked { border: 1px solid transparent; background: transparent; color: var(--primary); border-bottom: 2px solid var(--primary); border-radius: 0; text-align: left;}
+
+        /* Animation Area */
+        .anim-area { flex: 1; position: relative; background: var(--sky); overflow: hidden; transition: background 0.3s;}
+        #drill-svg { width: 100%; height: 100%; display: block; }
+
+        /* Right: RAM & Screen */
+        .col-right { flex: 0 0 280px; display: flex; flex-direction: column; }
+        
+        .ram-section { padding: 15px; flex: 1; border-bottom: 1px solid var(--border-color); overflow-y: auto; }
+        .ram-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: center; }
+        .ram-table th { background: var(--bg-color); padding: 8px 2px; border: 1px solid var(--border-color); position: sticky; top: 0; z-index: 10;}
+        .ram-table td { padding: 6px 2px; border: 1px solid var(--border-color); font-family: monospace; }
+        .ram-new-row { animation: flashRow 0.8s; }
+        @keyframes flashRow { 0% { background: var(--warning); } 100% { background: transparent; } }
+        
+        /* White Screen - Αύξηση ύψους κατά 8% (Από 160px πήγε στα 173px) */
+        .screen-section { padding: 15px; height: 173px; display: flex; flex-direction: column; }
+        .screen-display { 
+            flex: 1; background: var(--screen-bg); color: var(--screen-text); border: 2px solid var(--border-color);
+            padding: 15px; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 0.95rem; overflow-y: auto;
+        }
+
+        .code-line { white-space: nowrap; }
+        .code-blank.small-blank { width: 245px; }
+        .code-blank.medium-blank { width: 210px; }
+        #b7 { width: 190px; }
+        #b8 { width: 280px; }
+        .code-blank.large-blank, .code-blank.oso-blank { width: 315px; }
+        .code-blank.invalid { border-color: var(--danger); background: #fee2e2; }
+        .insert-panel { margin-top: 18px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; white-space: normal; font-family: 'Segoe UI', sans-serif; }
+        .insert-panel p { font-size: .8rem; color: var(--text-light); margin-bottom: 8px; }
+        .insert-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+        .insert-btn { font: bold .8rem Consolas, monospace; padding: 6px 8px; border: 1px solid var(--primary); border-radius: 5px; color: var(--text-dark); background: var(--panel-bg); cursor: pointer; }
+        .insert-btn:hover, .insert-btn:focus-visible { background: var(--highlight); color: #000; }
+        .insert-btn:disabled { opacity: .4; cursor: not-allowed; }
+        .data-line { font-size: .78rem; color: var(--text-light); margin-bottom: 8px; white-space: normal; }
+        .check-report { font: .85rem/1.5 'Segoe UI', sans-serif; margin: 12px 0; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; white-space: normal; }
+        .check-report:empty { display: none; }
+        .check-report table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: .8rem; }
+        .check-report td, .check-report th { border: 1px solid var(--border-color); padding: 5px; text-align: left; }
+        .screen-section { height: 230px; flex-shrink: 0; }
+        .screen-display { white-space: pre-wrap; }
+        .toolbar { gap: 10px; flex-wrap: wrap; }
+        .anim-area { min-width: 160px; }
+        .col-left { flex-basis: 230px; padding: 15px; }
+        .col-right { flex-basis: 245px; }
+        @media (max-width: 1400px) { .col-mid { flex-direction: column; } .code-area { flex: 1 1 auto; border-right: none; } .anim-area { flex: 0 0 210px; } }
+        @media (max-width: 1000px) { body { height: auto; min-height: 100vh; overflow: auto; } .main-container { flex-direction: column; overflow: visible; } .col-left, .col-right { flex: none; } .code-area { min-height: 520px; } .anim-area { min-height: 230px; } .ram-section { max-height: 260px; } }
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    <div class="toolbar-title">⛏️ Η Γεώτρηση</div>
+    <div class="controls-group">
+        <button class="tool-btn" onclick="openSettings()" title="Αλλαγή Δεδομένων">⚙️ Ρυθμίσεις</button>
+        <div class="speed-control" title="Ταχύτητα Εκτέλεσης">
+            🐢 <input type="range" id="speedSlider" min="100" max="1500" value="400" dir="rtl"> 🐇
+        </div>
+        <button class="tool-btn" onclick="toggleTheme()" title="Day/Night Mode">🌙</button>
+        <button class="tool-btn btn-solution" id="btnSolution" onclick="fillSolution()">💡 Λύση</button>
+        <button class="tool-btn btn-execute" id="btnExecute" onclick="prepareExecution()" disabled>🚀 Εκτέλεση</button>
+        <button class="tool-btn btn-step" id="btnStep" onclick="step()" style="display:none;">👣 Βήμα</button>
+        <button class="tool-btn btn-run" id="btnAuto" onclick="toggleAuto()" style="display:none;">▶️ Αυτόματα</button>
+        <button class="tool-btn" onclick="resetApp()">🔄 Αρχή</button>
+    </div>
+</div>
+
+<div class="main-container">
+    <div class="col col-left">
+        <div class="theory-title">Η Εκφώνηση</div>
+        <div class="theory-text">
+            Ένας ιδιοκτήτης αγροκτήματος διαθέτει <strong id="theoryBudget">2000</strong><strong>€</strong> για να κάνει μια γεώτρηση. 
+            <br><br>
+            Το πρώτο μέτρο κοστίζει <strong id="theoryCost">40</strong><strong>€</strong> και κάθε επόμενο μέτρο αυξάνεται κατά <strong id="theoryStep">3</strong><strong>€</strong>.
+            <br><br>
+            Να αναπτύξετε αλγόριθμο ο οποίος να υπολογίζει και να εμφανίζει το <strong>μέγιστο βάθος</strong> (σε μέτρα) της γεώτρησης.
+        </div>
+        <div class="instructions" id="instructionBox">
+            <strong>Οδηγίες:</strong><br>
+            Συμπλήρωσε τα κενά στον κώδικα (Τα κενά αγνοούν τόνους ή κεφαλαία γράμματα).<br><br>
+            Μόλις τα συμπληρώσεις όλα, πάτα <strong>Εκτέλεση</strong>.
+        </div>
+    </div>
+
+    <div class="col col-mid">
+        <div class="code-area">
+            <div class="code-line" style="color:var(--primary); font-weight:bold;">Αλγόριθμος γεώτρηση</div>
+            <div class="code-line" id="L1">βάθος_γεώτρησης &lt;- <input type="text" class="code-blank small-blank" id="b1" oninput="checkBlanks()"></div>
+            <div class="code-line" id="L2">διαθέσιμα_χρήματα &lt;- <input type="text" class="code-blank small-blank" id="b2" oninput="checkBlanks()"></div>
+            <div class="code-line" id="L3">τιμή_μέτρου &lt;- <input type="text" class="code-blank small-blank" id="b3" oninput="checkBlanks()"></div>
+            <div class="code-line" id="L4">Όσο <input type="text" class="code-blank oso-blank" id="b4" oninput="checkBlanks()"> επανάλαβε</div>
+            <div class="code-line" id="L5">&nbsp;&nbsp;βάθος_γεώτρησης &lt;- <input type="text" class="code-blank" style="width: 190px;" id="b5" oninput="checkBlanks()"></div>
+            <div class="code-line" id="L6">&nbsp;&nbsp;διαθέσιμα_χρήματα &lt;- <input type="text" class="code-blank" style="width: 245px;" id="b6" oninput="checkBlanks()"></div>
+            <div class="code-line" id="L7">&nbsp;&nbsp;<input type="text" class="code-blank medium-blank" id="b7" oninput="checkBlanks()"> &lt;- <input type="text" class="code-blank medium-blank" id="b8" oninput="checkBlanks()"></div>
+            <div class="code-line" id="L8">Τέλος_επανάληψης</div>
+            <div class="code-line" id="L9"><input type="text" class="code-blank large-blank" id="b9" oninput="checkBlanks()"></div>
+            <div class="code-line" style="color:var(--primary); font-weight:bold;">Τέλος γεώτρηση</div>
+            <div class="insert-panel">
+                <p>Επίλεξε ένα κενό και πάτησε ένα όνομα για εισαγωγή στη θέση του δρομέα.</p>
+                <div class="insert-buttons" id="variableButtons">
+                    <button type="button" class="insert-btn" data-insert="βάθος_γεώτρησης">βάθος_γεώτρησης</button>
+                    <button type="button" class="insert-btn" data-insert="διαθέσιμα_χρήματα">διαθέσιμα_χρήματα</button>
+                    <button type="button" class="insert-btn" data-insert="τιμή_μέτρου">τιμή_μέτρου</button>
+                </div>
+                <p id="insertStatus" role="status" aria-live="polite" style="margin-top:8px;margin-bottom:0;">Δεν έχει επιλεγεί κενό.</p>
+            </div>
+            <div class="check-report" id="checkReport" role="status" aria-live="polite"></div>
+        </div>
+
+        <div class="anim-area" id="animArea">
+            <svg id="drill-svg" viewBox="0 0 800 600" preserveAspectRatio="xMidYMin slice">
+                <rect x="-200" y="100" width="1200" height="500" fill="var(--soil-1)" />
+                <rect x="-200" y="250" width="1200" height="350" fill="var(--soil-2)" opacity="0.6"/>
+                <rect x="-200" y="450" width="1200" height="150" fill="#2d1a0a" />
+                
+                <ellipse id="water-pool" cx="400" cy="100" rx="0" ry="0" fill="#0ea5e9" opacity="0.85" />
+                <rect id="water-pipe" x="397" y="100" width="6" height="0" fill="#0ea5e9" opacity="0.9" />
+                <ellipse id="water-fountain" cx="400" cy="100" rx="0" ry="0" fill="#0ea5e9" opacity="0.9" />
+
+                <line x1="400" y1="20" x2="370" y2="100" stroke="#334155" stroke-width="4" />
+                <line x1="400" y1="20" x2="430" y2="100" stroke="#334155" stroke-width="4" />
+                <line x1="370" y1="100" x2="430" y2="100" stroke="#334155" stroke-width="4" />
+                <rect x="380" y="90" width="40" height="10" fill="#1e293b" />
+                
+                <rect id="drill-pipe" x="397" y="50" width="6" height="50" fill="#94a3b8" />
+                <path id="drill-bit" d="M390 100 L410 100 L400 115 Z" fill="#cbd5e1" />
+                
+                <text id="drill-label" x="420" y="110" font-family="sans-serif" font-size="16" font-weight="bold" fill="#ffffff" filter="drop-shadow(1px 1px 2px rgba(0,0,0,0.8))">Βάθος: 0 μ.</text>
+            </svg>
+        </div>
+    </div>
+
+    <div class="col col-right">
+        <div class="ram-section">
+            <div class="theory-title" style="border:none; margin-bottom:5px;">🧠 Μνήμη (RAM)</div>
+            <table class="ram-table">
+                <thead><tr><th>Βάθος Γεώτρ.</th><th>Διαθέσιμα Χρ.</th><th>Τιμή Μέτρου</th></tr></thead>
+                <tbody id="ramBody"></tbody>
+            </table>
+        </div>
+        <div class="screen-section">
+            <div class="theory-title" style="border:none; margin-bottom:5px;">🖥️ Οθόνη</div>
+            <div class="screen-display" id="screen"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="settingsModal">
+    <div class="modal-box">
+        <h3>Ρυθμίσεις Προβλήματος</h3>
+        <div class="modal-field">
+            <label>Αρχικό Ποσό (€):</label>
+            <input type="number" id="setBudget" value="2000" min="0" max="1000000" step="1">
+        </div>
+        <div class="modal-field">
+            <label>Κόστος 1ου Μέτρου (€):</label>
+            <input type="number" id="setCost" value="40" min="1" max="1000000" step="1">
+        </div>
+        <div class="modal-field">
+            <label>Αύξηση ανά Μέτρο (€):</label>
+            <input type="number" id="setStep" value="3" min="0" max="1000000" step="1">
+        </div>
+        <p id="settingsError" role="alert" style="color:var(--danger);font-size:.85rem;"></p>
+        <div class="modal-actions">
+            <button class="tool-btn" onclick="closeSettings()">Ακύρωση</button>
+            <button class="tool-btn btn-solution" onclick="saveSettings()">Αποθήκευση</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let sysDefaults = {budget:2000, cost:40, step:3};
+const freshState = () => ({vathos:undefined,money:undefined,price:undefined,pc:0,isPlaying:false,isFinished:false,timer:null,currentY:100,iters:0});
+let state = freshState(), userLogic = {}, compiled = null, activeBlank = null, executionId = 0;
+const aliases = new Map();
+function normalizeStr(s) { return s.trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/ς/g,'σ').replace(/_/g,''); }
+for (const [name,key] of [['βάθος_γεώτρησης','vathos'],['διαθέσιμα_χρήματα','money'],['τιμή_μέτρου','price'],['αρχικό_ποσό','budget'],['κόστος_πρώτου_μέτρου','cost'],['αύξηση_ανά_μέτρο','step']]) aliases.set(normalizeStr(name),key);
+const editableKeys = new Set(['vathos','money','price']);
+const precedence = {'ή':1,'η':1,'και':2,'=':4,'<>':4,'!=':4,'==':4,'<':4,'>':4,'<=':4,'>=':4,'+':5,'-':5,'*':6,'/':6,'div':6,'mod':6,'^':8};
+// Μικρός διερμηνευτής εκφράσεων: ποτέ eval ή εκτέλεση JavaScript μαθητή.
+function parseExpression(source) {
+    const tokens = []; let pos=0;
+    while (pos < source.length) {
+        const tail=source.slice(pos); let m;
+        if ((m=/^\s+/.exec(tail))) {pos+=m[0].length;continue;}
+        if ((m=/^(?:\d+(?:\.\d*)?|\.\d+)/.exec(tail))) tokens.push({kind:'number',value:Number(m[0])});
+        else if ((m=/^[\p{L}_][\p{L}\p{N}_\p{M}]*/u.exec(tail))) {
+            const word=normalizeStr(m[0]);
+            if (['και','η','οχι','div','mod'].includes(word)) tokens.push({kind:'op',value:word});
+            else if (word==='αληθησ' || word==='ψευδησ') tokens.push({kind:'boolean',value:word==='αληθησ'});
+            else if (aliases.has(word)) tokens.push({kind:'variable',value:aliases.get(word)});
+            else throw new Error(`Άγνωστο όνομα «${m[0]}». Επίλεξέ το από τα κουμπιά.`);
+        } else if ((m=/^(?:>=|<=|<>|!=|==|[()+\-*/^=<>])/.exec(tail))) tokens.push({kind:'op',value:m[0]});
+        else throw new Error(`Μη αναγνωρίσιμο σύμβολο «${tail[0]}».`);
+        pos+=m[0].length;
+        if(tokens.length>300) throw new Error('Η έκφραση είναι πολύ μεγάλη.');
+    }
+    let index=0;
+    function parse(min=0) {
+        const t=tokens[index++]; let left;
+        if (!t) throw new Error('Λείπει αριθμός ή μεταβλητή.');
+        if (t.kind==='number' || t.kind==='boolean' || t.kind==='variable') left=t;
+        else if (t.value==='(') {left=parse();if(tokens[index++]?.value!==')')throw new Error('Λείπει κλείσιμο παρένθεσης.');}
+        else if (['+','-','οχι'].includes(t.value)) left={kind:'unary',op:t.value,child:parse(t.value==='οχι'?3:7)};
+        else throw new Error(`Δεν αναμένεται «${t.value}» εδώ.`);
+        while(index<tokens.length) {
+            const op=tokens[index].value, power=precedence[op];
+            if(power===undefined || power<min)break;
+            index++; left={kind:'binary',op,left,right:parse(power+(op==='^'?0:1))};
+        }
+        return left;
+    }
+    const tree=parse();
+    if(index!==tokens.length)throw new Error(`Περιττό σύμβολο «${tokens[index].value}» ή λείπει τελεστής.`);
+    return tree;
+}
+function requireNumber(n) {if(typeof n!=='number' || !Number.isFinite(n))throw new Error('Η έκφραση πρέπει να δίνει πεπερασμένο αριθμό.');return n;}
+function requireBoolean(b) {if(typeof b!=='boolean')throw new Error('Η συνθήκη πρέπει να δίνει Αληθής ή Ψευδής.');return b;}
+function evaluate(tree,env,data) {
+    if(tree.kind==='number' || tree.kind==='boolean')return tree.value;
+    if(tree.kind==='variable') {
+        const v=editableKeys.has(tree.value)?env[tree.value]:data[tree.value];
+        if(v===undefined)throw new Error('Χρήση μεταβλητής πριν από την αρχικοποίησή της.');
+        return v;
+    }
+    if(tree.kind==='unary') {const v=evaluate(tree.child,env,data);return tree.op==='οχι'?!requireBoolean(v):tree.op==='-'?-requireNumber(v):requireNumber(v);}
+    const a=evaluate(tree.left,env,data);
+    if(tree.op==='και')return requireBoolean(a) && requireBoolean(evaluate(tree.right,env,data));
+    if(tree.op==='η')return requireBoolean(a) || requireBoolean(evaluate(tree.right,env,data));
+    const b=evaluate(tree.right,env,data);
+    if(['=','==','<>','!='].includes(tree.op)) {if(typeof a!==typeof b)throw new Error('Η σύγκριση χρειάζεται τιμές ίδιου τύπου.');return ['=','=='].includes(tree.op)?a===b:a!==b;}
+    requireNumber(a); requireNumber(b);let result;
+    switch(tree.op) {
+        case '<':return a<b;case '>':return a>b;case '<=':return a<=b;case '>=':return a>=b;
+        case '+':result=a+b;break;case '-':result=a-b;break;case '*':result=a*b;break;
+        case '/':case 'div':case 'mod':
+            if(b===0)throw new Error('Διαίρεση με το μηδέν.');
+            if(['div','mod'].includes(tree.op) && (!Number.isInteger(a)||!Number.isInteger(b)))throw new Error('DIV και MOD χρειάζονται ακέραιους.');
+            result=tree.op==='/'?a/b:tree.op==='div'?Math.trunc(a/b):a%b;break;
+        case '^':result=a**b;break;
+    }
+    return requireNumber(result);
+}
+function compileLogic(logic) {
+    const program={};
+    function field(id,fn) {try {return fn();} catch(e) {e.blank=id;throw e;}}
+    for(const i of [1,2,3,4,5,6,8]) program['p'+i]=field(i,()=>parseExpression(logic['p'+i]));
+    program.target=field(7,()=>{
+        const key=aliases.get(normalizeStr(logic.p7));
+        if(!editableKeys.has(key))throw new Error('Εδώ γράψε ένα από τα τρία ονόματα μεταβλητών του αλγορίθμου.');return key;
+    });
+    program.p9=field(9,()=>{
+        const command=/^\s*(γράψε|γραψε|εμφάνισε|εμφανισε|εκτύπωσε|εκτυπωσε)(?=\s|\()/iu.exec(logic.p9);
+        if(!command)throw new Error('Γράψε εντολή εμφάνισης, π.χ. Γράψε βάθος_γεώτρησης.');
+        let expr=logic.p9.slice(command[0].length).trim();let label='';
+        const labelMatch=/^(["'])(.*?)\1\s*,\s*/u.exec(expr);
+        if(labelMatch){label=labelMatch[2];expr=expr.slice(labelMatch[0].length);}
+        program.label=label;return parseExpression(expr);
+    });
+    return program;
+}
+function reference(data) {
+    const total=n=>n*data.cost+data.step*n*(n-1)/2;
+    let lo=0,hi=Math.floor(data.budget/data.cost)+1;
+    while(lo+1<hi){const mid=Math.floor((lo+hi)/2);if(total(mid)<=data.budget)lo=mid;else hi=mid;}
+    return {depth:lo,money:data.budget-total(lo),next:data.cost+lo*data.step};
+}
+function loopGuard(env,data,seen) {
+    const key=JSON.stringify([env.vathos,env.money,env.price]);
+    if(seen.has(key))throw new Error('Η κατάσταση επαναλαμβάνεται ενώ η συνθήκη παραμένει Αληθής: ατέρμων βρόχος.');
+    seen.add(key);
+    const limit=Math.min(100000,Math.max(2000,reference(data).depth*3+10));
+    if(++env.iters>limit)throw new Error(`Ξεπεράστηκε το όριο ${limit} επαναλήψεων. Έλεγξε τη συνθήκη και την πρόοδο του βρόχου.`);
+}
+function executeInstruction(program,env,data,line) {
+    try {
+        switch(line) {
+            case 1:env.vathos=requireNumber(evaluate(program.p1,env,data));break;
+            case 2:env.money=requireNumber(evaluate(program.p2,env,data));break;
+            case 3:env.price=requireNumber(evaluate(program.p3,env,data));break;
+            case 4:return requireBoolean(evaluate(program.p4,env,data));
+            case 5:env.vathos=requireNumber(evaluate(program.p5,env,data));break;
+            case 6:env.money=requireNumber(evaluate(program.p6,env,data));break;
+            case 7:env[program.target]=requireNumber(evaluate(program.p8,env,data));break;
+            case 9:return requireNumber(evaluate(program.p9,env,data));
+        }
+    }catch(e){e.line=line;e.blank=line===7?8:line;throw e;}
+}
+function runProgram(program,data) {
+    const env=freshState(),seen=new Set();
+    try {
+        for(const line of [1,2,3])executeInstruction(program,env,data,line);
+        while(executeInstruction(program,env,data,4)) {
+            loopGuard(env,data,seen);
+            for(const line of [5,6,7])executeInstruction(program,env,data,line);
+        }
+        return {output:executeInstruction(program,env,data,9),env};
+    }catch(e){return {error:e.message,line:e.line,env};}
+}
+function testCases(data) {
+    const cases=[{...data}];
+    for(const [cost,step] of [[data.cost,data.step],[10,2],[40,3],[7,0],[1,1],[11,5]]) {
+        for(const budget of [0,Math.max(0,cost-1),cost,cost*2+step-1,cost*2+step,cost*5+10*step,cost*5+10*step-1]) cases.push({budget,cost,step});
+    }
+    cases.push({budget:1500,cost:10,step:2},{budget:1540,cost:10,step:2},{budget:300,cost:1,step:0});
+    return [...new Map(cases.map(c=>[JSON.stringify(c),c])).values()];
+}
+function assess(program,data) {
+    const cases=testCases(data);let passed=0,firstFailure=null;
+    for(const sample of cases) {
+        const actual=runProgram(program,sample),expected=reference(sample);
+        if(!actual.error && Number.isInteger(actual.output) && actual.output===expected.depth)passed++;
+        else if(!firstFailure)firstFailure={data:sample,actual,expected};
+    }
+    return {total:cases.length,passed,firstFailure};
+}
+const $=id=>document.getElementById(id);
+const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function checkBlanks() {
+    $('btnExecute').disabled=Array.from({length:9},(_,i)=>$('b'+(i+1))).some(e=>!e.value.trim());
+}
+function clearFeedback() {$('checkReport').innerHTML='';document.querySelectorAll('.code-blank').forEach(e=>e.classList.remove('invalid'));}
+function insertName(name) {
+    if(!activeBlank || activeBlank.disabled){$('insertStatus').textContent='Επίλεξε πρώτα ένα κενό στον κώδικα.';return;}
+    const start=activeBlank.selectionStart ?? activeBlank.value.length,end=activeBlank.selectionEnd ?? start;
+    activeBlank.setRangeText(name,start,end,'end');activeBlank.focus();
+    const caret=start+name.length;activeBlank.setSelectionRange(caret,caret);
+    activeBlank.dispatchEvent(new Event('input',{bubbles:true}));
+    $('insertStatus').textContent=`Εισήχθη το ${name}. Συνέχισε να γράφεις δίπλα του.`;
+}
+document.querySelectorAll('.code-blank').forEach((el,i)=>{
+    el.setAttribute('aria-label',`Κενό ${i+1}`);el.setAttribute('autocomplete','off');el.setAttribute('spellcheck','false');
+    el.addEventListener('focus',()=>{activeBlank=el;$('insertStatus').textContent=`Ενεργό κενό: ${i+1}.`;});
+    el.addEventListener('input',()=>{clearFeedback();el.classList.remove('invalid');});
+});
+document.querySelectorAll('[data-insert]').forEach(btn=>{
+    btn.addEventListener('mousedown',e=>e.preventDefault());
+    btn.addEventListener('click',()=>insertName(btn.dataset.insert));
+});
+function toggleInsertion(disabled){document.querySelectorAll('[data-insert]').forEach(b=>b.disabled=disabled);}
+function openSettings(){for(const [id,key] of [['setBudget','budget'],['setCost','cost'],['setStep','step']])$(id).value=sysDefaults[key];$('settingsError').textContent='';$('settingsModal').style.display='flex';}
+function closeSettings(){$('settingsModal').style.display='none';}
+function saveSettings() {
+    const budget=Number($('setBudget').value),cost=Number($('setCost').value),step=Number($('setStep').value);
+    if(['setBudget','setCost','setStep'].some(id=>!$(id).value.trim()) || ![budget,cost,step].every(Number.isInteger) || budget<0 || cost<=0 || step<0 || Math.max(budget,cost,step)>1000000) {
+        $('settingsError').textContent='Δώσε ακέραιους έως 1.000.000: ποσό ≥ 0, πρώτο κόστος > 0, αύξηση ≥ 0.';return;
+    }
+    sysDefaults={budget,cost,step};
+    $('theoryBudget').textContent=budget;$('theoryCost').textContent=cost;$('theoryStep').textContent=step;
+    closeSettings();resetApp(true);
+}
+function fillSolution() {
+    const answers=['0',String(sysDefaults.budget),String(sysDefaults.cost),'διαθέσιμα_χρήματα >= τιμή_μέτρου','βάθος_γεώτρησης + 1','διαθέσιμα_χρήματα - τιμή_μέτρου','τιμή_μέτρου',`τιμή_μέτρου + ${sysDefaults.step}`,'Γράψε βάθος_γεώτρησης'];
+    for(let i=1;i<=9;i++)$('b'+i).value=answers[i-1];clearFeedback();checkBlanks();
+}
+function unlockInputs() {
+    document.querySelectorAll('.code-blank').forEach(e=>{e.classList.remove('locked');e.disabled=false;});toggleInsertion(false);
+    $('btnSolution').style.display='flex';$('btnExecute').style.display='flex';$('btnStep').style.display='none';$('btnAuto').style.display='none';checkBlanks();
+    $('instructionBox').innerHTML='<strong>Οδηγίες:</strong><br>Διόρθωσε τον κώδικα και πάτησε ξανά <strong>Εκτέλεση</strong>.';
+    $('instructionBox').style.background='rgba(245,158,11,.1)';$('instructionBox').style.borderColor='var(--warning)';
+}
+function showError(error) {
+    $('screen').textContent=`Λάθος${error.line?' στη γραμμή '+error.line:''}: ${error.message}`;
+    $('screen').style.color='var(--danger)';
+    if(error.blank){const el=$('b'+error.blank);el.classList.add('invalid');el.focus();}
+}
+function resetWater() {
+    for(const id of ['water-pool','water-pipe','water-fountain'])$(id).style.transition='none';
+    $('water-pool').setAttribute('rx',0);$('water-pool').setAttribute('ry',0);$('water-pipe').setAttribute('height',0);
+    $('water-fountain').setAttribute('rx',0);$('water-fountain').setAttribute('ry',0);$('water-fountain').setAttribute('cy',100);
+}
+let seenStates=new Set();
+function prepareExecution() {
+    stopAuto();executionId++;clearFeedback();
+    for(let i=1;i<=9;i++)userLogic['p'+i]=$('b'+i).value;
+    if(Object.values(userLogic).some(s=>!s.trim())){showError(new Error('Συμπλήρωσε όλα τα κενά.'));return;}
+    try{compiled=compileLogic(userLogic);}catch(e){showError(e);return;}
+    state=freshState();seenStates=new Set();$('ramBody').innerHTML='';$('screen').textContent='';$('screen').style.color='var(--screen-text)';resetWater();updateDrill(0);
+    document.querySelectorAll('.code-blank').forEach(e=>{e.classList.add('locked');e.disabled=true;});toggleInsertion(true);
+    $('btnSolution').style.display='none';$('btnExecute').style.display='none';$('btnStep').style.display='flex';$('btnAuto').style.display='flex';
+    $('instructionBox').innerHTML='<strong>Εκτέλεση σε εξέλιξη…</strong><br>Χρησιμοποίησε «Βήμα» ή «Αυτόματα». Στο τέλος θα ελεγχθεί το αποτέλεσμα που εμφανίζει ο κώδικάς σου.';
+    state.pc=1;highlightLine(1);
+}
+function step() {
+    if(state.isFinished || !compiled || state.pc===0)return;
+    try {
+        const pc=state.pc;
+        if(pc===4) {
+            if(executeInstruction(compiled,state,sysDefaults,4)){loopGuard(state,sysDefaults,seenStates);state.pc=5;}else state.pc=9;
+        } else if(pc===8)state.pc=4;
+        else if(pc===9) {
+            const output=executeInstruction(compiled,state,sysDefaults,9);
+            $('screen').textContent=(compiled.label || 'Μέγιστο βάθος: ')+output+' μ.';finishSim(output);return;
+        } else {
+            executeInstruction(compiled,state,sysDefaults,pc);state.pc=pc+1;
+            if([3,5,7].includes(pc))updateDrill(state.vathos);
+            if([3,7].includes(pc))addRamRow();
+        }
+        highlightLine(state.pc);
+    } catch(e) {state.isFinished=true;stopAuto();highlightLine(0);unlockInputs();showError(e);}
+}
+function finishSim(output) {
+    state.isFinished=true;stopAuto();highlightLine(0);unlockInputs();
+    // Οι αριθμητικές λύσεις αφορούν τη συγκεκριμένη εκφώνηση.
+    // Η υποστήριξη παλαιών λύσεων με παραμέτρους παραμένει στον διερμηνευτή.
+    const hasParameter = node => node && typeof node === 'object' &&
+        ((node.kind === 'variable' && ['budget','cost','step'].includes(node.value)) || Object.values(node).some(hasParameter));
+    const expected=reference(sysDefaults),checks=hasParameter(compiled)?assess(compiled,sysDefaults):null;
+    const currentOK=Number.isInteger(output) && output===expected.depth;
+    const fullOK=currentOK && checks && checks.passed===checks.total;
+    let report=`<strong style="color:${currentOK?'var(--success)':'var(--danger)'}">${fullOK?'✓ Σωστό αποτέλεσμα σε όλα τα δεδομένα που δοκιμάστηκαν.':currentOK?'✓ Σωστό για τα τρέχοντα δεδομένα.':'Έλεγξε τη λύση σου.'}</strong>`;
+    report+=`<p>Εμφανίστηκε: ${output} μ. · Αναμενόμενο: ${expected.depth} μ.<br>Στο μέγιστο βάθος απομένουν ${expected.money} € και το επόμενο μέτρο κοστίζει ${expected.next} €.</p>`;
+    if(currentOK && state.money!==expected.money)report+=`<p>Στη RAM τα διαθέσιμα χρήματα είναι ${state.money} €. Αν η μεταβλητή εκφράζει το υπόλοιπο στο εμφανιζόμενο βάθος, έλεγξε τον υπολογισμό της. Μια λύση που δοκιμάζει πρώτα ένα επιπλέον μέτρο μπορεί να έχει διαφορετική τελική κατάσταση.</p>`;
+    if(checks)report+=`<p>Έλεγχος διαφορετικών δεδομένων: ${checks.passed}/${checks.total} επιτυχίες.</p>`;
+    if(checks && checks.firstFailure) {
+        const f=checks.firstFailure;
+        report+=`<p>${currentOK?'Η λύση έδωσε σωστό αποτέλεσμα εδώ, αλλά χρειάζεται προσαρμογή για τα παρακάτω δεδομένα.':'Δοκίμασε και αυτή την περίπτωση για να εντοπίσεις το λάθος:'}</p>`;
+        report+=`<table><tr><th>Ποσό</th><th>1ο μέτρο</th><th>Αύξηση</th></tr><tr><td>${f.data.budget} €</td><td>${f.data.cost} €</td><td>${f.data.step} €</td></tr></table><p>Αναμενόμενο: ${f.expected.depth} μ. · ${f.actual.error?'Λάθος: '+escapeHTML(f.actual.error):'Εμφανίστηκε: '+f.actual.output+' μ.'}</p>`;
+    }
+    if(checks)report+='<p style="color:var(--text-light)">Ελέγχονται οριακές περιπτώσεις και διαφορετικά κόστη μέσα στον ίδιο σκελετό κώδικα. Οι δοκιμές δεν αποδεικνύουν ορθότητα για κάθε πιθανή είσοδο.</p>';
+    $('checkReport').innerHTML=report;
+    if(currentOK){$('screen').textContent+='\n✓ Σωστό για την τρέχουσα εκφώνηση.';animateWater();}
+    else $('screen').textContent+=`\nΛογικό λάθος: αναμενόταν ${expected.depth} μ.`;
+}
+function animateWater() {
+    const id=executionId;
+    $('water-pool').style.transition='all 1s ease';$('water-pool').setAttribute('rx',40);$('water-pool').setAttribute('ry',15);
+    setTimeout(()=>{
+        if(id!==executionId)return;
+        $('water-pipe').style.transition='all 2s ease-in';$('water-pipe').setAttribute('y',90);$('water-pipe').setAttribute('height',state.currentY-90);
+        setTimeout(()=>{if(id!==executionId)return;$('water-fountain').style.transition='all .5s ease';$('water-fountain').setAttribute('cy',85);$('water-fountain').setAttribute('rx',35);$('water-fountain').setAttribute('ry',20);},2000);
+    },1000);
+}
+function updateDrill(depth) {
+    const addedHeight=Math.max(0,Math.min(depth ?? 0,55))*8;state.currentY=100+addedHeight;
+    for(const id of ['drill-pipe','drill-bit','drill-label'])$(id).style.transition='all .4s ease';
+    $('drill-pipe').setAttribute('height',50+addedHeight);$('drill-bit').setAttribute('transform',`translate(0, ${addedHeight})`);
+    $('drill-label').setAttribute('y',110+addedHeight);$('drill-label').textContent=`Βάθος: ${depth ?? 0} μ.`;
+    $('water-pool').setAttribute('cy',state.currentY+5);$('water-pipe').setAttribute('y',state.currentY);
+}
+function highlightLine(id){document.querySelectorAll('.code-line').forEach(l=>l.classList.remove('active'));if(id>0)$('L'+id).classList.add('active');}
+function addRamRow() {
+    const row=document.createElement('tr');row.className='ram-new-row';
+    for(const key of ['vathos','money','price']){const td=document.createElement('td');td.textContent=state[key]??'—';row.appendChild(td);}
+    $('ramBody').appendChild(row);const section=$('ramBody').closest('.ram-section');section.scrollTop=section.scrollHeight;
+}
+function toggleAuto(){if(state.isPlaying)stopAuto();else{state.isPlaying=true;$('btnAuto').textContent='⏸️ Παύση';runAuto();}}
+function runAuto(){if(!state.isPlaying||state.isFinished)return;step();if(state.isPlaying&&!state.isFinished)state.timer=setTimeout(runAuto,Number($('speedSlider').value));}
+function stopAuto(){state.isPlaying=false;clearTimeout(state.timer);$('btnAuto').textContent='▶️ Αυτόματα';}
+function resetApp(keepCode=false) {
+    stopAuto();executionId++;state=freshState();compiled=null;seenStates=new Set();clearFeedback();resetWater();
+    document.querySelectorAll('.code-blank').forEach(el=>{if(!keepCode)el.value='';el.disabled=false;el.classList.remove('locked');});toggleInsertion(false);activeBlank=null;
+    $('insertStatus').textContent='Επίλεξε ένα κενό για να εισαγάγεις όνομα.';
+    unlockInputs();$('instructionBox').innerHTML='<strong>Οδηγίες:</strong><br>Συμπλήρωσε τα κενά. Τα ονόματα αγνοούν τόνους και κεφαλαία. Επίλεξε ένα κενό και χρησιμοποίησε τα κουμπιά κάτω από τον κώδικα.<br><br>Πάτησε <strong>Εκτέλεση</strong>.';
+    $('ramBody').innerHTML='';$('screen').textContent='';$('screen').style.color='var(--screen-text)';updateDrill(0);highlightLine(0);
+}
+function toggleTheme(){document.body.classList.toggle('dark-mode');}
+resetApp();
+
+</script>
+</body>
+</html>
