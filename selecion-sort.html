@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ταξινόμηση με Επιλογή</title>
+    <style>
+        :root {
+            /* Light Theme */
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --highlight-line: #fef08a; /* Yellow highlight */
+            
+            --array-item-bg: #3b82f6;
+            --array-item-text: #ffffff;
+            
+            --compare-color: #f59e0b; /* Orange for compare */
+            --swap-color: #ef4444;    /* Red for swap */
+            
+            --theta-color: #dc2626;   /* Red arrow for theta */
+            --j-color: #2563eb;       /* Blue arrow for j */
+            --i-color: #000000;       /* Black arrow for i */
+            
+            --water-line-color: #0ea5e9;
+            --border-color: #cbd5e1;
+            
+            --disabled-btn: #94a3b8;
+            --btn-hover: 0.95;
+            
+            --tabs-bg: #f1f5f9;
+            --tab-hover: #e2e8f0;
+            --notes-bg: #f0f9ff;
+            --notes-text: #0369a1;
+            --output-header-bg: #f1f5f9;
+            --log-border: #eee;
+            
+            /* Code Colors */
+            --code-keyword: #0000CD; 
+            --code-symbol: #FF0000;  
+            --code-text: #000000;
+            
+            --modal-overlay: rgba(15, 23, 42, 0.85);
+            --success-color: #10b981;
+        }
+
+        body.dark-mode {
+            /* Dark Theme */
+            --bg-color: #0f172a;
+            --text-color: #f1f5f9;
+            --panel-bg: #1e293b;
+            --highlight-line: #475569;
+            
+            --array-item-bg: #2563eb;
+            --border-color: #334155;
+            --disabled-btn: #475569;
+            
+            --i-color: #f8fafc; /* Visible in dark mode */
+            
+            --tabs-bg: #0f172a;
+            --tab-hover: rgba(255,255,255,0.05);
+            --notes-bg: #334155;
+            --notes-text: #93c5fd;
+            --output-header-bg: #0f172a;
+            --log-border: #334155;
+            
+            --code-keyword: #60a5fa;
+            --code-symbol: #f87171;
+            --code-text: #e2e8f0;
+            
+            --modal-overlay: rgba(0, 0, 0, 0.85);
+            --success-color: #34d399;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Focus styles for accessibility */
+        button:focus-visible,
+        [role="tab"]:focus-visible {
+            outline: 3px solid var(--array-item-bg);
+            outline-offset: 3px;
+        }
+        
+        .blurred { 
+            filter: blur(2px); 
+            transition: filter 0.3s ease; 
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 70px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            z-index: 100;
+            flex-wrap: wrap;
+            gap: 10px;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .header-title h1 { margin: 0; font-size: 1.1rem; }
+        .controls-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        button {
+            padding: 8px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        button.primary { background-color: var(--array-item-bg); color: white; border: none; }
+        button:hover:not(:disabled) { filter: brightness(var(--btn-hover)); transform: translateY(-1px); }
+        button:disabled { background-color: var(--disabled-btn); color: #ccc; cursor: not-allowed; border-color: transparent;}
+
+        #btnOrder { min-width: 130px; }
+
+        .slider-container { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; margin-left: 10px; }
+        .slider-container label { font-weight: bold; }
+
+        /* --- Main Layout --- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 15px;
+            gap: 15px;
+            height: calc(100% - 70px);
+            box-sizing: border-box;
+            min-height: 0;
+        }
+
+        /* LEFT: Code Panel */
+        .col-code {
+            flex: 0 0 550px;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .col-code.hidden { display: none !important; }
+
+        .tabs { 
+            display: flex; 
+            background: var(--tabs-bg); 
+            border-bottom: 1px solid var(--border-color); 
+            transition: background-color 0.3s;
+        }
+        .tab {
+            flex: 1; text-align: center; padding: 12px; font-size: 0.9rem; cursor: pointer;
+            border-bottom: 3px solid transparent; border-top: none; border-left: none; border-right: none;
+            color: var(--text-color); opacity: 0.7; background: none; font-weight: 600; transition: all 0.2s ease;
+        }
+        .tab:hover { background: var(--tab-hover); opacity: 1; }
+        .tab[aria-selected="true"] { 
+            background: var(--panel-bg); 
+            border-bottom-color: var(--array-item-bg); 
+            color: var(--text-color); 
+            opacity: 1;
+            font-weight: bold; 
+        }
+
+        body.dark-mode .tab[aria-selected="true"] { color: #93c5fd; }
+
+        .code-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 1.1rem; 
+            line-height: 1.5;
+            white-space: pre; 
+        }
+        
+        .code-line { padding: 2px 6px; border-radius: 3px; }
+        .code-line.active { background-color: var(--highlight-line); font-weight: bold; }
+        
+        body.dark-mode .code-line.active { color: #ffffff; }
+        body.dark-mode .code-line.active .kw,
+        body.dark-mode .code-line.active .sym,
+        body.dark-mode .code-line.active .txt { color: #ffffff; }
+
+        .kw { color: var(--code-keyword); font-weight: bold; } 
+        .sym { color: var(--code-symbol); font-weight: bold; } 
+        .txt { color: var(--code-text); }
+
+        .notes-area {
+            padding: 15px;
+            background-color: var(--notes-bg);
+            color: var(--notes-text);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* CENTER: Visualization */
+        .col-viz {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            position: relative;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .narrative {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: rgba(59, 130, 246, 0.1); 
+            border-left: 4px solid var(--array-item-bg);
+            font-size: 0.95rem;
+            font-style: italic;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .arrays-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            overflow-y: auto; 
+            align-items: flex-start;
+            padding-top: 40px; 
+            padding-bottom: 40px;
+            padding-left: clamp(70px, 12vw, 200px); 
+            position: relative; 
+        }
+
+        .array-col { display: flex; flex-direction: column; align-items: center; position: relative; z-index: 2; margin:0; padding:0; list-style:none;}
+        
+        .array-header { 
+            font-weight: bold; 
+            height: 40px; 
+            display: flex; 
+            align-items: center; 
+            font-size: 1rem; 
+            color: var(--text-color); 
+            margin-bottom: 5px;
+        }
+
+        /* Cells */
+        .cell-wrapper {
+            position: relative;
+            height: 60px; /* 50px + 10px margin */
+            width: 120px;
+            margin-bottom: 0px; 
+            transition: transform 0.4s ease-in-out;
+        }
+
+        .cell {
+            width: 100%;
+            height: 50px;
+            margin-bottom: 10px;
+            background-color: var(--array-item-bg);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            box-sizing: border-box;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: background-color 0.2s;
+        }
+
+        .cell-idx { position: absolute; left: -30px; font-size: 0.8rem; color: var(--text-color); opacity: 0.7; font-weight: bold; top: 15px; }
+        
+        /* States */
+        .comparing { background-color: var(--compare-color) !important; transform: scale(1.05); z-index: 10; transition: transform 0.2s;}
+        .highlight-theta { border: 4px solid var(--theta-color); box-sizing: border-box; }
+        .swapping-highlight { background-color: var(--swap-color) !important; }
+
+        /* Pointers */
+        .pointer-track {
+            position: absolute;
+            left: -180px; 
+            top: 45px; 
+            width: 150px;
+            height: 100%;
+            pointer-events: none;
+        }
+        #ptr-theta { right: 60px; }
+        
+        .comp-pointer {
+            position: absolute;
+            right: 0;
+            height: 50px; 
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            transition: top 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            opacity: 0; 
+        }
+        .comp-pointer.visible { opacity: 1; }
+
+        .ptr-i .ptr-label { color: var(--i-color); }
+        .ptr-i .ptr-symbol { color: var(--i-color); }
+
+        .ptr-j .ptr-label { color: var(--j-color); }
+        .ptr-j .ptr-symbol { color: var(--j-color); }
+
+        .ptr-theta .ptr-label { color: var(--theta-color); font-size: 1.4rem; }
+        .ptr-theta .ptr-symbol { color: var(--theta-color); font-size: 2.2rem; }
+
+        .ptr-symbol { font-size: 2rem; line-height: 0; font-weight: bold; margin-bottom: 5px; }
+        .ptr-label { font-size: 1.1rem; font-weight: bold; font-family: monospace; margin-right: 5px; }
+
+        /* Water Line */
+        .water-line {
+            position: absolute;
+            left: -80px; 
+            width: 280px; 
+            height: 4px;
+            background-color: var(--water-line-color);
+            z-index: 1;
+            transition: top 0.5s ease-in-out, opacity 0.3s;
+            box-shadow: 0 0 8px var(--water-line-color);
+            border-radius: 2px;
+        }
+        
+        /* FLYING CELLS (For Sol 2 Animation) */
+        .flying-cell {
+            position: fixed;
+            z-index: 9999;
+            background-color: var(--swap-color);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            pointer-events: none;
+        }
+
+        /* RIGHT: Output (Μεταβλητές) */
+        .col-output {
+            flex: 0 0 200px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .output-header { padding: 10px; background: var(--output-header-bg); font-weight: bold; border-bottom: 1px solid var(--border-color); transition: background-color 0.3s; }
+        .output-log { flex: 1; padding: 15px; overflow-y: auto; font-family: monospace; font-size: 1.1rem; display:flex; flex-direction:column; gap:10px; }
+        .log-item { display: flex; justify-content: space-between; border-bottom: 1px solid var(--log-border); padding: 5px 0; transition: border-color 0.3s; }
+        .log-label { font-weight: bold; color: var(--text-color); }
+        .log-val { color: var(--array-item-bg); font-weight:bold; }
+
+        /* --- INTRO OVERLAY (MODAL) --- */
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--modal-overlay); display: flex; align-items: center; justify-content: center;
+            z-index: 2000; opacity: 1; transition: opacity 0.5s;
+        }
+        .intro-box {
+            background: var(--panel-bg); width: 680px; max-width: 95%; max-height: 90dvh; overflow-y: auto; box-sizing: border-box;
+            border-radius: 12px; padding: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); border: 2px solid var(--array-item-bg); color: var(--text-color);
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .intro-box h1 { color: var(--array-item-bg); margin-top: 0; margin-bottom: 20px; font-size: 1.6rem; text-align: center; }
+        .intro-box p { font-size: 1.05rem; line-height: 1.6; margin-bottom: 15px; color: var(--text-color); text-align: justify; width: 100%;}
+        
+        .intro-btn { padding: 12px 24px; font-size: 1.1rem; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; background-color: var(--array-item-bg); color: white; margin-top: 25px; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);}
+        .intro-btn:hover { filter: brightness(0.9); transform: translateY(-2px); box-shadow: 0 6px 12px rgba(59, 130, 246, 0.4);}
+
+        /* Mini Animation in Modal */
+        .mini-animation {
+            display: flex; justify-content: center; gap: 8px; margin: 25px 0 40px 0; position: relative; height: 50px; align-items: center;
+        }
+        .mini-cell {
+            width: 45px; height: 45px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem; background: var(--array-item-bg); color: white; position: relative;
+        }
+        
+        /* CSS Keyframes for Real Swap */
+        @keyframes swapMini1 {
+            0%, 40% { transform: translate(0, 0); background: var(--array-item-bg); }
+            45%, 55% { transform: translate(0, -30px); background: var(--swap-color); }
+            60%, 75% { transform: translate(159px, -30px); background: var(--swap-color); }
+            80%, 99% { transform: translate(159px, 0); background: var(--success-color); }
+            100% { transform: translate(0, 0); background: var(--array-item-bg); }
+        }
+        @keyframes swapMini4 {
+            0%, 40% { transform: translate(0, 0); background: var(--array-item-bg); }
+            45%, 55% { transform: translate(0, 30px); background: var(--swap-color); }
+            60%, 75% { transform: translate(-159px, 30px); background: var(--swap-color); }
+            80%, 99% { transform: translate(-159px, 0); background: var(--success-color); }
+            100% { transform: translate(0, 0); background: var(--array-item-bg); }
+        }
+        @keyframes moveMiniTheta {
+            0%, 15% { left: 22px; opacity: 1; }
+            20%, 30% { left: 75px; opacity: 1; }
+            35%, 99% { left: 181px; opacity: 1; }
+            100% { left: 22px; opacity: 1; }
+        }
+        @keyframes messageReveal {
+            0%, 80% { opacity: 0; }
+            85%, 99% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        
+        .mini-cell:nth-child(1) { animation: swapMini1 7s infinite; }
+        .mini-cell:nth-child(4) { animation: swapMini4 7s infinite; }
+        
+        .mini-theta {
+            position: absolute; bottom: -25px; left: 22px; font-size: 1.1rem; color: var(--theta-color); transform: translateX(-50%); font-weight: bold;
+            animation: moveMiniTheta 7s infinite; white-space: nowrap;
+        }
+        .mini-success-msg {
+            position: absolute; bottom: -50px; color: var(--success-color); font-weight: bold; font-size: 0.95rem; opacity: 0; 
+            animation: messageReveal 7s infinite; white-space: nowrap;
+        }
+        
+        @media (prefers-reduced-motion: reduce) {
+            .mini-animation * { animation: none !important; transition: none !important; }
+            .mini-theta { left: 181px; } 
+            .mini-cell:nth-child(1) { transform: translateX(159px); background: var(--success-color); }
+            .mini-cell:nth-child(4) { transform: translateX(-159px); background: var(--success-color); }
+            .mini-success-msg { opacity: 1; }
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 1100px), (max-height: 750px) {
+            .main-container { flex-direction: column; overflow-y: auto; }
+            .col-code { flex: none; width: 100%; max-width: 100%; height: auto; max-height: 450px; }
+            .col-viz { flex: none; min-height: 550px; }
+            .col-output { flex: none; width: 100%; height: auto; min-height: 180px; }
+        }
+
+    </style>
+</head>
+<body>
+
+<!-- INTRO MODAL -->
+<div id="introOverlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="introTitle" aria-describedby="introDescription">
+    <div class="intro-box">
+        <h1 id="introTitle">Πώς λειτουργεί η Ταξινόμηση με Επιλογή;</h1>
+        <div id="introDescription">
+            <p>Η φιλοσοφία του αλγορίθμου είναι πολύ απλή: βασίζεται στην <b>κατ' επανάληψη εύρεση του ελάχιστου (ή του μέγιστου) στοιχείου</b> στον πίνακα!</p>
+            <ul style="line-height: 1.6; margin-bottom: 15px;">
+                <li>Στο <b>1ο πέρασμα</b>, ψάχνουμε σε όλο τον πίνακα για να βρούμε το μικρότερο στοιχείο και το βάζουμε στην 1η θέση.</li>
+                <li>Στο <b>2ο πέρασμα</b>, ψάχνουμε στα <i>υπόλοιπα</i> στοιχεία για το αμέσως επόμενο μικρότερο και το βάζουμε στη 2η θέση.</li>
+                <li>Η διαδικασία επαναλαμβάνεται, «χτίζοντας» βήμα-βήμα το ταξινομημένο τμήμα του πίνακα μέχρι το τέλος.</li>
+            </ul>
+        </div>
+        
+        <div class="mini-animation" aria-hidden="true">
+            <div class="mini-cell">42</div>
+            <div class="mini-cell">25</div>
+            <div class="mini-cell">63</div>
+            <div class="mini-cell">17</div>
+            <div class="mini-theta">⬆ min</div>
+            <div class="mini-success-msg">✓ Η 1η θέση οριστικοποιήθηκε</div>
+        </div>
+        
+        <div style="font-weight:bold; color:var(--array-item-bg); margin-bottom:5px;">Αύξουσα → αναζητούμε το ελάχιστο</div>
+        <div style="font-weight:bold; color:var(--array-item-bg);">Φθίνουσα → αναζητούμε το μέγιστο</div>
+
+        <button class="intro-btn" onclick="closeIntro()" id="btnIntroStart">Ξεκινήστε</button>
+    </div>
+</div>
+
+<header id="mainHeader" class="blurred" inert>
+    <div class="header-title">
+        <h1>Ταξινόμηση με Επιλογή</h1>
+    </div>
+    
+    <div class="controls-area">
+        <button onclick="toggleOrder()" id="btnOrder" aria-label="Αλλαγή σε φθίνουσα ταξινόμηση">📈 Αύξουσα</button>
+        <button onclick="randomizeData()">🎲 Νέα Δεδομένα</button>
+        <button onclick="resetSim()">🔄 Αρχή</button>
+        <button onclick="play()" id="btnPlay" class="primary">▶️ Αυτόματη Εκτέλεση</button>
+        <button onclick="step()" id="btnStep">Βήμα ⏩</button>
+        <button onclick="undo()" id="btnUndo" disabled>⏪ Αναίρεση</button>
+        <button onclick="toggleCode()" id="btnCode" aria-expanded="true">👁️ Απόκρυψη Κώδικα</button>
+        
+        <div class="slider-container">
+            <label for="speedSlider">Ταχύτητα:</label>
+            <input type="range" min="50" max="1500" value="800" id="speedSlider" aria-label="Ταχύτητα εκτέλεσης" oninput="updateSpeed()">
+        </div>
+
+        <button id="btnTheme" onclick="toggleTheme()" aria-label="Ενεργοποίηση σκοτεινού θέματος">🌙</button>
+    </div>
+</header>
+
+<div class="main-container blurred" id="mainApp" inert>
+    
+    <div class="col-code">
+        <div class="tabs" role="tablist" aria-label="Επιλογή λύσης" onkeydown="handleTabKeydown(event)">
+            <button class="tab active" role="tab" id="tab1" aria-selected="true" aria-controls="codeContainer" tabindex="0" onclick="setSolution(1)">Λύση 1 (Μόνο θέση max/min)</button>
+            <button class="tab" role="tab" id="tab2" aria-selected="false" aria-controls="codeContainer" tabindex="-1" onclick="setSolution(2)">Λύση 2 (max/min & θέση)</button>
+        </div>
+        <div class="code-content" id="codeContainer" role="tabpanel" aria-labelledby="tab1"></div>
+        <div class="notes-area">
+            <strong>Παρατήρηση:</strong>
+            <p id="noteText">Ο αλγόριθμος αυτός είναι μια κατ' επανάληψη εύρεση του <strong>min</strong>.</p>
+        </div>
+    </div>
+
+    <div class="col-viz">
+        <div class="narrative" id="narrativeBox" role="status" aria-live="polite" aria-atomic="true">Πατήστε εκτέλεση...</div>
+        
+        <div class="arrays-wrapper" id="arraysContainer">
+            </div>
+    </div>
+
+    <div class="col-output">
+        <div class="output-header">📺 Μεταβλητές</div>
+        <div class="output-log" id="outputLog" role="group" aria-label="Τρέχουσες τιμές μεταβλητών">
+            <div class="log-item"><span class="log-label">ι:</span><span class="log-val" id="var-i">-</span></div>
+            <div class="log-item"><span class="log-label">j:</span><span class="log-val" id="var-j">-</span></div>
+            <div class="log-item"><span class="log-label">θ:</span><span class="log-val" id="var-theta">-</span></div>
+            <div class="log-item" id="var-extremum-row" style="display:none;"><span class="log-label" id="var-extremum-label">min:</span><span class="log-val" id="var-extremum">-</span></div>
+            <div class="log-item" id="var-temp-row" style="display:none;"><span class="log-label">temp:</span><span class="log-val" id="var-temp">-</span></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- Theming & Intro ---
+    window.addEventListener('DOMContentLoaded', () => {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-mode');
+            const btn = document.getElementById('btnTheme');
+            if(btn) {
+                btn.innerText = '☀️';
+                btn.setAttribute('aria-label', 'Ενεργοποίηση φωτεινού θέματος');
+            }
+        }
+        
+        // Setup Modal Focus
+        setTimeout(() => {
+            const startBtn = document.getElementById('btnIntroStart');
+            if (startBtn) startBtn.focus();
+        }, 100);
+    });
+
+    function toggleTheme() {
+        const isDark = document.body.classList.toggle('dark-mode');
+        const btn = document.getElementById('btnTheme');
+        
+        if (isDark) {
+            btn.innerText = '☀️';
+            btn.setAttribute('aria-label', 'Ενεργοποίηση φωτεινού θέματος');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            btn.innerText = '🌙';
+            btn.setAttribute('aria-label', 'Ενεργοποίηση σκοτεινού θέματος');
+            localStorage.setItem('theme', 'light');
+        }
+    }
+
+    // Modal Focus Trap
+    const introOverlay = document.getElementById('introOverlay');
+    introOverlay.addEventListener('keydown', function(e) {
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            document.getElementById('btnIntroStart').focus();
+        } else if (e.key === 'Escape') {
+            closeIntro();
+        }
+    });
+
+    function closeIntro() {
+        introOverlay.style.opacity = '0';
+        
+        const header = document.getElementById('mainHeader');
+        const app = document.getElementById('mainApp');
+
+        header.classList.remove('blurred');
+        app.classList.remove('blurred');
+
+        header.inert = false;
+        app.inert = false;
+        
+        setTimeout(() => {
+            introOverlay.style.display = 'none';
+            document.getElementById('btnPlay').focus();
+        }, 500);
+    }
+
+    // --- Tab Keyboard Support ---
+    function handleTabKeydown(event) {
+        const tabs = [
+            document.getElementById('tab1'),
+            document.getElementById('tab2')
+        ];
+        
+        let index = currentSol - 1;
+
+        if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+            event.preventDefault();
+            index = (index + 1) % tabs.length;
+            setSolution(index + 1);
+            tabs[index].focus();
+        } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            index = (index - 1 + tabs.length) % tabs.length;
+            setSolution(index + 1);
+            tabs[index].focus();
+        } else if (event.key === 'Home') {
+            event.preventDefault();
+            setSolution(1);
+            tabs[0].focus();
+        } else if (event.key === 'End') {
+            event.preventDefault();
+            setSolution(2);
+            tabs[1].focus();
+        }
+    }
+
+    // --- Data ---
+    const SIZE = 6;
+    let originalData = [];
+    let data = [];
+    let isAscending = true; 
+
+    // --- State ---
+    let currentSol = 1;
+    let steps = [];
+    let stepIdx = -1;
+    let timer = null;
+    let isPlaying = false;
+    let isAnimating = false;
+    let speed = 800;
+    let currentRunId = 0;
+    
+    const CELL_HEIGHT_FULL = 60; // 50px cell + 10px margin
+    const HEADER_HEIGHT = 45;
+
+    // --- Helpers for HTML Code Generation ---
+    function kw(text) { return `<span class="kw">${text}</span>`; }
+    function sym(text) { return `<span class="sym">${text}</span>`; }
+    function txt(text) { return `<span class="txt">${text}</span>`; }
+
+    function getCodeLines() {
+        const op = isAscending ? '<' : '>';
+        const limit = SIZE - 1;
+        const limit2 = SIZE;
+        
+        if (currentSol === 1) {
+            return [
+                `${kw("Για")} ${txt("ι")} ${kw("από")} 1 ${kw("μέχρι")} ${limit}`,
+                `  ${txt("θ")} ${sym("←")} ${txt("ι")}`,
+                `  ${kw("Για")} ${txt("j")} ${kw("από")} ${txt("ι")}${sym("+")}1 ${kw("μέχρι")} ${limit2}`,
+                `    ${kw("Αν")} ${txt("Π[j]")} ${sym(op)} ${txt("Π[θ]")} ${kw("τότε")}`,
+                `      ${txt("θ")} ${sym("←")} ${txt("j")}`,
+                `    ${kw("Τέλος_αν")}`,
+                `  ${kw("Τέλος_επανάληψης")}`,
+                `  ${kw("αντιμετάθεσε")} ${txt("Π[ι]")}${sym(",")} ${txt("Π[θ]")}`,
+                `${kw("Τέλος_επανάληψης")}`
+            ];
+        } else {
+            const varName = isAscending ? "min" : "max";
+            return [
+                `${kw("Για")} ${txt("ι")} ${kw("από")} 1 ${kw("μέχρι")} ${limit}`,
+                `  ${txt(varName)} ${sym("←")} ${txt("Π[ι]")}`,
+                `  ${txt("θ")} ${sym("←")} ${txt("ι")}`,
+                `  ${kw("Για")} ${txt("j")} ${kw("από")} ${txt("ι")}${sym("+")}1 ${kw("μέχρι")} ${limit2}`,
+                `    ${kw("Αν")} ${txt("Π[j]")} ${sym(op)} ${txt(varName)} ${kw("τότε")}`,
+                `      ${txt(varName)} ${sym("←")} ${txt("Π[j]")}`,
+                `      ${txt("θ")} ${sym("←")} ${txt("j")}`,
+                `    ${kw("Τέλος_αν")}`,
+                `  ${kw("Τέλος_επανάληψης")}`,
+                `  ${txt("temp")} ${sym("←")} ${txt("Π[ι]")}`,
+                `  ${txt("Π[ι]")} ${sym("←")} ${txt("Π[θ]")}`,
+                `  ${txt("Π[θ]")} ${sym("←")} ${txt("temp")}`,
+                `${kw("Τέλος_επανάληψης")}`
+            ];
+        }
+    }
+
+    // --- Init ---
+    function generateNewData() {
+        originalData = Array.from({length: SIZE}, () => Math.floor(Math.random() * 90) + 10);
+    }
+
+    function randomizeData() {
+        generateNewData();
+        resetSim();
+    }
+
+    function init() {
+        generateNewData();
+        resetSim();
+    }
+
+    function toggleOrder() {
+        currentRunId++;
+        isAscending = !isAscending;
+        const btn = document.getElementById('btnOrder');
+        btn.innerText = isAscending ? "📈 Αύξουσα" : "📉 Φθίνουσα";
+        btn.setAttribute('aria-label', isAscending ? "Αλλαγή σε φθίνουσα ταξινόμηση" : "Αλλαγή σε αύξουσα ταξινόμηση");
+        resetSim();
+    }
+
+    function setSolution(n) {
+        currentRunId++;
+        currentSol = n;
+        
+        const tabs = [
+            document.getElementById('tab1'),
+            document.getElementById('tab2')
+        ];
+        
+        const codeContainer = document.getElementById('codeContainer');
+        
+        tabs.forEach((tab, i) => {
+            const active = i + 1 === n;
+            tab.setAttribute('aria-selected', active ? 'true' : 'false');
+            tab.setAttribute('tabindex', active ? '0' : '-1');
+            tab.classList.toggle('active', active);
+        });
+        
+        codeContainer.setAttribute('aria-labelledby', `tab${n}`);
+        
+        resetSim();
+    }
+
+    function resetSim() {
+        currentRunId++;
+        isPlaying = false;
+        isAnimating = false;
+        clearTimeout(timer);
+        
+        data = [...originalData];
+        steps = [];
+        stepIdx = -1;
+        
+        document.getElementById('narrativeBox').innerText = "Πατήστε εκτέλεση...";
+        document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+        
+        // Clean up UI safely
+        document.querySelectorAll('.code-line.active').forEach(e => e.classList.remove('active'));
+        document.querySelectorAll('.highlight-check').forEach(e => e.classList.remove('highlight-check'));
+        document.querySelectorAll('.comparing').forEach(e => e.classList.remove('comparing'));
+        document.querySelectorAll('.highlight-theta').forEach(e => e.classList.remove('highlight-theta'));
+        document.querySelectorAll('.swapping-highlight').forEach(e => e.classList.remove('swapping-highlight'));
+        document.querySelectorAll('.flying-cell').forEach(e => e.remove());
+        
+        const note = isAscending ? "min" : "max";
+        document.getElementById('noteText').innerHTML = `Ο αλγόριθμος αυτός είναι μια κατ' επανάληψη εύρεση του <strong>${note}</strong>.`;
+
+        renderCode();
+        renderArray();
+        
+        updateWaterLine(0, false); 
+        updatePointers({show: false}); 
+        updateVarsUI();
+        
+        calcSteps();
+        updateExecutionButtons();
+    }
+
+    function updateExecutionButtons() {
+        const btnStep = document.getElementById('btnStep');
+        const btnUndo = document.getElementById('btnUndo');
+        
+        const atEnd = steps.length > 0 && stepIdx >= steps.length - 1;
+
+        btnStep.disabled = isPlaying || isAnimating || atEnd;
+        
+        if (isPlaying) {
+            btnUndo.disabled = true;
+        } else {
+            btnUndo.disabled = isAnimating || stepIdx <= -1;
+        }
+    }
+
+    // --- Rendering ---
+    function renderCode() {
+        const lines = getCodeLines();
+        const html = lines.map((l, i) => 
+            `<div class="code-line" id="line-${i}">${l}</div>`
+        ).join('');
+        document.getElementById('codeContainer').innerHTML = html;
+        
+        // Show/hide var rows based on solution
+        document.getElementById('var-extremum-row').style.display = currentSol === 2 ? 'flex' : 'none';
+        document.getElementById('var-extremum-label').innerText = isAscending ? 'min:' : 'max:';
+        document.getElementById('var-temp-row').style.display = currentSol === 2 ? 'flex' : 'none';
+    }
+
+    function renderArray() {
+        const con = document.getElementById('arraysContainer');
+        let html = '';
+
+        html += `<div class="array-col" role="list" aria-label="Πίνακας Π">
+                    <div class="array-header" aria-hidden="true">Πίνακας Π</div>
+                    <div id="waterLine" class="water-line" aria-hidden="true" style="display:none;"></div>
+                    <div class="pointer-track">
+                        <div id="ptr-i" class="comp-pointer ptr-i" aria-hidden="true">
+                            <span class="ptr-label">ι</span><span class="ptr-symbol">➡</span>
+                        </div>
+                        <div id="ptr-j" class="comp-pointer ptr-j" aria-hidden="true">
+                            <span class="ptr-label">j</span><span class="ptr-symbol">➡</span>
+                        </div>
+                        <div id="ptr-theta" class="comp-pointer ptr-theta" aria-hidden="true">
+                            <span class="ptr-label">θ</span><span class="ptr-symbol">➡</span>
+                        </div>
+                    </div>
+                `;
+        data.forEach((v, i) => html += createCell(i, v));
+        html += `</div>`;
+
+        con.innerHTML = html;
+    }
+
+    function createCell(idx, val) {
+        return `
+            <div class="cell-wrapper" id="wrap-${idx}" role="listitem" aria-label="Θέση ${idx+1}, τιμή ${val}" style="transform: translateY(0px);">
+                <div id="c-${idx}" class="cell">
+                    <span class="cell-idx" aria-hidden="true">${idx+1}</span>
+                    <span class="cell-val">${val}</span>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Updates value and ARIA label
+    function setCellValue(index, value) {
+        const cell = document.getElementById(`c-${index}`);
+        const wrapper = document.getElementById(`wrap-${index}`);
+
+        if (cell) {
+            cell.querySelector('.cell-val').innerText = value;
+        }
+        if (wrapper) {
+            wrapper.setAttribute('aria-label', `Θέση ${index + 1}, τιμή ${value}`);
+        }
+    }
+
+    // --- Logic Helper ---
+    function checkCondition(val, boundaryVal) {
+        if (isAscending) return val < boundaryVal;
+        else return val > boundaryVal;
+    }
+
+    // --- Logic Generation ---
+    function calcSteps() {
+        steps = [];
+        let simData = [...data];
+        const label = isAscending ? 'min' : 'max';
+        const op = isAscending ? '<' : '>';
+        
+        let simI = undefined;
+        let simJ = undefined;
+        let simTheta = undefined;
+        let simExtremum = undefined;
+        let simTemp = undefined;
+        let simWater = 0;
+
+        function addStep(obj) {
+            obj.state = {
+                arr: [...simData],
+                i: simI,
+                j: simJ,
+                theta: simTheta,
+                extremum: simExtremum,
+                temp: simTemp,
+                water: simWater
+            };
+            steps.push(obj);
+        }
+
+        if (currentSol === 1) { 
+            // Solution 1: Only Theta
+            for (let i = 0; i < SIZE - 1; i++) {
+                simI = i;
+                simJ = undefined;
+                simTheta = undefined;
+                simExtremum = undefined;
+                simTemp = undefined;
+                
+                addStep({ line: 0, type: 'loop_outer', msg: `Πέρασμα ${i+1}: Ψάχνουμε το ${label} από τη θέση ${i+1}` });
+                
+                simTheta = i;
+                addStep({ line: 1, type: 'set_theta', msg: `Αρχικά υποθέτουμε θ = ${i+1}` });
+
+                for (let j = i + 1; j < SIZE; j++) {
+                    simJ = j;
+                    addStep({ line: 2, type: 'loop_inner', msg: `Έλεγχος στοιχείου j=${j+1}` });
+                    
+                    addStep({ line: 3, type: 'cmp', idx1: j, idx2: simTheta, msg: `Σύγκριση: Π[${j+1}] ${op} Π[${simTheta+1}];` });
+
+                    if (checkCondition(simData[j], simData[simTheta])) {
+                        simTheta = j;
+                        addStep({ line: 4, type: 'new_theta', msg: `Βρέθηκε νέο ${label}! θ ← ${j+1}` });
+                    }
+                }
+                
+                simJ = undefined;
+                
+                let tempVal = simData[i];
+                simData[i] = simData[simTheta];
+                simData[simTheta] = tempVal;
+                
+                // Set water line right before saving the step
+                simWater = i + 1;
+                addStep({ line: 7, type: simTheta !== i ? 'swap' : 'info', idx1: i, idx2: simTheta, msg: `Αντιμετάθεση Π[${i+1}] με Π[${simTheta+1}]` });
+            }
+            
+            simI = undefined;
+            simTheta = undefined;
+            simWater = SIZE;
+            addStep({ line: 8, type: 'finish', msg: 'Ο πίνακας ταξινομήθηκε πλήρως.' }); 
+
+        } else if (currentSol === 2) { 
+            // Solution 2: With Value Variable
+            for (let i = 0; i < SIZE - 1; i++) {
+                simI = i;
+                simJ = undefined;
+                simTheta = undefined;
+                simExtremum = undefined;
+                simTemp = undefined;
+                
+                addStep({ line: 0, type: 'loop_outer', msg: `Πέρασμα ${i+1}: Ψάχνουμε το ${label}` });
+                
+                simExtremum = simData[i];
+                addStep({ line: 1, type: 'info', msg: `${label} ← ${simExtremum}` });
+                
+                simTheta = i;
+                addStep({ line: 2, type: 'set_theta', msg: `θ ← ${i+1}` });
+
+                for (let j = i + 1; j < SIZE; j++) {
+                    simJ = j;
+                    addStep({ line: 3, type: 'loop_inner', msg: `Έλεγχος j=${j+1}` });
+                    
+                    addStep({ line: 4, type: 'cmp', idx1: j, idx2: simTheta, msg: `Σύγκριση: Π[${j+1}] ${op} ${label}(${simExtremum});` });
+
+                    // Check condition against currently known extremum
+                    if (checkCondition(simData[j], simExtremum)) {
+                        simExtremum = simData[j];
+                        addStep({ line: 5, type: 'info', msg: `Νέο ${label}=${simExtremum}` });
+                        simTheta = j;
+                        addStep({ line: 6, type: 'new_theta', msg: `θ ← ${j+1}` });
+                    }
+                }
+                
+                simJ = undefined;
+                
+                // ALWAYS run swap steps for Solution 2
+                simTemp = simData[i];
+                addStep({ line: 9, type: 'info', msg: `temp ← ${simTemp}` });
+                
+                let originalThetaValue = simData[simTheta];
+                simData[i] = originalThetaValue;
+                addStep({ line: 10, type: simTheta !== i ? 'copy_anim' : 'info', src: simTheta, dest: i, val: originalThetaValue, msg: `Π[${i+1}] ← Π[${simTheta+1}]` });
+                
+                simData[simTheta] = simTemp;
+                simWater = i + 1;
+                addStep({ line: 11, type: simTheta !== i ? 'copy_anim' : 'info', src: -1, dest: simTheta, val: simTemp, msg: `Π[${simTheta+1}] ← temp` });
+            }
+            
+            simI = undefined;
+            simTheta = undefined;
+            simExtremum = undefined;
+            simTemp = undefined;
+            simWater = SIZE;
+            addStep({ line: 12, type: 'finish', msg: 'Ο πίνακας ταξινομήθηκε πλήρως.' });
+        }
+    }
+
+    // --- Helpers ---
+    function updateWaterLine(sortedCount, isVisible) {
+        const line = document.getElementById('waterLine');
+        if (!isVisible) {
+            line.style.opacity = '0';
+            setTimeout(() => {
+                if(line.style.opacity === '0') line.style.display = 'none';
+            }, 300);
+            return;
+        }
+        line.style.display = 'block';
+        const pos = HEADER_HEIGHT + (sortedCount * CELL_HEIGHT_FULL) - 5; 
+        line.style.top = pos + 'px';
+        requestAnimationFrame(() => line.style.opacity = '1');
+    }
+
+    function updatePointers(pState) {
+        const ptrI = document.getElementById('ptr-i');
+        const ptrJ = document.getElementById('ptr-j');
+        const ptrTheta = document.getElementById('ptr-theta');
+
+        if(pState.show === false) {
+            ptrI.classList.remove('visible');
+            ptrJ.classList.remove('visible');
+            ptrTheta.classList.remove('visible');
+            return;
+        }
+
+        setPtr(ptrI, pState.i);
+        setPtr(ptrJ, pState.j);
+        setPtr(ptrTheta, pState.theta);
+    }
+
+    function setPtr(el, idx) {
+        if (idx === undefined || idx < 0) {
+            el.classList.remove('visible');
+        } else {
+            el.style.top = (idx * CELL_HEIGHT_FULL) + 'px';
+            el.classList.add('visible');
+        }
+    }
+    
+    function updateVarsUI(state) {
+        const vI = document.getElementById('var-i');
+        const vJ = document.getElementById('var-j');
+        const vTheta = document.getElementById('var-theta');
+        const vExtr = document.getElementById('var-extremum');
+        const vTemp = document.getElementById('var-temp');
+        
+        if(!state) {
+            vI.innerText = '-';
+            vJ.innerText = '-';
+            vTheta.innerText = '-';
+            vExtr.innerText = '-';
+            vTemp.innerText = '-';
+            return;
+        }
+        
+        vI.innerText = state.i !== undefined ? state.i + 1 : '-';
+        vJ.innerText = state.j !== undefined ? state.j + 1 : '-';
+        vTheta.innerText = state.theta !== undefined ? state.theta + 1 : '-';
+        vExtr.innerText = state.extremum !== undefined ? state.extremum : '-';
+        vTemp.innerText = state.temp !== undefined ? state.temp : '-';
+    }
+
+    // --- Animation ---
+    async function swapAnimate(idx1, idx2, waterLevel) {
+        const myRunId = currentRunId;
+        isAnimating = true;
+        updateExecutionButtons();
+        
+        const w1 = document.getElementById(`wrap-${idx1}`);
+        const w2 = document.getElementById(`wrap-${idx2}`);
+        
+        w1.querySelector('.cell').classList.add('swapping-highlight');
+        w2.querySelector('.cell').classList.add('swapping-highlight');
+
+        const dist = (idx2 - idx1) * CELL_HEIGHT_FULL;
+
+        w1.style.transform = `translateY(${dist}px)`;
+        w2.style.transform = `translateY(-${dist}px)`;
+
+        await new Promise(r => setTimeout(r, speed * 0.8));
+
+        if (myRunId !== currentRunId) return;
+
+        w1.style.transition = 'none';
+        w2.style.transition = 'none';
+        w1.style.transform = 'translateY(0)';
+        w2.style.transform = 'translateY(0)';
+
+        const v1 = w1.querySelector('.cell-val').innerText;
+        const v2 = w2.querySelector('.cell-val').innerText;
+        
+        setCellValue(idx1, v2);
+        setCellValue(idx2, v1);
+
+        w1.querySelector('.cell').classList.remove('swapping-highlight');
+        w2.querySelector('.cell').classList.remove('swapping-highlight');
+
+        setTimeout(() => {
+            if (myRunId !== currentRunId) return;
+            
+            w1.style.transition = 'transform 0.4s ease-in-out';
+            w2.style.transition = 'transform 0.4s ease-in-out';
+            isAnimating = false;
+            
+            if (waterLevel !== undefined) {
+                updateWaterLine(waterLevel, true);
+            }
+            
+            updateExecutionButtons();
+            
+            if(isPlaying) timer = setTimeout(step, speed * 0.2);
+        }, 50);
+    }
+    
+    // Εφεδρικό copy animation για τη λύση 2
+    async function flyCopy(srcIdx, destIdx, val, waterLevel) {
+        const myRunId = currentRunId;
+        isAnimating = true;
+        updateExecutionButtons();
+        
+        const destWrap = document.getElementById(`wrap-${destIdx}`);
+        let srcRect;
+        
+        if (srcIdx === -1) {
+            const tempBox = document.getElementById('var-temp');
+            srcRect = tempBox.getBoundingClientRect();
+        } else {
+            const srcCell = document.getElementById(`c-${srcIdx}`);
+            srcCell.classList.add('comparing'); // highlight source
+            srcRect = srcCell.getBoundingClientRect();
+        }
+        
+        const destRect = destWrap.getBoundingClientRect();
+        
+        const flyer = document.createElement('div');
+        flyer.className = 'cell flying-cell';
+        flyer.innerText = val;
+        flyer.setAttribute('aria-hidden', 'true');
+        flyer.style.backgroundColor = 'var(--swap-color)';
+        flyer.style.position = 'fixed';
+        flyer.style.zIndex = '9999';
+        
+        flyer.style.width = destRect.width + 'px';
+        flyer.style.height = destRect.height + 'px';
+        flyer.style.left = srcRect.left + 'px';
+        flyer.style.top = srcRect.top + 'px';
+        
+        document.body.appendChild(flyer);
+        flyer.getBoundingClientRect(); 
+        
+        const dur = speed * 0.7;
+        flyer.style.transition = `all ${dur}ms ease-in-out`;
+        flyer.style.left = destRect.left + 'px';
+        flyer.style.top = destRect.top + 'px';
+        
+        setTimeout(() => {
+            if (myRunId !== currentRunId) { flyer.remove(); return; }
+            
+            setCellValue(destIdx, val);
+            
+            if (srcIdx !== -1) {
+                document.getElementById(`c-${srcIdx}`).classList.remove('comparing');
+            }
+            
+            flyer.remove();
+            isAnimating = false;
+            
+            if (waterLevel !== undefined) {
+                updateWaterLine(waterLevel, true);
+            }
+            
+            updateExecutionButtons();
+            
+            if(isPlaying) timer = setTimeout(step, speed * 0.2);
+        }, dur + 50);
+    }
+
+    // --- Execution ---
+    function step() {
+        if (isAnimating) return;
+
+        if (stepIdx >= steps.length - 1) {
+            isPlaying = false;
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+            updateExecutionButtons();
+            return;
+        }
+        stepIdx++;
+        runStep(steps[stepIdx]);
+    }
+
+    function undo() {
+        if (isAnimating || isPlaying || stepIdx <= -1) return;
+        
+        currentRunId++; // Cancel active anims
+        stepIdx--;
+        
+        if (stepIdx === -1) {
+            resetSim(); 
+        } else {
+            restoreToStep(stepIdx);
+        }
+    }
+    
+    function restoreToStep(idx) {
+        const s = steps[idx];
+        
+        // Restore Code Highlights
+        document.querySelectorAll('.code-line.active').forEach(e => e.classList.remove('active'));
+        if (s.line >= 0) { 
+            const el = document.getElementById(`line-${s.line}`); 
+            if(el) { 
+                el.classList.add('active'); 
+                el.scrollIntoView({behavior: "smooth", block: "nearest"}); 
+            } 
+        }
+
+        // Restore Message
+        const narr = document.getElementById('narrativeBox');
+        if(s.msg) narr.innerText = s.msg;
+
+        // Clean Highlights
+        document.querySelectorAll('.comparing').forEach(e => e.classList.remove('comparing'));
+        document.querySelectorAll('.highlight-theta').forEach(e => e.classList.remove('highlight-theta'));
+        document.querySelectorAll('.swapping-highlight').forEach(e => e.classList.remove('swapping-highlight'));
+        
+        // Restore array exact state
+        s.state.arr.forEach((val, i) => {
+            setCellValue(i, val);
+            const el = document.getElementById(`c-${i}`);
+            if (el) {
+                el.classList.remove('highlight-source');
+                el.style.backgroundColor = '';
+            }
+        });
+        
+        if (s.state && s.state.water !== undefined) {
+            updateWaterLine(s.state.water, true);
+        } else {
+            updateWaterLine(0, false);
+        }
+        
+        updatePointers(s.state);
+        updateVarsUI(s.state);
+        
+        // Restore highlights based on step type
+        if (s.type === 'cmp') {
+            document.getElementById(`c-${s.idx1}`).classList.add('comparing');
+            document.getElementById(`c-${s.idx2}`).classList.add('comparing');
+        } else if (s.type === 'new_theta' || s.type === 'set_theta') {
+            const c = document.getElementById(`c-${s.state.theta}`);
+            if(c) c.classList.add('highlight-theta');
+        }
+
+        updateExecutionButtons();
+    }
+
+    function runStep(s) {
+        document.querySelectorAll('.code-line.active').forEach(e => e.classList.remove('active'));
+        if (s.line !== undefined && s.line >= 0) {
+             const el = document.getElementById(`line-${s.line}`);
+             if(el) {
+                 el.classList.add('active');
+                 el.scrollIntoView({behavior: "smooth", block: "center"});
+             }
+        }
+
+        const narr = document.getElementById('narrativeBox');
+        if(s.msg) {
+            narr.innerText = s.msg;
+            narr.style.fontStyle = "italic";
+        }
+
+        document.querySelectorAll('.comparing').forEach(e => e.classList.remove('comparing'));
+        document.querySelectorAll('.highlight-theta').forEach(e => e.classList.remove('highlight-theta'));
+
+        if (s.type !== 'swap' && s.type !== 'copy_anim') {
+            if (s.state && s.state.water !== undefined) {
+                updateWaterLine(s.state.water, true);
+            }
+        }
+
+        updatePointers(s.state);
+        updateVarsUI(s.state);
+
+        if (s.type === 'cmp') {
+            document.getElementById(`c-${s.idx1}`).classList.add('comparing');
+            document.getElementById(`c-${s.idx2}`).classList.add('comparing');
+        } else if (s.type === 'new_theta' || s.type === 'set_theta') {
+            const c = document.getElementById(`c-${s.state.theta}`);
+            if(c) c.classList.add('highlight-theta');
+        } else if (s.type === 'swap') {
+            swapAnimate(s.idx1, s.idx2, s.state?.water);
+            return; 
+        } else if (s.type === 'copy_anim') {
+            flyCopy(s.src, s.dest, s.val, s.state?.water);
+            return;
+        }
+
+        if (s.type === 'finish') {
+            isPlaying = false;
+            clearTimeout(timer);
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+            updateExecutionButtons();
+            return;
+        }
+
+        updateExecutionButtons();
+
+        if (isPlaying) {
+            timer = setTimeout(step, speed);
+        }
+    }
+
+    function play() {
+        if (isPlaying) {
+            isPlaying = false;
+            clearTimeout(timer);
+            document.getElementById('btnPlay').innerText = "▶️ Αυτόματη Εκτέλεση";
+            updateExecutionButtons();
+            return;
+        }
+
+        if (isAnimating) return;
+
+        if (steps.length > 0 && stepIdx >= steps.length - 1) {
+            resetSim();
+        }
+
+        isPlaying = true;
+        document.getElementById('btnPlay').innerText = "⏸ Παύση";
+        updateExecutionButtons();
+        step();
+    }
+
+    function updateSpeed() {
+        speed = 1550 - document.getElementById('speedSlider').value;
+    }
+
+    function toggleCode() {
+        const codePanel = document.querySelector('.col-code');
+        const isHidden = codePanel.classList.toggle('hidden');
+        
+        const btn = document.getElementById('btnCode');
+        btn.innerText = isHidden ? "👁️ Εμφάνιση Κώδικα" : "👁️ Απόκρυψη Κώδικα";
+        btn.setAttribute('aria-expanded', isHidden ? 'false' : 'true');
+    }
+
+    init();
+</script>
+</body>
+</html>
